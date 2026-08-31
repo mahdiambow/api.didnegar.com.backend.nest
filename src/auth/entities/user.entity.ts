@@ -8,24 +8,22 @@ import {
   OneToMany,
   Index,
 } from 'typeorm';
-import { UserRole } from '../enums/user-role.enum';
-import { UserProfile } from './user-profile.entity';
-import { UserAddress } from './user-address.entity';
-import { RefreshToken } from './refresh-token.entity';
+import { UserRole } from '../enums/user-role.enum.js';
+import type { UserProfile } from './user-profile.entity.js';
+import type { UserAddress } from './user-address.entity.js';
+import type { RefreshToken } from './refresh-token.entity.js';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // فیلدهای مربوط به مهاجرت از سیستم قدیمی
   @Column({ type: 'bigint', nullable: true })
   legacyId: number | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   legacyTable: string | null;
 
-  // شماره موبایل به عنوان نام کاربری استفاده می‌شود
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 20 })
   username: string;
@@ -51,11 +49,9 @@ export class User {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  // نقش کاربر برای برگرداندن در validateToken
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
 
-  // فیلدهای OTP - در صورت استفاده از Redis می‌توان این دو فیلد را حذف کرد
   @Column({ type: 'varchar', length: 6, nullable: true, select: false })
   otpCode: string | null;
 
@@ -68,12 +64,12 @@ export class User {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToOne(() => UserProfile, (profile) => profile.user)
+  @OneToOne('UserProfile', 'user')
   profile: UserProfile;
 
-  @OneToMany(() => UserAddress, (address) => address.user)
+  @OneToMany('UserAddress', 'user')
   addresses: UserAddress[];
 
-  @OneToMany(() => RefreshToken, (token) => token.user)
+  @OneToMany('RefreshToken', 'user')
   refreshTokens: RefreshToken[];
 }

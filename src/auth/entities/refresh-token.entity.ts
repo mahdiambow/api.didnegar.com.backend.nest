@@ -6,7 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { User } from './user.entity';
+import type { User } from './user.entity.js';
 
 @Entity('refresh_tokens')
 export class RefreshToken {
@@ -16,7 +16,6 @@ export class RefreshToken {
   @Column({ type: 'uuid' })
   userId: string;
 
-  // هش شده ذخیره می‌شود، هرگز توکن خام را ذخیره نکنید
   @Column({ type: 'varchar' })
   tokenHash: string;
 
@@ -29,7 +28,7 @@ export class RefreshToken {
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => User, (user) => user.refreshTokens, { onDelete: 'CASCADE' })
+  @ManyToOne('User', 'refreshTokens', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 }

@@ -8,7 +8,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { User } from './user.entity';
+import type { User } from './user.entity.js';
 
 @Entity('user_profiles')
 export class UserProfile {
@@ -20,10 +20,10 @@ export class UserProfile {
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 10, nullable: true })
-  nationalCode: string | null; // کد ملی
+  nationalCode: string | null;
 
   @Column({ type: 'date', nullable: true })
-  birthDate: Date | null; // تاریخ تولد
+  birthDate: Date | null;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -31,7 +31,7 @@ export class UserProfile {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToOne(() => User, (user) => user.profile, { onDelete: 'CASCADE' })
+  @OneToOne('User', 'profile', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 }

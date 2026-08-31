@@ -7,7 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { User } from './user.entity';
+import type { User } from './user.entity.js';
 
 @Entity('user_addresses')
 export class UserAddress {
@@ -18,28 +18,28 @@ export class UserAddress {
   userId: string;
 
   @Column({ type: 'varchar', length: 100 })
-  title: string; // عنوان آدرس (خانه، محل کار و ...)
+  title: string;
 
   @Column({ type: 'varchar', length: 100 })
-  province: string; // استان
+  province: string;
 
   @Column({ type: 'varchar', length: 100 })
-  city: string; // شهر
+  city: string;
 
   @Column({ type: 'text' })
-  addressDetail: string; // آدرس دقیق پستی
+  addressDetail: string;
 
   @Column({ type: 'varchar', length: 10 })
-  postalCode: string; // کد پستی
+  postalCode: string;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
-  plaque: string | null; // پلاک
+  plaque: string | null;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
-  unit: string | null; // واحد (اختیاری)
+  unit: string | null;
 
   @Column({ type: 'text', nullable: true })
-  description: string | null; // توضیحات تکمیلی
+  description: string | null;
 
   @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
   lat: number | null;
@@ -48,10 +48,10 @@ export class UserAddress {
   long: number | null;
 
   @Column({ type: 'varchar', length: 150 })
-  recipientFullName: string; // نام و نام‌خانوادگی تحویل‌گیرنده
+  recipientFullName: string;
 
   @Column({ type: 'varchar', length: 20 })
-  recipientPhone: string; // شماره تماس تحویل‌گیرنده
+  recipientPhone: string;
 
   @Column({ type: 'boolean', default: false })
   isDefault: boolean;
@@ -62,7 +62,7 @@ export class UserAddress {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne(() => User, (user) => user.addresses, { onDelete: 'CASCADE' })
+  @ManyToOne('User', 'addresses', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 }

@@ -9,13 +9,13 @@ import { ConfigService } from '@nestjs/config';
 import { Repository, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
-import { User } from './entities/user.entity';
-import { RefreshToken } from './entities/refresh-token.entity';
-import { UserRole } from './enums/user-role.enum';
+import { User } from './entities/user.entity.js';
+import { RefreshToken } from './entities/refresh-token.entity.js';
+import { UserRole } from './enums/user-role.enum.js';
 import {
   JwtPayload,
   OtpTokenPayload,
-} from './interfaces/jwt-payload.interface';
+} from './interfaces/jwt-payload.interface.js';
 
 const OTP_TTL_MINUTES = 2;
 const ACCESS_TOKEN_TTL = '15m';
@@ -24,8 +24,6 @@ const OTP_TOKEN_TTL = '5m';
 
 @Injectable()
 export class AuthService {
-  // در صورت ست بودن OTP_STATIC_CODE در env، همیشه از همین کد استفاده می‌شود
-  // (برای محیط توسعه/تست). در پروداکشن این مقدار را در env خالی بگذارید.
   private readonly staticOtpCode: string | null;
 
   constructor(
@@ -39,9 +37,6 @@ export class AuthService {
       this.config.get<string>('OTP_STATIC_CODE') ?? '123456';
   }
 
-  // ---------------------------------------------------------------------
-  // login/signup یکپارچه: اگر کاربر با این موبایل وجود نداشته باشد ساخته می‌شود
-  // ---------------------------------------------------------------------
   async loginOrSignup(mobile: string) {
     let user = await this.userRepo.findOne({ where: { username: mobile } });
 
@@ -63,7 +58,6 @@ export class AuthService {
     });
 
     // TODO: اتصال به سرویس پیامک واقعی برای ارسال کد
-    // eslint-disable-next-line no-console
     console.log(`[OTP] ارسال کد ${code} به شماره ${mobile}`);
 
     const otpTokenPayload: OtpTokenPayload = {
@@ -78,14 +72,11 @@ export class AuthService {
 
     return {
       otpToken,
-      isNewUser: !user.password, // اگر پسورد ندارد یعنی کاربر جدید یا هنوز پسورد ست نکرده
+      isNewUser: !user.password,
       expiresIn: OTP_TTL_MINUTES * 60,
     };
   }
 
-  // ---------------------------------------------------------------------
-  // تایید کد OTP و صدور accessToken/refreshToken
-  // ---------------------------------------------------------------------
   async verifyOtp(otpToken: string, code: string) {
     let payload: OtpTokenPayload;
     try {
@@ -100,14 +91,14 @@ export class AuthService {
 
     const user = await this.userRepo.findOne({
       where: { id: payload.sub },
-      select: [
-        'id',
-        'username',
-        'role',
-        'otpCode',
-        'otpExpiresAt',
-        'password',
-      ],
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        otpCode: true,
+        otpExpiresAt: true,
+        password: true,
+      },
     });
 
     if (!user || !user.otpCode || !user.otpExpiresAt) {
@@ -118,7 +109,6 @@ export class AuthService {
       throw new UnauthorizedException('کد تایید منقضی شده است');
     }
 
-    // اگر OTP استاتیک فعال باشد (محیط توسعه)، همیشه کد ۱۲۳۴۵۶ پذیرفته می‌شود
     const isStaticMatch = this.staticOtpCode && code === this.staticOtpCode;
     const isHashMatch = await bcrypt.compare(code, user.otpCode);
 
@@ -126,7 +116,6 @@ export class AuthService {
       throw new UnauthorizedException('کد تایید نادرست است');
     }
 
-    // پاک کردن OTP بعد از استفاده موفق
     await this.userRepo.update(user.id, {
       otpCode: null,
       otpExpiresAt: null,
@@ -143,9 +132,6 @@ export class AuthService {
     };
   }
 
-  // ---------------------------------------------------------------------
-  // اعتبارسنجی accessToken؛ در صورت نامعتبر بودن، تلاش برای refresh
-  // ---------------------------------------------------------------------
   async validateToken(accessToken: string, refreshToken?: string) {
     try {
       const payload = this.jwtService.verify<JwtPayload>(accessToken);
@@ -164,8 +150,7 @@ export class AuthService {
         userId: user.id,
         role: user.role,
       };
-    } catch (err) {
-      // accessToken نامعتبر/منقضی است -> تلاش برای refresh
+    } catch {
       if (!refreshToken) {
         throw new UnauthorizedException('توکن نامعتبر است و refreshToken ارسال نشده');
       }
@@ -182,9 +167,6 @@ export class AuthService {
     }
   }
 
-  // ---------------------------------------------------------------------
-  // صدور توکن جدید بر اساس refreshToken معتبر
-  // ---------------------------------------------------------------------
   async refreshTokens(refreshTokenRaw: string) {
     let payload: JwtPayload;
     try {
@@ -211,7 +193,6 @@ export class AuthService {
       throw new UnauthorizedException('refreshToken یافت نشد یا باطل شده است');
     }
 
-    // ابطال توکن قبلی (rotation)
     await this.refreshTokenRepo.update(storedToken.id, { revoked: true });
 
     const user = await this.userRepo.findOne({ where: { id: payload.sub } });
@@ -223,9 +204,6 @@ export class AuthService {
     return { userId: user.id, role: user.role, ...tokens };
   }
 
-  // ---------------------------------------------------------------------
-  // تنظیم پسورد کاربر
-  // ---------------------------------------------------------------------
   async setPassword(userId: string, password: string) {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) {
@@ -238,9 +216,6 @@ export class AuthService {
     return { success: true };
   }
 
-  // ---------------------------------------------------------------------
-  // کمکی: صدور access + refresh token و ذخیره هش refresh در دیتابیس
-  // ---------------------------------------------------------------------
   private async issueTokens(userId: string, role: UserRole) {
     const accessPayload: JwtPayload = { sub: userId, role, type: 'access' };
     const refreshPayload: JwtPayload = { sub: userId, role, type: 'refresh' };
@@ -264,7 +239,6 @@ export class AuthService {
   }
 
   private hashToken(token: string): string {
-    // چون refreshToken خودش JWT با آنتروپی بالاست، sha256 برای جستجوی مساوی کافی و امن است
     return createHash('sha256').update(token).digest('hex');
   }
 
