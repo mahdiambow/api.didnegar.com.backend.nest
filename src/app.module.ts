@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { createObserveModule } from '@nestjs/observe';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
+import { AuthService } from './auth/auth.service.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -15,7 +14,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       serviceId: 'api.didnegar.com.backend.nest',
     }),
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [AuthService],
 })
 export class AppModule {}
