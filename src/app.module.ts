@@ -14,6 +14,8 @@ import { UsersModule } from './users/users.module.js';
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
       autoLoadEntities: true,
+      migrations: ['dist/database/migrations/*.js'],
+      migrationsRun: true,
       synchronize: process.env.NODE_ENV !== 'production',
     }),
     RolesModule,
