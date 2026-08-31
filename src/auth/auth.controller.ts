@@ -18,6 +18,8 @@ import { ValidateTokenDto } from './dto/validate-token.dto.js';
 import { ValidateTokenApiResponseDto } from './dto/validate-token-response.dto.js';
 import { SetPasswordDto } from './dto/set-password.dto.js';
 import { SetPasswordApiResponseDto } from './dto/set-password-response.dto.js';
+import { LoginWithPasswordDto } from './dto/login-with-password.dto.js';
+import { LoginWithPasswordApiResponseDto } from './dto/login-with-password-response.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
 @ApiTags('Auth')
@@ -47,6 +49,19 @@ export class AuthController {
   @ApiOkResponse({ type: VerifyOtpApiResponseDto })
   verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto.mobile, dto.code);
+  }
+
+  @Post('login-with-password')
+  @ApiResponseMeta({
+    code: 'LOGIN_SUCCESS',
+    message: 'Logged in successfully',
+  })
+  @ApiOperation({ summary: 'ورود با شماره موبایل و رمز عبور' })
+  @ApiBody({ type: LoginWithPasswordDto })
+  @ApiOkResponse({ type: LoginWithPasswordApiResponseDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
+  loginWithPassword(@Body() dto: LoginWithPasswordDto) {
+    return this.authService.loginWithPassword(dto.mobile, dto.password);
   }
 
   @Post('validate-token')

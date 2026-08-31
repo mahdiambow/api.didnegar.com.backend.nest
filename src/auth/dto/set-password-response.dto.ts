@@ -1,10 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
 import { createSuccessResponseDto } from '../../common/response/dto/create-success-response.dto.js';
-
-export class SetPasswordDataDto {}
+import { UserResponseDto } from './user-response.dto.js';
 
 export const SetPasswordApiResponseDto = createSuccessResponseDto(
-  SetPasswordDataDto,
+  UserResponseDto,
   {
     code: 'PASSWORD_SET',
     message: 'Password set successfully',

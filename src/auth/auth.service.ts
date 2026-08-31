@@ -9,6 +9,7 @@ import { User } from './entities/user.entity.js';
 import { RefreshToken } from './entities/refresh-token.entity.js';
 import { UserRole } from './enums/user-role.enum.js';
 import { JwtPayload } from './interfaces/jwt-payload.interface.js';
+import { toUserResponse } from './dto/user-response.dto.js';
 
 const OTP_TTL_MINUTES = 2;
 const ACCESS_TOKEN_TTL = '15m';
@@ -57,6 +58,47 @@ export class AuthService {
       ...(this.isProduction ? {} : { code }),
       isNewUser: !user.password,
       expiresIn: OTP_TTL_MINUTES * 60,
+    };
+  }
+
+  async loginWithPassword(mobile: string, password: string) {
+    const user = await this.userRepo
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.username = :mobile', { mobile })
+      .getOne();
+
+    if (!user || !user.password) {
+      throw new ApiException(
+        'INVALID_CREDENTIALS',
+        'شماره موبایل یا رمز عبور نادرست است',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    if (!user.isActive) {
+      throw new ApiException(
+        'USER_INACTIVE',
+        'حساب کاربری غیرفعال است',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      throw new ApiException(
+        'INVALID_CREDENTIALS',
+        'شماره موبایل یا رمز عبور نادرست است',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const tokens = await this.issueTokens(user.id, user.role);
+
+    return {
+      user: toUserResponse(user),
+      ...tokens,
     };
   }
 
@@ -232,7 +274,16 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 10);
     await this.userRepo.update(userId, { password: hashedPassword });
 
-    return {};
+    const updatedUser = await this.userRepo.findOne({ where: { id: userId } });
+    if (!updatedUser) {
+      throw new ApiException(
+        'USER_NOT_FOUND',
+        'کاربر یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return toUserResponse(updatedUser);
   }
 
   private async sendOtpSms(mobile: string, code: string): Promise<void> {
