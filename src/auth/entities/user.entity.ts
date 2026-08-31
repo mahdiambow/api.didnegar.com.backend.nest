@@ -52,7 +52,7 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
   role: UserRole;
 
-  @Column({ type: 'varchar', length: 6, nullable: true, select: false })
+  @Column({ type: 'varchar', length: 72, nullable: true, select: false })
   otpCode: string | null;
 
   @Column({ type: 'timestamp', nullable: true, select: false })

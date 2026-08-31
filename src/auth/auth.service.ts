@@ -5,37 +5,29 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { Repository, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
 import { User } from './entities/user.entity.js';
 import { RefreshToken } from './entities/refresh-token.entity.js';
 import { UserRole } from './enums/user-role.enum.js';
-import {
-  JwtPayload,
-  OtpTokenPayload,
-} from './interfaces/jwt-payload.interface.js';
+import { JwtPayload } from './interfaces/jwt-payload.interface.js';
 
 const OTP_TTL_MINUTES = 2;
 const ACCESS_TOKEN_TTL = '15m';
 const REFRESH_TOKEN_TTL = '30d';
-const OTP_TOKEN_TTL = '5m';
 
 @Injectable()
 export class AuthService {
-  private readonly staticOtpCode: string | null;
+  private readonly isProduction = process.env.NODE_ENV === 'production';
+  private readonly devOtpCode = process.env.OTP_STATIC_CODE ?? '123456';
 
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepo: Repository<RefreshToken>,
     private readonly jwtService: JwtService,
-    private readonly config: ConfigService,
-  ) {
-    this.staticOtpCode =
-      this.config.get<string>('OTP_STATIC_CODE') ?? '123456';
-  }
+  ) {}
 
   async loginOrSignup(mobile: string) {
     let user = await this.userRepo.findOne({ where: { username: mobile } });
@@ -49,7 +41,10 @@ export class AuthService {
       user = await this.userRepo.save(user);
     }
 
-    const code = this.generateOtpCode();
+    const code = this.isProduction
+      ? this.generateRandomOtpCode()
+      : this.devOtpCode;
+
     const hashedCode = await bcrypt.hash(code, 10);
 
     await this.userRepo.update(user.id, {
@@ -57,40 +52,20 @@ export class AuthService {
       otpExpiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000),
     });
 
-    // TODO: اتصال به سرویس پیامک واقعی برای ارسال کد
-    console.log(`[OTP] ارسال کد ${code} به شماره ${mobile}`);
-
-    const otpTokenPayload: OtpTokenPayload = {
-      sub: user.id,
-      mobile: user.username,
-      purpose: 'otp',
-    };
-
-    const otpToken = this.jwtService.sign(otpTokenPayload, {
-      expiresIn: OTP_TOKEN_TTL,
-    });
+    if (this.isProduction) {
+      await this.sendOtpSms(mobile, code);
+    }
 
     return {
-      otpToken,
+      ...(this.isProduction ? {} : { code }),
       isNewUser: !user.password,
       expiresIn: OTP_TTL_MINUTES * 60,
     };
   }
 
-  async verifyOtp(otpToken: string, code: string) {
-    let payload: OtpTokenPayload;
-    try {
-      payload = this.jwtService.verify<OtpTokenPayload>(otpToken);
-    } catch {
-      throw new UnauthorizedException('توکن OTP نامعتبر یا منقضی شده است');
-    }
-
-    if (payload.purpose !== 'otp') {
-      throw new BadRequestException('توکن نامعتبر است');
-    }
-
+  async verifyOtp(mobile: string, code: string) {
     const user = await this.userRepo.findOne({
-      where: { id: payload.sub },
+      where: { username: mobile },
       select: {
         id: true,
         username: true,
@@ -109,10 +84,9 @@ export class AuthService {
       throw new UnauthorizedException('کد تایید منقضی شده است');
     }
 
-    const isStaticMatch = this.staticOtpCode && code === this.staticOtpCode;
     const isHashMatch = await bcrypt.compare(code, user.otpCode);
 
-    if (!isStaticMatch && !isHashMatch) {
+    if (!isHashMatch) {
       throw new UnauthorizedException('کد تایید نادرست است');
     }
 
@@ -216,6 +190,11 @@ export class AuthService {
     return { success: true };
   }
 
+  private async sendOtpSms(mobile: string, code: string): Promise<void> {
+    // TODO: اتصال به سرویس پیامک واقعی
+    console.log(`[SMS] ارسال کد ${code} به شماره ${mobile}`);
+  }
+
   private async issueTokens(userId: string, role: UserRole) {
     const accessPayload: JwtPayload = { sub: userId, role, type: 'access' };
     const refreshPayload: JwtPayload = { sub: userId, role, type: 'refresh' };
@@ -242,10 +221,7 @@ export class AuthService {
     return createHash('sha256').update(token).digest('hex');
   }
 
-  private generateOtpCode(): string {
-    if (this.staticOtpCode) {
-      return this.staticOtpCode;
-    }
+  private generateRandomOtpCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 }

@@ -5,9 +5,3 @@ export interface JwtPayload {
   role: UserRole;
   type: 'access' | 'refresh';
 }
-
-export interface OtpTokenPayload {
-  sub: string;
-  mobile: string;
-  purpose: 'otp';
-}
