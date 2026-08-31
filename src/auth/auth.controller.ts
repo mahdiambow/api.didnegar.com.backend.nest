@@ -5,6 +5,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
@@ -21,13 +22,21 @@ import { SetPasswordApiResponseDto } from './dto/set-password-response.dto.js';
 import { LoginWithPasswordDto } from './dto/login-with-password.dto.js';
 import { LoginWithPasswordApiResponseDto } from './dto/login-with-password-response.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
+import { AuthThrottlerGuard } from './guards/auth-throttler.guard.js';
+import {
+  LoginThrottle,
+  OtpSendThrottle,
+  OtpVerifyThrottle,
+} from './decorators/auth-throttle.decorator.js';
 
 @ApiTags('Auth')
+@UseGuards(AuthThrottlerGuard)
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login-or-signup')
+  @OtpSendThrottle()
   @ApiResponseMeta({
     code: 'OTP_SENT',
     message: 'OTP sent successfully',
@@ -35,11 +44,13 @@ export class AuthController {
   @ApiOperation({ summary: 'ورود / ثبت‌نام با شماره موبایل و ارسال OTP' })
   @ApiBody({ type: LoginOrSignupDto })
   @ApiOkResponse({ type: LoginOrSignupApiResponseDto })
+  @ApiTooManyRequestsResponse({ type: ApiErrorResponseDto })
   loginOrSignup(@Body() dto: LoginOrSignupDto) {
     return this.authService.loginOrSignup(dto.mobile);
   }
 
   @Post('verify-otp')
+  @OtpVerifyThrottle()
   @ApiResponseMeta({
     code: 'OTP_VERIFIED',
     message: 'OTP verified successfully',
@@ -47,11 +58,13 @@ export class AuthController {
   @ApiOperation({ summary: 'تایید کد OTP با شماره موبایل و دریافت token' })
   @ApiBody({ type: VerifyOtpDto })
   @ApiOkResponse({ type: VerifyOtpApiResponseDto })
+  @ApiTooManyRequestsResponse({ type: ApiErrorResponseDto })
   verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto.mobile, dto.code);
   }
 
   @Post('login-with-password')
+  @LoginThrottle()
   @ApiResponseMeta({
     code: 'LOGIN_SUCCESS',
     message: 'Logged in successfully',
@@ -60,6 +73,7 @@ export class AuthController {
   @ApiBody({ type: LoginWithPasswordDto })
   @ApiOkResponse({ type: LoginWithPasswordApiResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
+  @ApiTooManyRequestsResponse({ type: ApiErrorResponseDto })
   loginWithPassword(@Body() dto: LoginWithPasswordDto) {
     return this.authService.loginWithPassword(dto.mobile, dto.password);
   }

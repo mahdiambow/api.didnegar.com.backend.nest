@@ -8,10 +8,11 @@ import { toUserResponse } from './dto/user-response.dto.js';
 import { RolesSeedService } from '../roles/roles.seed.service.js';
 import { UserRepository } from './repositories/user.repository.js';
 import { RefreshTokenRepository } from './repositories/refresh-token.repository.js';
-
-const OTP_TTL_MINUTES = 2;
-const ACCESS_TOKEN_TTL = '15m';
-const REFRESH_TOKEN_TTL = '30d';
+import {
+  authConfig,
+  otpTtlMs,
+  refreshTokenExpiresAt,
+} from './config/auth.config.js';
 
 @Injectable()
 export class AuthService {
@@ -47,7 +48,7 @@ export class AuthService {
 
     await this.userRepository.update(user.id, {
       otpCode: hashedCode,
-      otpExpiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000),
+      otpExpiresAt: new Date(Date.now() + otpTtlMs()),
     });
 
     if (this.isProduction) {
@@ -57,7 +58,7 @@ export class AuthService {
     return {
       ...(this.isProduction ? {} : { code }),
       isNewUser: !user.password,
-      expiresIn: OTP_TTL_MINUTES * 60,
+      expiresIn: authConfig.otpTtlMinutes * 60,
     };
   }
 
@@ -286,17 +287,17 @@ export class AuthService {
     };
 
     const accessToken = this.jwtService.sign(accessPayload, {
-      expiresIn: ACCESS_TOKEN_TTL,
+      expiresIn: authConfig.accessTokenTtl,
     });
     const refreshToken = this.jwtService.sign(refreshPayload, {
-      expiresIn: REFRESH_TOKEN_TTL,
+      expiresIn: authConfig.refreshTokenTtl,
     });
 
     await this.refreshTokenRepository.save(
       this.refreshTokenRepository.create({
         userId,
         tokenHash: this.hashToken(refreshToken),
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        expiresAt: refreshTokenExpiresAt(),
       }),
     );
 

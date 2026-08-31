@@ -15,9 +15,18 @@ async function bootstrap() {
   const { createValidationPipe } = await import(
     './common/pipes/validation.pipe.js'
   );
+  const helmet = (await import('helmet')).default;
 
   const app = await NestFactory.create(AppModule);
   const reflector = app.get(Reflector);
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  app.use(
+    helmet({
+      contentSecurityPolicy: isProduction ? undefined : false,
+      crossOriginEmbedderPolicy: isProduction,
+    }),
+  );
 
   app.useGlobalPipes(createValidationPipe());
   app.useGlobalInterceptors(new TransformInterceptor(reflector));
