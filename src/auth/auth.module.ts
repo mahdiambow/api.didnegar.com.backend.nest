@@ -8,7 +8,8 @@ import { AuthTestController } from './auth-test.controller.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { PermissionsGuard } from './guards/permissions.guard.js';
 import { RoleGuard } from './guards/role.guard.js';
-import { Role } from '../roles/entities/role.entity.js';
+import { UserRepository } from './repositories/user.repository.js';
+import { RefreshTokenRepository } from './repositories/refresh-token.repository.js';
 import { User } from './entities/user.entity.js';
 import { UserProfile } from './entities/user-profile.entity.js';
 import { UserAddress } from './entities/user-address.entity.js';
@@ -22,7 +23,6 @@ import { RolesModule } from '../roles/roles.module.js';
       UserProfile,
       UserAddress,
       RefreshToken,
-      Role,
     ]),
     forwardRef(() => RolesModule),
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -31,13 +31,22 @@ import { RolesModule } from '../roles/roles.module.js';
     }),
   ],
   controllers: [AuthController, AuthTestController],
-  providers: [AuthService, JwtStrategy, PermissionsGuard, RoleGuard],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    PermissionsGuard,
+    RoleGuard,
+    UserRepository,
+    RefreshTokenRepository,
+  ],
   exports: [
     AuthService,
     JwtStrategy,
     PassportModule,
     PermissionsGuard,
     RoleGuard,
+    UserRepository,
+    RefreshTokenRepository,
   ],
 })
 export class AuthModule {}

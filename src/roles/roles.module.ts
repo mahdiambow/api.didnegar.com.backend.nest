@@ -4,6 +4,7 @@ import { Role } from './entities/role.entity.js';
 import { RolesService } from './roles.service.js';
 import { RolesController } from './roles.controller.js';
 import { RolesSeedService } from './roles.seed.service.js';
+import { RoleRepository } from './repositories/role.repository.js';
 import { AuthModule } from '../auth/auth.module.js';
 
 @Module({
@@ -12,7 +13,7 @@ import { AuthModule } from '../auth/auth.module.js';
     forwardRef(() => AuthModule),
   ],
   controllers: [RolesController],
-  providers: [RolesService, RolesSeedService],
-  exports: [RolesService, RolesSeedService, TypeOrmModule],
+  providers: [RolesService, RolesSeedService, RoleRepository],
+  exports: [RolesService, RolesSeedService, RoleRepository],
 })
 export class RolesModule {}

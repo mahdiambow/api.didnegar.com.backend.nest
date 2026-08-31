@@ -1,22 +1,21 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import {
   ALL_PERMISSIONS,
   PERMISSION_DEFINITIONS,
 } from './permissions.js';
-import { Role } from './entities/role.entity.js';
 import { CreateRoleDto } from './dto/create-role.dto.js';
 import { UpdateRoleDto } from './dto/update-role.dto.js';
 import { toRoleResponse } from './dto/role-response.dto.js';
-import { getPaginationParams, paginatedList } from '../common/response/helpers/paginated-response.helper.js';
+import {
+  getPaginationParams,
+  paginatedList,
+} from '../common/response/helpers/paginated-response.helper.js';
+import { RoleRepository } from './repositories/role.repository.js';
 
 @Injectable()
 export class RolesService {
-  constructor(
-    @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
-  ) {}
+  constructor(private readonly roleRepository: RoleRepository) {}
 
   getPermissions() {
     return {
@@ -27,11 +26,10 @@ export class RolesService {
 
   async findAll(query: { page?: string | number; limit?: string | number }) {
     const { page, limit, offset } = getPaginationParams(query);
-    const [items, total] = await this.roleRepo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip: offset,
-      take: limit,
-    });
+    const [items, total] = await this.roleRepository.findPaginated(
+      offset,
+      limit,
+    );
 
     return paginatedList(
       items.map(toRoleResponse),
@@ -42,7 +40,7 @@ export class RolesService {
   }
 
   async findOne(id: string) {
-    const role = await this.roleRepo.findOne({ where: { id } });
+    const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new ApiException(
         'ROLE_NOT_FOUND',
@@ -54,7 +52,7 @@ export class RolesService {
   }
 
   async create(dto: CreateRoleDto) {
-    const existing = await this.roleRepo.findOne({ where: { slug: dto.slug } });
+    const existing = await this.roleRepository.findBySlug(dto.slug);
     if (existing) {
       throw new ApiException(
         'ROLE_ALREADY_EXISTS',
@@ -65,8 +63,8 @@ export class RolesService {
 
     this.assertValidPermissions(dto.permissions);
 
-    const role = await this.roleRepo.save(
-      this.roleRepo.create({
+    const role = await this.roleRepository.save(
+      this.roleRepository.create({
         slug: dto.slug,
         name: dto.name,
         permissions: dto.permissions,
@@ -78,7 +76,7 @@ export class RolesService {
   }
 
   async update(id: string, dto: UpdateRoleDto) {
-    const role = await this.roleRepo.findOne({ where: { id } });
+    const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new ApiException(
         'ROLE_NOT_FOUND',
@@ -96,9 +94,7 @@ export class RolesService {
     }
 
     if (dto.slug && dto.slug !== role.slug) {
-      const slugTaken = await this.roleRepo.findOne({
-        where: { slug: dto.slug },
-      });
+      const slugTaken = await this.roleRepository.findBySlug(dto.slug);
       if (slugTaken) {
         throw new ApiException(
           'ROLE_ALREADY_EXISTS',
@@ -113,12 +109,12 @@ export class RolesService {
     }
 
     Object.assign(role, dto);
-    const updated = await this.roleRepo.save(role);
+    const updated = await this.roleRepository.save(role);
     return toRoleResponse(updated);
   }
 
   async remove(id: string) {
-    const role = await this.roleRepo.findOne({ where: { id } });
+    const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new ApiException(
         'ROLE_NOT_FOUND',
@@ -135,11 +131,7 @@ export class RolesService {
       );
     }
 
-    const usersCount = await this.roleRepo.manager
-      .createQueryBuilder()
-      .from('users', 'user')
-      .where('user.roleId = :roleId', { roleId: id })
-      .getCount();
+    const usersCount = await this.roleRepository.countUsersByRoleId(id);
 
     if (usersCount > 0) {
       throw new ApiException(
@@ -149,7 +141,7 @@ export class RolesService {
       );
     }
 
-    await this.roleRepo.remove(role);
+    await this.roleRepository.remove(role);
     return {};
   }
 

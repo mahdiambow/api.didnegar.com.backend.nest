@@ -1,32 +1,29 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
-import { User } from '../auth/entities/user.entity.js';
-import { Role } from '../roles/entities/role.entity.js';
 import { toUserResponse } from '../auth/dto/user-response.dto.js';
+import { UserRepository } from '../auth/repositories/user.repository.js';
+import { RoleRepository } from '../roles/repositories/role.repository.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User) private readonly userRepo: Repository<User>,
-    @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
+    private readonly userRepository: UserRepository,
+    private readonly roleRepository: RoleRepository,
   ) {}
 
   async findAll(query: { page?: string | number; limit?: string | number }) {
     const { page, limit, offset } = getPaginationParams(query);
-    const [items, total] = await this.userRepo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip: offset,
-      take: limit,
-    });
+    const [items, total] = await this.userRepository.findPaginated(
+      offset,
+      limit,
+    );
 
     return paginatedList(
       items.map(toUserResponse),
@@ -37,7 +34,7 @@ export class UsersService {
   }
 
   async findOne(id: string) {
-    const user = await this.userRepo.findOne({ where: { id } });
+    const user = await this.userRepository.findById(id);
     if (!user) {
       throw new ApiException(
         'USER_NOT_FOUND',
@@ -49,9 +46,7 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto) {
-    const existing = await this.userRepo.findOne({
-      where: { username: dto.username },
-    });
+    const existing = await this.userRepository.findByUsername(dto.username);
     if (existing) {
       throw new ApiException(
         'USER_ALREADY_EXISTS',
@@ -62,26 +57,27 @@ export class UsersService {
 
     await this.ensureRoleExists(dto.roleId);
 
-    const user = this.userRepo.create({
-      username: dto.username,
-      roleId: dto.roleId,
-      email: dto.email ?? null,
-      displayName: dto.displayName ?? null,
-      firstName: dto.firstName ?? null,
-      lastName: dto.lastName ?? null,
-      isActive: dto.isActive ?? true,
-      password: dto.password
-        ? await bcrypt.hash(dto.password, 10)
-        : null,
-    });
+    const saved = await this.userRepository.save(
+      this.userRepository.create({
+        username: dto.username,
+        roleId: dto.roleId,
+        email: dto.email ?? null,
+        displayName: dto.displayName ?? null,
+        firstName: dto.firstName ?? null,
+        lastName: dto.lastName ?? null,
+        isActive: dto.isActive ?? true,
+        password: dto.password
+          ? await bcrypt.hash(dto.password, 10)
+          : null,
+      }),
+    );
 
-    const saved = await this.userRepo.save(user);
-    const loaded = await this.userRepo.findOneOrFail({ where: { id: saved.id } });
+    const loaded = await this.userRepository.findByIdOrFail(saved.id);
     return toUserResponse(loaded);
   }
 
   async update(id: string, dto: UpdateUserDto) {
-    const user = await this.userRepo.findOne({ where: { id } });
+    const user = await this.userRepository.findById(id);
     if (!user) {
       throw new ApiException(
         'USER_NOT_FOUND',
@@ -106,13 +102,13 @@ export class UsersService {
       user.password = await bcrypt.hash(dto.password, 10);
     }
 
-    await this.userRepo.save(user);
-    const loaded = await this.userRepo.findOneOrFail({ where: { id } });
+    await this.userRepository.save(user);
+    const loaded = await this.userRepository.findByIdOrFail(id);
     return toUserResponse(loaded);
   }
 
   async remove(id: string) {
-    const user = await this.userRepo.findOne({ where: { id } });
+    const user = await this.userRepository.findById(id);
     if (!user) {
       throw new ApiException(
         'USER_NOT_FOUND',
@@ -121,12 +117,12 @@ export class UsersService {
       );
     }
 
-    await this.userRepo.remove(user);
+    await this.userRepository.remove(user);
     return {};
   }
 
   private async ensureRoleExists(roleId: string) {
-    const role = await this.roleRepo.findOne({ where: { id: roleId } });
+    const role = await this.roleRepository.findById(roleId);
     if (!role) {
       throw new ApiException(
         'ROLE_NOT_FOUND',

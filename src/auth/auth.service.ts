@@ -1,15 +1,13 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
-import { Repository, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
 import { ApiException } from '../common/exceptions/api.exception.js';
-import { User } from './entities/user.entity.js';
-import { RefreshToken } from './entities/refresh-token.entity.js';
 import { JwtPayload } from './interfaces/jwt-payload.interface.js';
 import { toUserResponse } from './dto/user-response.dto.js';
 import { RolesSeedService } from '../roles/roles.seed.service.js';
+import { UserRepository } from './repositories/user.repository.js';
+import { RefreshTokenRepository } from './repositories/refresh-token.repository.js';
 
 const OTP_TTL_MINUTES = 2;
 const ACCESS_TOKEN_TTL = '15m';
@@ -21,24 +19,24 @@ export class AuthService {
   private readonly devOtpCode = process.env.OTP_STATIC_CODE ?? '123456';
 
   constructor(
-    @InjectRepository(User) private readonly userRepo: Repository<User>,
-    @InjectRepository(RefreshToken)
-    private readonly refreshTokenRepo: Repository<RefreshToken>,
+    private readonly userRepository: UserRepository,
+    private readonly refreshTokenRepository: RefreshTokenRepository,
     private readonly jwtService: JwtService,
     private readonly rolesSeedService: RolesSeedService,
   ) {}
 
   async loginOrSignup(mobile: string) {
-    let user = await this.userRepo.findOne({ where: { username: mobile } });
+    let user = await this.userRepository.findByUsername(mobile);
 
     if (!user) {
       const defaultRole = await this.rolesSeedService.getDefaultUserRole();
-      user = this.userRepo.create({
-        username: mobile,
-        isActive: true,
-        roleId: defaultRole.id,
-      });
-      user = await this.userRepo.save(user);
+      user = await this.userRepository.save(
+        this.userRepository.create({
+          username: mobile,
+          isActive: true,
+          roleId: defaultRole.id,
+        }),
+      );
     }
 
     const code = this.isProduction
@@ -47,7 +45,7 @@ export class AuthService {
 
     const hashedCode = await bcrypt.hash(code, 10);
 
-    await this.userRepo.update(user.id, {
+    await this.userRepository.update(user.id, {
       otpCode: hashedCode,
       otpExpiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000),
     });
@@ -64,11 +62,7 @@ export class AuthService {
   }
 
   async loginWithPassword(mobile: string, password: string) {
-    const user = await this.userRepo
-      .createQueryBuilder('user')
-      .addSelect('user.password')
-      .where('user.username = :mobile', { mobile })
-      .getOne();
+    const user = await this.userRepository.findByUsernameWithPassword(mobile);
 
     if (!user || !user.password) {
       throw new ApiException(
@@ -105,12 +99,7 @@ export class AuthService {
   }
 
   async verifyOtp(mobile: string, code: string) {
-    const user = await this.userRepo
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.role', 'role')
-      .addSelect(['user.otpCode', 'user.otpExpiresAt', 'user.password'])
-      .where('user.username = :mobile', { mobile })
-      .getOne();
+    const user = await this.userRepository.findByUsernameForOtpVerify(mobile);
 
     if (!user || !user.otpCode || !user.otpExpiresAt) {
       throw new ApiException(
@@ -138,7 +127,7 @@ export class AuthService {
       );
     }
 
-    await this.userRepo.update(user.id, {
+    await this.userRepository.update(user.id, {
       otpCode: null,
       otpExpiresAt: null,
       isActive: true,
@@ -165,7 +154,7 @@ export class AuthService {
         );
       }
 
-      const user = await this.userRepo.findOne({ where: { id: payload.sub } });
+      const user = await this.userRepository.findById(payload.sub);
       if (!user || !user.isActive) {
         throw new ApiException(
           'USER_NOT_FOUND',
@@ -226,14 +215,10 @@ export class AuthService {
     }
 
     const tokenHash = this.hashToken(refreshTokenRaw);
-    const storedToken = await this.refreshTokenRepo.findOne({
-      where: {
-        userId: payload.sub,
-        tokenHash,
-        revoked: false,
-        expiresAt: MoreThan(new Date()),
-      },
-    });
+    const storedToken = await this.refreshTokenRepository.findValidToken(
+      payload.sub,
+      tokenHash,
+    );
 
     if (!storedToken) {
       throw new ApiException(
@@ -243,9 +228,9 @@ export class AuthService {
       );
     }
 
-    await this.refreshTokenRepo.update(storedToken.id, { revoked: true });
+    await this.refreshTokenRepository.revoke(storedToken.id);
 
-    const user = await this.userRepo.findOne({ where: { id: payload.sub } });
+    const user = await this.userRepository.findById(payload.sub);
     if (!user || !user.isActive) {
       throw new ApiException(
         'USER_NOT_FOUND',
@@ -259,7 +244,7 @@ export class AuthService {
   }
 
   async setPassword(userId: string, password: string) {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
+    const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new ApiException(
         'USER_NOT_FOUND',
@@ -269,9 +254,9 @@ export class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    await this.userRepo.update(userId, { password: hashedPassword });
+    await this.userRepository.update(userId, { password: hashedPassword });
 
-    const updatedUser = await this.userRepo.findOne({ where: { id: userId } });
+    const updatedUser = await this.userRepository.findById(userId);
     if (!updatedUser) {
       throw new ApiException(
         'USER_NOT_FOUND',
@@ -307,8 +292,8 @@ export class AuthService {
       expiresIn: REFRESH_TOKEN_TTL,
     });
 
-    await this.refreshTokenRepo.save(
-      this.refreshTokenRepo.create({
+    await this.refreshTokenRepository.save(
+      this.refreshTokenRepository.create({
         userId,
         tokenHash: this.hashToken(refreshToken),
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),

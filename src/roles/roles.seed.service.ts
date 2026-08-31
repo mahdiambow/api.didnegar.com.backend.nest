@@ -1,17 +1,13 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import {
   DEFAULT_ROLE_PERMISSIONS,
   DEFAULT_ROLE_SLUGS,
 } from './permissions.js';
-import { Role } from './entities/role.entity.js';
+import { RoleRepository } from './repositories/role.repository.js';
 
 @Injectable()
 export class RolesSeedService implements OnModuleInit {
-  constructor(
-    @InjectRepository(Role) private readonly roleRepo: Repository<Role>,
-  ) {}
+  constructor(private readonly roleRepository: RoleRepository) {}
 
   async onModuleInit() {
     await this.seedRole(DEFAULT_ROLE_SLUGS.USER, 'کاربر', false);
@@ -19,13 +15,13 @@ export class RolesSeedService implements OnModuleInit {
   }
 
   private async seedRole(slug: string, name: string, isSystem: boolean) {
-    const existing = await this.roleRepo.findOne({ where: { slug } });
+    const existing = await this.roleRepository.findBySlug(slug);
     if (existing) {
       return existing;
     }
 
-    return this.roleRepo.save(
-      this.roleRepo.create({
+    return this.roleRepository.save(
+      this.roleRepository.create({
         slug,
         name,
         isSystem,
@@ -38,10 +34,8 @@ export class RolesSeedService implements OnModuleInit {
     );
   }
 
-  async getDefaultUserRole(): Promise<Role> {
-    const role = await this.roleRepo.findOne({
-      where: { slug: DEFAULT_ROLE_SLUGS.USER },
-    });
+  async getDefaultUserRole() {
+    const role = await this.roleRepository.findBySlug(DEFAULT_ROLE_SLUGS.USER);
     if (!role) {
       throw new Error('Default user role not found');
     }
