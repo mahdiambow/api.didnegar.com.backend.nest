@@ -18,8 +18,8 @@ import { UsersModule } from './users/users.module.js';
       migrationsRun: true,
       synchronize: process.env.NODE_ENV !== 'production',
     }),
-    RolesModule,
     AuthModule,
+    RolesModule,
     UsersModule,
   ],
 })
