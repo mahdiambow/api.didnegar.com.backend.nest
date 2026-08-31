@@ -7,15 +7,17 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
+import { ApiErrorResponseDto } from '../common/response/dto/api-error-response.dto.js';
 import { AuthService } from './auth.service.js';
 import { LoginOrSignupDto } from './dto/login-or-signup.dto.js';
-import { LoginOrSignupResponseDto } from './dto/login-or-signup-response.dto.js';
+import { LoginOrSignupApiResponseDto } from './dto/login-or-signup-response.dto.js';
 import { VerifyOtpDto } from './dto/verify-otp.dto.js';
-import { VerifyOtpResponseDto } from './dto/verify-otp-response.dto.js';
+import { VerifyOtpApiResponseDto } from './dto/verify-otp-response.dto.js';
 import { ValidateTokenDto } from './dto/validate-token.dto.js';
-import { ValidateTokenResponseDto } from './dto/validate-token-response.dto.js';
+import { ValidateTokenApiResponseDto } from './dto/validate-token-response.dto.js';
 import { SetPasswordDto } from './dto/set-password.dto.js';
-import { SetPasswordResponseDto } from './dto/set-password-response.dto.js';
+import { SetPasswordApiResponseDto } from './dto/set-password-response.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 
 @ApiTags('Auth')
@@ -24,38 +26,54 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login-or-signup')
+  @ApiResponseMeta({
+    code: 'OTP_SENT',
+    message: 'OTP sent successfully',
+  })
   @ApiOperation({ summary: 'ورود / ثبت‌نام با شماره موبایل و ارسال OTP' })
   @ApiBody({ type: LoginOrSignupDto })
-  @ApiOkResponse({ type: LoginOrSignupResponseDto })
+  @ApiOkResponse({ type: LoginOrSignupApiResponseDto })
   loginOrSignup(@Body() dto: LoginOrSignupDto) {
     return this.authService.loginOrSignup(dto.mobile);
   }
 
   @Post('verify-otp')
+  @ApiResponseMeta({
+    code: 'OTP_VERIFIED',
+    message: 'OTP verified successfully',
+  })
   @ApiOperation({ summary: 'تایید کد OTP با شماره موبایل و دریافت token' })
   @ApiBody({ type: VerifyOtpDto })
-  @ApiOkResponse({ type: VerifyOtpResponseDto })
+  @ApiOkResponse({ type: VerifyOtpApiResponseDto })
   verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto.mobile, dto.code);
   }
 
   @Post('validate-token')
+  @ApiResponseMeta({
+    code: 'TOKEN_VALIDATED',
+    message: 'Token validated successfully',
+  })
   @ApiOperation({
     summary: 'اعتبارسنجی access token (با امکان refresh)',
   })
   @ApiBody({ type: ValidateTokenDto })
-  @ApiOkResponse({ type: ValidateTokenResponseDto })
+  @ApiOkResponse({ type: ValidateTokenApiResponseDto })
   validateToken(@Body() dto: ValidateTokenDto) {
     return this.authService.validateToken(dto.accessToken, dto.refreshToken);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('set-password')
+  @ApiResponseMeta({
+    code: 'PASSWORD_SET',
+    message: 'Password set successfully',
+  })
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'تنظیم رمز عبور برای کاربر لاگین‌شده' })
   @ApiBody({ type: SetPasswordDto })
-  @ApiOkResponse({ type: SetPasswordResponseDto })
-  @ApiUnauthorizedResponse({ description: 'توکن نامعتبر یا ارسال نشده' })
+  @ApiOkResponse({ type: SetPasswordApiResponseDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
   setPassword(
     @Req() req: { user: { sub: string } },
     @Body() dto: SetPasswordDto,

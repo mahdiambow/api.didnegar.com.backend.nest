@@ -1,21 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { createSuccessResponseDto } from '../../common/response/dto/create-success-response.dto.js';
 
-export class LoginOrSignupResponseDto {
+export class LoginOrSignupDataDto {
   @ApiPropertyOptional({
     example: '123456',
-    description: 'کد OTP — فقط در محیط development برگردانده می‌شود',
+    description: 'فقط در محیط development',
   })
   code?: string;
 
-  @ApiProperty({
-    example: true,
-    description: 'آیا کاربر جدید است یا هنوز رمز عبور تنظیم نکرده',
-  })
+  @ApiProperty({ example: true })
   isNewUser: boolean;
 
-  @ApiProperty({
-    example: 120,
-    description: 'مدت اعتبار OTP به ثانیه',
-  })
+  @ApiProperty({ example: 120 })
   expiresIn: number;
 }
+
+export const LoginOrSignupApiResponseDto = createSuccessResponseDto(
+  LoginOrSignupDataDto,
+  {
+    code: 'OTP_SENT',
+    message: 'OTP sent successfully',
+    name: 'LoginOrSignup',
+  },
+);

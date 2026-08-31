@@ -3,13 +3,25 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 async function bootstrap() {
-  const { ValidationPipe } = await import('@nestjs/common');
-  const { NestFactory } = await import('@nestjs/core');
+  const { NestFactory, Reflector } = await import('@nestjs/core');
   const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
   const { AppModule } = await import('./app.module.js');
+  const { TransformInterceptor } = await import(
+    './common/interceptors/transform.interceptor.js'
+  );
+  const { HttpExceptionFilter } = await import(
+    './common/filters/http-exception.filter.js'
+  );
+  const { createValidationPipe } = await import(
+    './common/pipes/validation.pipe.js'
+  );
 
   const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  const reflector = app.get(Reflector);
+
+  app.useGlobalPipes(createValidationPipe());
+  app.useGlobalInterceptors(new TransformInterceptor(reflector));
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Didnegar API')

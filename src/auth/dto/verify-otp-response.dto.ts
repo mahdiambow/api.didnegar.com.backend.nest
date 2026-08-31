@@ -1,37 +1,29 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { createSuccessResponseDto } from '../../common/response/dto/create-success-response.dto.js';
 import { UserRole } from '../enums/user-role.enum.js';
 
-export class VerifyOtpResponseDto {
-  @ApiProperty({
-    example: '550e8400-e29b-41d4-a716-446655440000',
-    description: 'شناسه کاربر',
-  })
+export class VerifyOtpDataDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   userId: string;
 
-  @ApiProperty({
-    example: UserRole.USER,
-    enum: UserRole,
-    description: 'نقش کاربر',
-  })
+  @ApiProperty({ example: UserRole.USER, enum: UserRole })
   role: UserRole;
 
-  @ApiProperty({
-    example: false,
-    description: 'آیا کاربر رمز عبور تنظیم کرده است',
-  })
+  @ApiProperty({ example: false })
   hasPassword: boolean;
 
-  @ApiProperty({
-    example:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwicm9sZSI6InVzZXIiLCJ0eXBlIjoiYWNjZXNzIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjE3MDAwMDA5MDB9.example',
-    description: 'Access token (۱۵ دقیقه اعتبار)',
-  })
+  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   accessToken: string;
 
-  @ApiProperty({
-    example:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwicm9sZSI6InVzZXIiLCJ0eXBlIjoicmVmcmVzaCIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNzAzMDAwMDAwfQ.example',
-    description: 'Refresh token (۳۰ روز اعتبار)',
-  })
+  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   refreshToken: string;
 }
+
+export const VerifyOtpApiResponseDto = createSuccessResponseDto(
+  VerifyOtpDataDto,
+  {
+    code: 'OTP_VERIFIED',
+    message: 'OTP verified successfully',
+    name: 'VerifyOtp',
+  },
+);

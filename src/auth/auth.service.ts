@@ -1,13 +1,10 @@
-import {
-  BadRequestException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
+import { ApiException } from '../common/exceptions/api.exception.js';
 import { User } from './entities/user.entity.js';
 import { RefreshToken } from './entities/refresh-token.entity.js';
 import { UserRole } from './enums/user-role.enum.js';
@@ -77,17 +74,29 @@ export class AuthService {
     });
 
     if (!user || !user.otpCode || !user.otpExpiresAt) {
-      throw new UnauthorizedException('درخواست کد معتبری یافت نشد');
+      throw new ApiException(
+        'OTP_REQUEST_NOT_FOUND',
+        'درخواست کد معتبری یافت نشد',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     if (user.otpExpiresAt.getTime() < Date.now()) {
-      throw new UnauthorizedException('کد تایید منقضی شده است');
+      throw new ApiException(
+        'OTP_EXPIRED',
+        'کد تایید منقضی شده است',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     const isHashMatch = await bcrypt.compare(code, user.otpCode);
 
     if (!isHashMatch) {
-      throw new UnauthorizedException('کد تایید نادرست است');
+      throw new ApiException(
+        'INVALID_OTP',
+        'کد تایید نادرست است',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     await this.userRepo.update(user.id, {
@@ -110,12 +119,20 @@ export class AuthService {
     try {
       const payload = this.jwtService.verify<JwtPayload>(accessToken);
       if (payload.type !== 'access') {
-        throw new UnauthorizedException('توکن نامعتبر است');
+        throw new ApiException(
+          'INVALID_TOKEN',
+          'توکن نامعتبر است',
+          HttpStatus.UNAUTHORIZED,
+        );
       }
 
       const user = await this.userRepo.findOne({ where: { id: payload.sub } });
       if (!user || !user.isActive) {
-        throw new UnauthorizedException('کاربر یافت نشد یا غیرفعال است');
+        throw new ApiException(
+          'USER_NOT_FOUND',
+          'کاربر یافت نشد یا غیرفعال است',
+          HttpStatus.UNAUTHORIZED,
+        );
       }
 
       return {
@@ -124,9 +141,17 @@ export class AuthService {
         userId: user.id,
         role: user.role,
       };
-    } catch {
+    } catch (error) {
+      if (error instanceof ApiException) {
+        throw error;
+      }
+
       if (!refreshToken) {
-        throw new UnauthorizedException('توکن نامعتبر است و refreshToken ارسال نشده');
+        throw new ApiException(
+          'REFRESH_TOKEN_REQUIRED',
+          'توکن نامعتبر است و refreshToken ارسال نشده',
+          HttpStatus.UNAUTHORIZED,
+        );
       }
 
       const refreshed = await this.refreshTokens(refreshToken);
@@ -146,11 +171,19 @@ export class AuthService {
     try {
       payload = this.jwtService.verify<JwtPayload>(refreshTokenRaw);
     } catch {
-      throw new UnauthorizedException('refreshToken نامعتبر یا منقضی شده است');
+      throw new ApiException(
+        'INVALID_REFRESH_TOKEN',
+        'refreshToken نامعتبر یا منقضی شده است',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     if (payload.type !== 'refresh') {
-      throw new UnauthorizedException('نوع توکن نامعتبر است');
+      throw new ApiException(
+        'INVALID_TOKEN',
+        'نوع توکن نامعتبر است',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     const tokenHash = this.hashToken(refreshTokenRaw);
@@ -164,14 +197,22 @@ export class AuthService {
     });
 
     if (!storedToken) {
-      throw new UnauthorizedException('refreshToken یافت نشد یا باطل شده است');
+      throw new ApiException(
+        'INVALID_REFRESH_TOKEN',
+        'refreshToken یافت نشد یا باطل شده است',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     await this.refreshTokenRepo.update(storedToken.id, { revoked: true });
 
     const user = await this.userRepo.findOne({ where: { id: payload.sub } });
     if (!user || !user.isActive) {
-      throw new UnauthorizedException('کاربر یافت نشد یا غیرفعال است');
+      throw new ApiException(
+        'USER_NOT_FOUND',
+        'کاربر یافت نشد یا غیرفعال است',
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     const tokens = await this.issueTokens(user.id, user.role);
@@ -181,13 +222,17 @@ export class AuthService {
   async setPassword(userId: string, password: string) {
     const user = await this.userRepo.findOne({ where: { id: userId } });
     if (!user) {
-      throw new BadRequestException('کاربر یافت نشد');
+      throw new ApiException(
+        'USER_NOT_FOUND',
+        'کاربر یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await this.userRepo.update(userId, { password: hashedPassword });
 
-    return { success: true };
+    return {};
   }
 
   private async sendOtpSms(mobile: string, code: string): Promise<void> {
