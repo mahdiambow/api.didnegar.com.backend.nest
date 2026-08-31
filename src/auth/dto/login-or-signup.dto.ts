@@ -3,7 +3,7 @@ import { IsNotEmpty, IsString, Matches } from 'class-validator';
 
 export class LoginOrSignupDto {
   @ApiProperty({
-    example: '09123456789',
+    example: '09363078987',
     description: 'شماره موبایل (۱۱ رقم، با ۰۹ شروع شود)',
   })
   @IsString()

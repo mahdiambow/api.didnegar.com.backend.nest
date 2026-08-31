@@ -6,9 +6,11 @@ import {
   UpdateDateColumn,
   OneToOne,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
   Index,
 } from 'typeorm';
-import { UserRole } from '../enums/user-role.enum.js';
+import type { Role } from '../../roles/entities/role.entity.js';
 import type { UserProfile } from './user-profile.entity.js';
 import type { UserAddress } from './user-address.entity.js';
 import type { RefreshToken } from './refresh-token.entity.js';
@@ -49,8 +51,8 @@ export class User {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
-  role: UserRole;
+  @Column({ type: 'uuid' })
+  roleId: string;
 
   @Column({ type: 'varchar', length: 72, nullable: true, select: false })
   otpCode: string | null;
@@ -63,6 +65,10 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @ManyToOne('Role', 'users', { eager: true })
+  @JoinColumn({ name: 'roleId' })
+  role: Role;
 
   @OneToOne('UserProfile', 'user')
   profile: UserProfile;

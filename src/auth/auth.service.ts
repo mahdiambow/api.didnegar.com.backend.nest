@@ -7,9 +7,9 @@ import { createHash } from 'crypto';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import { User } from './entities/user.entity.js';
 import { RefreshToken } from './entities/refresh-token.entity.js';
-import { UserRole } from './enums/user-role.enum.js';
 import { JwtPayload } from './interfaces/jwt-payload.interface.js';
 import { toUserResponse } from './dto/user-response.dto.js';
+import { RolesSeedService } from '../roles/roles.seed.service.js';
 
 const OTP_TTL_MINUTES = 2;
 const ACCESS_TOKEN_TTL = '15m';
@@ -25,16 +25,18 @@ export class AuthService {
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepo: Repository<RefreshToken>,
     private readonly jwtService: JwtService,
+    private readonly rolesSeedService: RolesSeedService,
   ) {}
 
   async loginOrSignup(mobile: string) {
     let user = await this.userRepo.findOne({ where: { username: mobile } });
 
     if (!user) {
+      const defaultRole = await this.rolesSeedService.getDefaultUserRole();
       user = this.userRepo.create({
         username: mobile,
         isActive: true,
-        role: UserRole.USER,
+        roleId: defaultRole.id,
       });
       user = await this.userRepo.save(user);
     }
@@ -94,7 +96,7 @@ export class AuthService {
       );
     }
 
-    const tokens = await this.issueTokens(user.id, user.role);
+    const tokens = await this.issueTokens(user.id, user.role.slug);
 
     return {
       user: toUserResponse(user),
@@ -103,17 +105,12 @@ export class AuthService {
   }
 
   async verifyOtp(mobile: string, code: string) {
-    const user = await this.userRepo.findOne({
-      where: { username: mobile },
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        otpCode: true,
-        otpExpiresAt: true,
-        password: true,
-      },
-    });
+    const user = await this.userRepo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .addSelect(['user.otpCode', 'user.otpExpiresAt', 'user.password'])
+      .where('user.username = :mobile', { mobile })
+      .getOne();
 
     if (!user || !user.otpCode || !user.otpExpiresAt) {
       throw new ApiException(
@@ -147,11 +144,11 @@ export class AuthService {
       isActive: true,
     });
 
-    const tokens = await this.issueTokens(user.id, user.role);
+    const tokens = await this.issueTokens(user.id, user.role.slug);
 
     return {
       userId: user.id,
-      role: user.role,
+      role: user.role.slug,
       hasPassword: !!user.password,
       ...tokens,
     };
@@ -181,7 +178,7 @@ export class AuthService {
         valid: true,
         refreshed: false,
         userId: user.id,
-        role: user.role,
+        role: user.role.slug,
       };
     } catch (error) {
       if (error instanceof ApiException) {
@@ -257,8 +254,8 @@ export class AuthService {
       );
     }
 
-    const tokens = await this.issueTokens(user.id, user.role);
-    return { userId: user.id, role: user.role, ...tokens };
+    const tokens = await this.issueTokens(user.id, user.role.slug);
+    return { userId: user.id, role: user.role.slug, ...tokens };
   }
 
   async setPassword(userId: string, password: string) {
@@ -291,9 +288,17 @@ export class AuthService {
     console.log(`[SMS] ارسال کد ${code} به شماره ${mobile}`);
   }
 
-  private async issueTokens(userId: string, role: UserRole) {
-    const accessPayload: JwtPayload = { sub: userId, role, type: 'access' };
-    const refreshPayload: JwtPayload = { sub: userId, role, type: 'refresh' };
+  private async issueTokens(userId: string, roleSlug: string) {
+    const accessPayload: JwtPayload = {
+      sub: userId,
+      role: roleSlug,
+      type: 'access',
+    };
+    const refreshPayload: JwtPayload = {
+      sub: userId,
+      role: roleSlug,
+      type: 'refresh',
+    };
 
     const accessToken = this.jwtService.sign(accessPayload, {
       expiresIn: ACCESS_TOKEN_TTL,

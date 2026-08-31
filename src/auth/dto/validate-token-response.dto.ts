@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { createSuccessResponseDto } from '../../common/response/dto/create-success-response.dto.js';
-import { UserRole } from '../enums/user-role.enum.js';
 
 export class ValidateTokenDataDto {
   @ApiProperty({ example: true })
@@ -12,8 +11,8 @@ export class ValidateTokenDataDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   userId: string;
 
-  @ApiProperty({ example: UserRole.USER, enum: UserRole })
-  role: UserRole;
+  @ApiProperty({ example: 'user' })
+  role: string;
 
   @ApiPropertyOptional({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   accessToken?: string;

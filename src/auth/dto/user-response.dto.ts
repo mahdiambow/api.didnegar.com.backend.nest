@@ -1,6 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '../enums/user-role.enum.js';
 import { User } from '../entities/user.entity.js';
+
+export class UserRoleSummaryDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  id: string;
+
+  @ApiProperty({ example: 'user' })
+  slug: string;
+
+  @ApiProperty({ example: 'کاربر' })
+  name: string;
+}
 
 export class UserResponseDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
@@ -27,8 +37,8 @@ export class UserResponseDto {
   @ApiProperty({ example: true })
   isActive: boolean;
 
-  @ApiProperty({ example: UserRole.USER, enum: UserRole })
-  role: UserRole;
+  @ApiProperty({ type: UserRoleSummaryDto })
+  role: UserRoleSummaryDto;
 
   @ApiProperty({ example: '2026-08-31T12:00:00.000Z' })
   createdAt: Date;
@@ -47,7 +57,11 @@ export function toUserResponse(user: User): UserResponseDto {
     lastName: user.lastName,
     website: user.website,
     isActive: user.isActive,
-    role: user.role,
+    role: {
+      id: user.role.id,
+      slug: user.role.slug,
+      name: user.role.name,
+    },
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
