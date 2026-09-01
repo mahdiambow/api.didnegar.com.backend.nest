@@ -91,7 +91,11 @@ export class AuthService {
       );
     }
 
-    const tokens = await this.issueTokens(user.id, user.role.slug);
+    const tokens = await this.issueTokens(
+      user.id,
+      user.role.slug,
+      user.sellerId,
+    );
 
     return {
       user: toUserResponse(user),
@@ -134,11 +138,16 @@ export class AuthService {
       isActive: true,
     });
 
-    const tokens = await this.issueTokens(user.id, user.role.slug);
+    const tokens = await this.issueTokens(
+      user.id,
+      user.role.slug,
+      user.sellerId,
+    );
 
     return {
       userId: user.id,
       role: user.role.slug,
+      sellerId: user.sellerId,
       hasPassword: !!user.password,
       ...tokens,
     };
@@ -169,6 +178,7 @@ export class AuthService {
         refreshed: false,
         userId: user.id,
         role: user.role.slug,
+        sellerId: user.sellerId,
       };
     } catch (error) {
       if (error instanceof ApiException) {
@@ -189,6 +199,7 @@ export class AuthService {
         refreshed: true,
         userId: refreshed.userId,
         role: refreshed.role,
+        sellerId: refreshed.sellerId,
         accessToken: refreshed.accessToken,
         refreshToken: refreshed.refreshToken,
       };
@@ -240,8 +251,17 @@ export class AuthService {
       );
     }
 
-    const tokens = await this.issueTokens(user.id, user.role.slug);
-    return { userId: user.id, role: user.role.slug, ...tokens };
+    const tokens = await this.issueTokens(
+      user.id,
+      user.role.slug,
+      user.sellerId,
+    );
+    return {
+      userId: user.id,
+      role: user.role.slug,
+      sellerId: user.sellerId,
+      ...tokens,
+    };
   }
 
   async setPassword(userId: string, password: string) {
@@ -274,15 +294,21 @@ export class AuthService {
     console.log(`[SMS] ارسال کد ${code} به شماره ${mobile}`);
   }
 
-  private async issueTokens(userId: string, roleSlug: string) {
+  private async issueTokens(
+    userId: string,
+    roleSlug: string,
+    sellerId: string | null,
+  ) {
     const accessPayload: JwtPayload = {
       sub: userId,
       role: roleSlug,
+      sellerId,
       type: 'access',
     };
     const refreshPayload: JwtPayload = {
       sub: userId,
       role: roleSlug,
+      sellerId,
       type: 'refresh',
     };
 

@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -19,6 +20,7 @@ import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js'
 import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import type { AuthUser } from '../auth/types/auth-user.type.js';
 import { RolesService } from './roles.service.js';
 import { CreateRoleDto } from './dto/create-role.dto.js';
 import { UpdateRoleDto } from './dto/update-role.dto.js';
@@ -71,8 +73,8 @@ export class RolesController {
   })
   @ApiOperation({ summary: 'لیست نقش‌ها با pagination' })
   @ApiOkResponse({ type: RolesPaginatedApiResponseDto })
-  findAll(@Query() query: ListRolesQueryDto) {
-    return this.rolesService.findAll(query);
+  findAll(@Req() req: { user: AuthUser }, @Query() query: ListRolesQueryDto) {
+    return this.rolesService.findAll(req.user, query);
   }
 
   @Get(':id')
@@ -82,8 +84,8 @@ export class RolesController {
   })
   @ApiOperation({ summary: 'دریافت یک نقش' })
   @ApiOkResponse({ type: RoleApiResponseDto })
-  findOne(@Param('id') id: string) {
-    return this.rolesService.findOne(id);
+  findOne(@Req() req: { user: AuthUser }, @Param('id') id: string) {
+    return this.rolesService.findOne(req.user, id);
   }
 
   @Post()
@@ -93,8 +95,8 @@ export class RolesController {
   })
   @ApiOperation({ summary: 'ایجاد نقش جدید' })
   @ApiOkResponse({ type: RoleApiResponseDto })
-  create(@Body() dto: CreateRoleDto) {
-    return this.rolesService.create(dto);
+  create(@Req() req: { user: AuthUser }, @Body() dto: CreateRoleDto) {
+    return this.rolesService.create(req.user, dto);
   }
 
   @Patch(':id')
@@ -104,8 +106,12 @@ export class RolesController {
   })
   @ApiOperation({ summary: 'ویرایش نقش' })
   @ApiOkResponse({ type: RoleApiResponseDto })
-  update(@Param('id') id: string, @Body() dto: UpdateRoleDto) {
-    return this.rolesService.update(id, dto);
+  update(
+    @Req() req: { user: AuthUser },
+    @Param('id') id: string,
+    @Body() dto: UpdateRoleDto,
+  ) {
+    return this.rolesService.update(req.user, id, dto);
   }
 
   @Delete(':id')
@@ -114,7 +120,7 @@ export class RolesController {
     message: 'Role deleted successfully',
   })
   @ApiOperation({ summary: 'حذف نقش' })
-  remove(@Param('id') id: string) {
-    return this.rolesService.remove(id);
+  remove(@Req() req: { user: AuthUser }, @Param('id') id: string) {
+    return this.rolesService.remove(req.user, id);
   }
 }

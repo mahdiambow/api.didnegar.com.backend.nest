@@ -1,8 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ApiException } from '../common/exceptions/api.exception.js';
+import { canAccessSellerData } from '../common/tenant/tenant-access.js';
+import { isSuperAdmin } from '../common/tenant/tenant-scope.js';
+import type { TenantScope } from '../common/tenant/tenant-scope.js';
 import {
   ALL_PERMISSIONS,
   PERMISSION_DEFINITIONS,
+  isValidPermission,
 } from './permissions.js';
 import { CreateRoleDto } from './dto/create-role.dto.js';
 import { UpdateRoleDto } from './dto/update-role.dto.js';
@@ -24,11 +28,18 @@ export class RolesService {
     };
   }
 
-  async findAll(query: { page?: string | number; limit?: string | number }) {
+  async findAll(
+    scope: TenantScope,
+    query: { page?: string | number; limit?: string | number },
+  ) {
     const { page, limit, offset } = getPaginationParams(query);
-    const [items, total] = await this.roleRepository.findPaginated(
+    const [items, total] = await this.roleRepository.findPaginatedForTenant(
       offset,
       limit,
+      {
+        sellerId: scope.sellerId,
+        isSuperAdmin: isSuperAdmin(scope),
+      },
     );
 
     return paginatedList(
@@ -39,7 +50,7 @@ export class RolesService {
     );
   }
 
-  async findOne(id: string) {
+  async findOne(scope: TenantScope, id: string) {
     const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new ApiException(
@@ -48,11 +59,14 @@ export class RolesService {
         HttpStatus.NOT_FOUND,
       );
     }
+
+    this.assertRoleAccessible(scope, role.sellerId);
     return toRoleResponse(role);
   }
 
-  async create(dto: CreateRoleDto) {
-    const existing = await this.roleRepository.findBySlug(dto.slug);
+  async create(scope: TenantScope, dto: CreateRoleDto) {
+    const sellerId = this.resolveSellerId(scope, dto.sellerId);
+    const existing = await this.roleRepository.findBySlug(dto.slug, sellerId);
     if (existing) {
       throw new ApiException(
         'ROLE_ALREADY_EXISTS',
@@ -69,13 +83,14 @@ export class RolesService {
         name: dto.name,
         permissions: dto.permissions,
         isSystem: false,
+        sellerId,
       }),
     );
 
     return toRoleResponse(role);
   }
 
-  async update(id: string, dto: UpdateRoleDto) {
+  async update(scope: TenantScope, id: string, dto: UpdateRoleDto) {
     const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new ApiException(
@@ -85,16 +100,21 @@ export class RolesService {
       );
     }
 
-    if (role.isSystem && dto.slug && dto.slug !== role.slug) {
+    this.assertRoleAccessible(scope, role.sellerId);
+
+    if (role.isSystem) {
       throw new ApiException(
         'SYSTEM_ROLE_PROTECTED',
-        'slug نقش سیستمی قابل تغییر نیست',
+        'نقش سیستمی قابل ویرایش نیست',
         HttpStatus.BAD_REQUEST,
       );
     }
 
     if (dto.slug && dto.slug !== role.slug) {
-      const slugTaken = await this.roleRepository.findBySlug(dto.slug);
+      const slugTaken = await this.roleRepository.findBySlug(
+        dto.slug,
+        role.sellerId,
+      );
       if (slugTaken) {
         throw new ApiException(
           'ROLE_ALREADY_EXISTS',
@@ -113,7 +133,7 @@ export class RolesService {
     return toRoleResponse(updated);
   }
 
-  async remove(id: string) {
+  async remove(scope: TenantScope, id: string) {
     const role = await this.roleRepository.findById(id);
     if (!role) {
       throw new ApiException(
@@ -122,6 +142,8 @@ export class RolesService {
         HttpStatus.NOT_FOUND,
       );
     }
+
+    this.assertRoleAccessible(scope, role.sellerId);
 
     if (role.isSystem) {
       throw new ApiException(
@@ -145,8 +167,56 @@ export class RolesService {
     return {};
   }
 
+  private resolveSellerId(
+    scope: TenantScope,
+    requestedSellerId?: string | null,
+  ): string | null {
+    if (isSuperAdmin(scope)) {
+      return requestedSellerId ?? null;
+    }
+
+    if (!scope.sellerId) {
+      throw new ApiException(
+        'SELLER_REQUIRED',
+        'فقط کاربران فروشنده می‌توانند نقش سفارشی بسازند',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    if (requestedSellerId && requestedSellerId !== scope.sellerId) {
+      throw new ApiException(
+        'FORBIDDEN',
+        'امکان ساخت نقش برای فروشنده دیگر وجود ندارد',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    return scope.sellerId;
+  }
+
+  private assertRoleAccessible(
+    scope: TenantScope,
+    roleSellerId: string | null,
+  ) {
+    if (isSuperAdmin(scope)) {
+      return;
+    }
+
+    if (roleSellerId === null) {
+      return;
+    }
+
+    if (!canAccessSellerData(scope, roleSellerId)) {
+      throw new ApiException(
+        'FORBIDDEN',
+        'دسترسی به این نقش مجاز نیست',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+  }
+
   private assertValidPermissions(permissions: string[]) {
-    const invalid = permissions.filter((p) => !ALL_PERMISSIONS.includes(p));
+    const invalid = permissions.filter((p) => !isValidPermission(p));
     if (invalid.length) {
       throw new ApiException(
         'INVALID_PERMISSIONS',

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { DEFAULT_ROLE_SLUGS } from '../../roles/permissions.js';
 import { User } from '../entities/user.entity.js';
 
 @Injectable()
@@ -21,17 +22,31 @@ export class UserRepository {
     return this.repo.findOne({ where: { username } });
   }
 
-  findPaginated(offset: number, limit: number) {
-    return this.repo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip: offset,
-      take: limit,
-    });
+  findPaginatedForTenant(
+    offset: number,
+    limit: number,
+    options: { sellerId: string | null; isSuperAdmin: boolean },
+  ) {
+    const qb = this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.seller', 'seller')
+      .orderBy('user.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit);
+
+    if (!options.isSuperAdmin) {
+      qb.andWhere('user.sellerId = :sellerId', { sellerId: options.sellerId });
+    }
+
+    return qb.getManyAndCount();
   }
 
   findByUsernameWithPassword(username: string) {
     return this.repo
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.seller', 'seller')
       .addSelect('user.password')
       .where('user.username = :username', { username })
       .getOne();
@@ -41,9 +56,35 @@ export class UserRepository {
     return this.repo
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.seller', 'seller')
       .addSelect(['user.otpCode', 'user.otpExpiresAt', 'user.password'])
       .where('user.username = :username', { username })
       .getOne();
+  }
+
+  findByIds(ids: string[]) {
+    if (ids.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    return this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .where('user.id IN (:...ids)', { ids })
+      .getMany();
+  }
+
+  findAdminIdsBySellerId(sellerId: string) {
+    return this.repo
+      .createQueryBuilder('user')
+      .innerJoin('user.role', 'role')
+      .select('user.id', 'id')
+      .where('user.sellerId = :sellerId', { sellerId })
+      .andWhere('role.slug = :adminSlug', {
+        adminSlug: DEFAULT_ROLE_SLUGS.ADMIN,
+      })
+      .getRawMany<{ id: string }>()
+      .then((rows) => rows.map((row) => row.id));
   }
 
   create(data: Partial<User>) {

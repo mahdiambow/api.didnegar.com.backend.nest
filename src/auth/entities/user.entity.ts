@@ -11,6 +11,7 @@ import {
   Index,
 } from 'typeorm';
 import type { Role } from '../../roles/entities/role.entity.js';
+import type { Seller } from '../../sellers/entities/seller.entity.js';
 import type { UserProfile } from './user-profile.entity.js';
 import type { UserAddress } from './user-address.entity.js';
 import type { RefreshToken } from './refresh-token.entity.js';
@@ -54,6 +55,9 @@ export class User {
   @Column({ type: 'uuid' })
   roleId: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  sellerId: string | null;
+
   @Column({ type: 'varchar', length: 72, nullable: true, select: false })
   otpCode: string | null;
 
@@ -69,6 +73,10 @@ export class User {
   @ManyToOne('Role', 'users', { eager: true })
   @JoinColumn({ name: 'roleId' })
   role: Role;
+
+  @ManyToOne('Seller', 'users', { eager: true, nullable: true })
+  @JoinColumn({ name: 'sellerId' })
+  seller: Seller | null;
 
   @OneToOne('UserProfile', 'user')
   profile: UserProfile;
