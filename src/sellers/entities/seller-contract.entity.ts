@@ -9,7 +9,6 @@ import {
   Index,
 } from 'typeorm';
 import type { Seller } from './seller.entity.js';
-import type { User } from '../../auth/entities/user.entity.js';
 
 @Entity('seller_contracts')
 export class SellerContract {
@@ -17,15 +16,14 @@ export class SellerContract {
   id: string;
 
   @Index()
-  @Column({ type: 'uuid' })
-  sellerId: string;
+  @Column({ type: 'uuid', nullable: true })
+  sellerId: string | null;
 
   @Column({ type: 'varchar', length: 150 })
   sellerName: string;
 
-  @Index()
-  @Column({ type: 'uuid' })
-  adminId: string;
+  @Column({ type: 'uuid', array: true, default: '{}' })
+  userIds: string[];
 
   @Column({ type: 'varchar', length: 150 })
   contractPartyName: string;
@@ -42,11 +40,7 @@ export class SellerContract {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
-  @ManyToOne('Seller', 'contracts', { onDelete: 'CASCADE' })
+  @ManyToOne('Seller', 'contracts', { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'sellerId' })
-  seller: Seller;
-
-  @ManyToOne('User', { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'adminId' })
-  admin: User;
+  seller: Seller | null;
 }

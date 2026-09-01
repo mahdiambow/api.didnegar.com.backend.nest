@@ -4,9 +4,10 @@ import { canAccessSellerData } from '../common/tenant/tenant-access.js';
 import { isSuperAdmin } from '../common/tenant/tenant-scope.js';
 import type { TenantScope } from '../common/tenant/tenant-scope.js';
 import {
-  ALL_PERMISSIONS,
   PERMISSION_DEFINITIONS,
-  isValidPermission,
+  SELLER_ASSIGNABLE_PERMISSIONS,
+  getInvalidPermissions,
+  getNonAssignableSellerPermissions,
 } from './permissions.js';
 import { CreateRoleDto } from './dto/create-role.dto.js';
 import { UpdateRoleDto } from './dto/update-role.dto.js';
@@ -16,15 +17,25 @@ import {
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
 import { RoleRepository } from './repositories/role.repository.js';
+import { SellerRepository } from '../sellers/repositories/seller.repository.js';
 
 @Injectable()
 export class RolesService {
-  constructor(private readonly roleRepository: RoleRepository) {}
+  constructor(
+    private readonly roleRepository: RoleRepository,
+    private readonly sellerRepository: SellerRepository,
+  ) {}
 
-  getPermissions() {
+  getPermissions(scope: TenantScope) {
+    const permissions = isSuperAdmin(scope)
+      ? PERMISSION_DEFINITIONS
+      : PERMISSION_DEFINITIONS.filter((item) =>
+          SELLER_ASSIGNABLE_PERMISSIONS.includes(item.key),
+        );
+
     return {
-      permissions: PERMISSION_DEFINITIONS,
-      all: ALL_PERMISSIONS,
+      permissions,
+      all: permissions.map((item) => item.key),
     };
   }
 
@@ -65,7 +76,7 @@ export class RolesService {
   }
 
   async create(scope: TenantScope, dto: CreateRoleDto) {
-    const sellerId = this.resolveSellerId(scope, dto.sellerId);
+    const sellerId = await this.resolveSellerId(scope, dto.sellerId);
     const existing = await this.roleRepository.findBySlug(dto.slug, sellerId);
     if (existing) {
       throw new ApiException(
@@ -75,7 +86,7 @@ export class RolesService {
       );
     }
 
-    this.assertValidPermissions(dto.permissions);
+    this.assertValidPermissions(dto.permissions, sellerId);
 
     const role = await this.roleRepository.save(
       this.roleRepository.create({
@@ -125,7 +136,7 @@ export class RolesService {
     }
 
     if (dto.permissions) {
-      this.assertValidPermissions(dto.permissions);
+      this.assertValidPermissions(dto.permissions, role.sellerId);
     }
 
     Object.assign(role, dto);
@@ -167,11 +178,14 @@ export class RolesService {
     return {};
   }
 
-  private resolveSellerId(
+  private async resolveSellerId(
     scope: TenantScope,
     requestedSellerId?: string | null,
-  ): string | null {
+  ): Promise<string | null> {
     if (isSuperAdmin(scope)) {
+      if (requestedSellerId) {
+        await this.ensureSellerExists(requestedSellerId);
+      }
       return requestedSellerId ?? null;
     }
 
@@ -192,6 +206,17 @@ export class RolesService {
     }
 
     return scope.sellerId;
+  }
+
+  private async ensureSellerExists(sellerId: string) {
+    const seller = await this.sellerRepository.findById(sellerId);
+    if (!seller) {
+      throw new ApiException(
+        'SELLER_NOT_FOUND',
+        'فروشنده یافت نشد',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
   private assertRoleAccessible(
@@ -215,14 +240,28 @@ export class RolesService {
     }
   }
 
-  private assertValidPermissions(permissions: string[]) {
-    const invalid = permissions.filter((p) => !isValidPermission(p));
+  private assertValidPermissions(
+    permissions: string[],
+    sellerId: string | null,
+  ) {
+    const invalid = getInvalidPermissions(permissions);
     if (invalid.length) {
       throw new ApiException(
         'INVALID_PERMISSIONS',
         `دسترسی‌های نامعتبر: ${invalid.join(', ')}`,
         HttpStatus.BAD_REQUEST,
       );
+    }
+
+    if (sellerId) {
+      const restricted = getNonAssignableSellerPermissions(permissions);
+      if (restricted.length) {
+        throw new ApiException(
+          'PERMISSION_NOT_ASSIGNABLE',
+          `این دسترسی‌ها برای نقش فروشنده مجاز نیست: ${restricted.join(', ')}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
   }
 }

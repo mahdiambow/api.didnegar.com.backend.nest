@@ -10,6 +10,7 @@ import {
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
 import { UserRepository } from '../auth/repositories/user.repository.js';
+import { toUserResponse } from '../auth/dto/user-response.dto.js';
 import { RoleRepository } from '../roles/repositories/role.repository.js';
 import { DEFAULT_ROLE_SLUGS, isSuperAdminRole } from '../roles/permissions.js';
 import { BusinessType, SellerStatus } from './entities/seller.enums.js';
@@ -19,6 +20,7 @@ import { SellerContractRepository } from './repositories/seller-contract.reposit
 import { CreateSellerDto } from './dto/create-seller.dto.js';
 import { UpdateSellerDto } from './dto/update-seller.dto.js';
 import { toSellerResponse } from './dto/seller-response.dto.js';
+import { toSellerContractResponse } from './dto/seller-contract-response.dto.js';
 
 @Injectable()
 export class SellersService {
@@ -84,29 +86,28 @@ export class SellersService {
     }
 
     const adminIds = [...new Set(dto.admins ?? [])];
-    const contractAdminId = dto.contract?.adminId ?? adminIds[0];
+    const contractUserIds = dto.contract?.userIds?.length
+      ? [...new Set(dto.contract.userIds)]
+      : adminIds;
 
-    if (dto.contract && !contractAdminId) {
+    if (dto.contract && contractUserIds.length === 0) {
       throw new ApiException(
-        'CONTRACT_ADMIN_REQUIRED',
-        'برای ثبت قرارداد باید adminId یا admins ارسال شود',
+        'CONTRACT_USER_REQUIRED',
+        'برای ثبت قرارداد باید userIds یا admins ارسال شود',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    const assignAdminIds = [...new Set(adminIds)];
-    if (contractAdminId && !assignAdminIds.includes(contractAdminId)) {
-      assignAdminIds.push(contractAdminId);
-    }
+    const assignAdminIds = [...new Set([...adminIds, ...contractUserIds])];
 
     if (
-      dto.contract?.adminId &&
+      dto.contract?.userIds?.length &&
       adminIds.length > 0 &&
-      !adminIds.includes(dto.contract.adminId)
+      !dto.contract.userIds.every((id) => adminIds.includes(id))
     ) {
       throw new ApiException(
-        'CONTRACT_ADMIN_MISMATCH',
-        'adminId قرارداد باید در لیست admins باشد',
+        'CONTRACT_USER_MISMATCH',
+        'userIds قرارداد باید زیرمجموعه admins باشد',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -123,7 +124,7 @@ export class SellersService {
       );
     }
 
-    await this.validateAdminUsers(assignAdminIds);
+    const assignableUsers = await this.validateAdminUsers(assignAdminIds);
 
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
@@ -149,6 +150,14 @@ export class SellersService {
       );
 
       for (const adminId of assignAdminIds) {
+        const user = assignableUsers.find((item) => item.id === adminId);
+        if (user && isSuperAdminRole(user.role.slug)) {
+          await qr.manager.update('users', adminId, {
+            sellerId: seller.id,
+          });
+          continue;
+        }
+
         await qr.manager.update('users', adminId, {
           sellerId: seller.id,
           roleId: adminRole.id,
@@ -161,7 +170,7 @@ export class SellersService {
           this.contractRepository.create({
             sellerId: seller.id,
             sellerName: seller.name,
-            adminId: contractAdminId!,
+            userIds: contractUserIds,
             contractPartyName: dto.contract.contractPartyName,
             description: dto.contract.description ?? null,
             contractDate: new Date(dto.contract.contractDate),
@@ -172,10 +181,7 @@ export class SellersService {
 
       await qr.commitTransaction();
 
-      return toSellerResponse(seller, {
-        contractId,
-        adminIds: assignAdminIds,
-      });
+      return this.buildSellerResponse(seller);
     } catch (error) {
       await qr.rollbackTransaction();
       throw error;
@@ -246,20 +252,24 @@ export class SellersService {
       );
     }
 
-    const [contract, adminIds] = await Promise.all([
+    const [contract, users] = await Promise.all([
       this.contractRepository.findLatestBySellerId(seller.id),
-      this.userRepository.findAdminIdsBySellerId(seller.id),
+      this.userRepository.findUsersBySellerId(seller.id),
     ]);
+
+    const admins = users.map(toUserResponse);
 
     return toSellerResponse(seller, {
       contractId: contract?.id ?? null,
-      adminIds,
+      adminIds: admins.map((admin) => admin.id),
+      admins,
+      contract: contract ? toSellerContractResponse(contract) : null,
     });
   }
 
   private async validateAdminUsers(adminIds: string[]) {
     if (adminIds.length === 0) {
-      return;
+      return [];
     }
 
     const users = await this.userRepository.findByIds(adminIds);
@@ -273,11 +283,7 @@ export class SellersService {
 
     for (const user of users) {
       if (isSuperAdminRole(user.role.slug)) {
-        throw new ApiException(
-          'FORBIDDEN',
-          'super-admin را نمی‌توان به فروشنده اختصاص داد',
-          HttpStatus.BAD_REQUEST,
-        );
+        continue;
       }
 
       if (user.sellerId) {
@@ -288,6 +294,8 @@ export class SellersService {
         );
       }
     }
+
+    return users;
   }
 
   private assertSellerAccessible(scope: TenantScope, sellerId: string) {

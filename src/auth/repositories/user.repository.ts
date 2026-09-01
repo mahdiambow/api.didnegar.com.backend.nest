@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DEFAULT_ROLE_SLUGS } from '../../roles/permissions.js';
 import { User } from '../entities/user.entity.js';
 
 @Injectable()
@@ -75,16 +74,19 @@ export class UserRepository {
   }
 
   findAdminIdsBySellerId(sellerId: string) {
+    return this.findUsersBySellerId(sellerId).then((users) =>
+      users.map((user) => user.id),
+    );
+  }
+
+  findUsersBySellerId(sellerId: string) {
     return this.repo
       .createQueryBuilder('user')
-      .innerJoin('user.role', 'role')
-      .select('user.id', 'id')
+      .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.seller', 'seller')
       .where('user.sellerId = :sellerId', { sellerId })
-      .andWhere('role.slug = :adminSlug', {
-        adminSlug: DEFAULT_ROLE_SLUGS.ADMIN,
-      })
-      .getRawMany<{ id: string }>()
-      .then((rows) => rows.map((row) => row.id));
+      .orderBy('user.createdAt', 'ASC')
+      .getMany();
   }
 
   create(data: Partial<User>) {

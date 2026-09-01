@@ -20,7 +20,10 @@ import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js'
 import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator.js';
 import type { AuthUser } from '../auth/types/auth-user.type.js';
+import { PERMISSIONS } from './permissions.js';
 import { RolesService } from './roles.service.js';
 import { CreateRoleDto } from './dto/create-role.dto.js';
 import { UpdateRoleDto } from './dto/update-role.dto.js';
@@ -50,23 +53,25 @@ const PermissionsApiResponseDto = createSuccessResponseDto(Object, {
 
 @ApiTags('Roles')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get('permissions')
+  @RequirePermissions(PERMISSIONS.roles.read)
   @ApiResponseMeta({
     code: 'PERMISSIONS_FOUND',
     message: 'Permissions retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست تمام permissionهای تعریف‌شده' })
+  @ApiOperation({ summary: 'لیست permissionهای قابل اختصاص' })
   @ApiOkResponse({ type: PermissionsApiResponseDto })
-  getPermissions() {
-    return this.rolesService.getPermissions();
+  getPermissions(@Req() req: { user: AuthUser }) {
+    return this.rolesService.getPermissions(req.user);
   }
 
   @Get()
+  @RequirePermissions(PERMISSIONS.roles.read)
   @ApiResponseMeta({
     code: 'ROLES_FOUND',
     message: 'Roles retrieved successfully',
@@ -78,6 +83,7 @@ export class RolesController {
   }
 
   @Get(':id')
+  @RequirePermissions(PERMISSIONS.roles.read)
   @ApiResponseMeta({
     code: 'ROLE_FOUND',
     message: 'Role retrieved successfully',
@@ -89,6 +95,7 @@ export class RolesController {
   }
 
   @Post()
+  @RequirePermissions(PERMISSIONS.roles.create)
   @ApiResponseMeta({
     code: 'ROLE_CREATED',
     message: 'Role created successfully',
@@ -100,6 +107,7 @@ export class RolesController {
   }
 
   @Patch(':id')
+  @RequirePermissions(PERMISSIONS.roles.update)
   @ApiResponseMeta({
     code: 'ROLE_UPDATED',
     message: 'Role updated successfully',
@@ -115,6 +123,7 @@ export class RolesController {
   }
 
   @Delete(':id')
+  @RequirePermissions(PERMISSIONS.roles.delete)
   @ApiResponseMeta({
     code: 'ROLE_DELETED',
     message: 'Role deleted successfully',

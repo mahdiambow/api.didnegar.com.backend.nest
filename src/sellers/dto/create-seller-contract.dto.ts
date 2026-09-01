@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMinSize,
+  IsArray,
   IsISO8601,
   IsNotEmpty,
   IsOptional,
@@ -9,9 +11,13 @@ import {
 } from 'class-validator';
 
 export class CreateSellerContractDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiPropertyOptional({
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'اختیاری — اگر seller وجود نداشته باشد فقط sellerName ذخیره می‌شود',
+  })
+  @IsOptional()
   @IsUUID()
-  sellerId: string;
+  sellerId?: string;
 
   @ApiProperty({ example: 'فروشگاه نمونه' })
   @IsString()
@@ -19,9 +25,15 @@ export class CreateSellerContractDto {
   @MaxLength(150)
   sellerName: string;
 
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440001' })
-  @IsUUID()
-  adminId: string;
+  @ApiProperty({
+    type: [String],
+    example: ['5a4083a7-9b1a-4c07-8321-e9c5545993f8'],
+    description: 'لیست UUID کاربران',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsUUID('4', { each: true })
+  userIds: string[];
 
   @ApiProperty({ example: 'شرکت طرف قرارداد' })
   @IsString()

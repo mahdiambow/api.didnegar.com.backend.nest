@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { UserResponseDto } from '../../auth/dto/user-response.dto.js';
 import { Seller } from '../entities/seller.entity.js';
 import { BusinessType, SellerStatus } from '../entities/seller.enums.js';
+import { SellerContractResponseDto } from './seller-contract-response.dto.js';
 
 export class SellerResponseDto {
   @ApiProperty()
@@ -59,11 +61,22 @@ export class SellerResponseDto {
     example: ['550e8400-e29b-41d4-a716-446655440001'],
   })
   adminIds: string[];
+
+  @ApiProperty({ type: [UserResponseDto] })
+  admins: UserResponseDto[];
+
+  @ApiPropertyOptional({ type: SellerContractResponseDto, nullable: true })
+  contract: SellerContractResponseDto | null;
 }
 
 export function toSellerResponse(
   seller: Seller,
-  relations: { contractId?: string | null; adminIds?: string[] } = {},
+  relations: {
+    contractId?: string | null;
+    adminIds?: string[];
+    admins?: UserResponseDto[];
+    contract?: SellerContractResponseDto | null;
+  } = {},
 ): SellerResponseDto {
   return {
     id: seller.id,
@@ -81,7 +94,9 @@ export function toSellerResponse(
     status: seller.status,
     createdAt: seller.createdAt,
     updatedAt: seller.updatedAt,
-    contractId: relations.contractId ?? null,
-    adminIds: relations.adminIds ?? [],
+    contractId: relations.contractId ?? relations.contract?.id ?? null,
+    adminIds: relations.adminIds ?? relations.admins?.map((admin) => admin.id) ?? [],
+    admins: relations.admins ?? [],
+    contract: relations.contract ?? null,
   };
 }

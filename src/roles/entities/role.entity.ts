@@ -7,7 +7,6 @@ import {
   OneToMany,
   ManyToOne,
   JoinColumn,
-  Index,
 } from 'typeorm';
 import type { User } from '../../auth/entities/user.entity.js';
 import type { Seller } from '../../sellers/entities/seller.entity.js';
@@ -17,7 +16,6 @@ export class Role {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Index(['slug', 'sellerId'], { unique: true })
   @Column({ type: 'varchar', length: 50 })
   slug: string;
 

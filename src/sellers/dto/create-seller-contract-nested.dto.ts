@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMinSize,
+  IsArray,
   IsISO8601,
   IsNotEmpty,
   IsOptional,
@@ -10,12 +12,15 @@ import {
 
 export class CreateSellerContractNestedDto {
   @ApiPropertyOptional({
-    example: '550e8400-e29b-41d4-a716-446655440001',
-    description: 'ادمین قرارداد؛ اگر نباشد اولین مقدار admins استفاده می‌شود',
+    type: [String],
+    example: ['5a4083a7-9b1a-4c07-8321-e9c5545993f8'],
+    description: 'کاربران قرارداد؛ اگر نباشد از admins seller استفاده می‌شود',
   })
   @IsOptional()
-  @IsUUID()
-  adminId?: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsUUID('4', { each: true })
+  userIds?: string[];
 
   @ApiProperty({ example: 'شرکت طرف قرارداد' })
   @IsString()

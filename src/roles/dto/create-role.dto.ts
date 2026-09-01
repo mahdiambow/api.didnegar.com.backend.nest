@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
+import { ALL_PERMISSIONS } from '../permissions.js';
+import { IsPermissionArray } from '../validators/is-permission.validator.js';
 
 export class CreateRoleDto {
   @ApiProperty({ example: 'editor' })
@@ -19,10 +21,12 @@ export class CreateRoleDto {
 
   @ApiProperty({
     example: ['users:read', 'users:update'],
-    type: [String],
+    enum: ALL_PERMISSIONS,
+    isArray: true,
   })
   @IsArray()
   @IsString({ each: true })
+  @IsPermissionArray()
   permissions: string[];
 
   @ApiPropertyOptional({

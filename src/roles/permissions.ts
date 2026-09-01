@@ -246,6 +246,40 @@ export function isValidPermission(permission: string): permission is Permission 
   return (ALL_PERMISSIONS as readonly string[]).includes(permission);
 }
 
+export const SUPER_ADMIN_ONLY_PERMISSIONS: readonly Permission[] = [
+  PERMISSIONS.sellers.create,
+  PERMISSIONS.sellers.delete,
+  PERMISSIONS.auth.manage,
+] as const;
+
+export const SELLER_ASSIGNABLE_PERMISSIONS: readonly Permission[] =
+  ALL_PERMISSIONS.filter(
+    (permission) => !SUPER_ADMIN_ONLY_PERMISSIONS.includes(permission),
+  );
+
+export function isSellerAssignablePermission(
+  permission: string,
+): permission is Permission {
+  return (
+    isValidPermission(permission) &&
+    SELLER_ASSIGNABLE_PERMISSIONS.includes(permission)
+  );
+}
+
+export function getInvalidPermissions(permissions: string[]): string[] {
+  return permissions.filter((permission) => !isValidPermission(permission));
+}
+
+export function getNonAssignableSellerPermissions(
+  permissions: string[],
+): string[] {
+  return permissions.filter(
+    (permission) =>
+      isValidPermission(permission) &&
+      !SELLER_ASSIGNABLE_PERMISSIONS.includes(permission),
+  );
+}
+
 export function validatePermissions(permissions: string[]): string[] {
   const invalid = permissions.filter((p) => !isValidPermission(p));
   if (invalid.length) {

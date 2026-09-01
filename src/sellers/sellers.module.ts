@@ -15,7 +15,7 @@ import { SellerContractsController } from './seller-contracts.controller.js';
   imports: [
     TypeOrmModule.forFeature([Seller, SellerContract]),
     forwardRef(() => AuthModule),
-    RolesModule,
+    forwardRef(() => RolesModule),
   ],
   controllers: [SellersController, SellerContractsController],
   providers: [

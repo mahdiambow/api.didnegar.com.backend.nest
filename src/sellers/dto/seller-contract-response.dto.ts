@@ -5,14 +5,17 @@ export class SellerContractResponseDto {
   @ApiProperty()
   id: string;
 
-  @ApiProperty()
-  sellerId: string;
+  @ApiPropertyOptional({ nullable: true })
+  sellerId: string | null;
 
   @ApiProperty({ example: 'فروشگاه نمونه' })
   sellerName: string;
 
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440001' })
-  adminId: string;
+  @ApiProperty({
+    type: [String],
+    example: ['5a4083a7-9b1a-4c07-8321-e9c5545993f8'],
+  })
+  userIds: string[];
 
   @ApiProperty({ example: 'شرکت طرف قرارداد' })
   contractPartyName: string;
@@ -41,7 +44,7 @@ export function toSellerContractResponse(
     id: contract.id,
     sellerId: contract.sellerId,
     sellerName: contract.sellerName,
-    adminId: contract.adminId,
+    userIds: contract.userIds,
     contractPartyName: contract.contractPartyName,
     description: contract.description,
     contractDate: toIsoString(contract.contractDate),

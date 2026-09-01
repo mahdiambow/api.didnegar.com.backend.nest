@@ -66,24 +66,26 @@ export class SellerContractsService {
   }
 
   async create(scope: TenantScope, dto: CreateSellerContractDto) {
-    this.assertSellerAccessible(scope, dto.sellerId);
+    const sellerId = await this.resolveSellerId(dto.sellerId);
 
-    const seller = await this.sellerRepository.findById(dto.sellerId);
-    if (!seller) {
+    if (sellerId) {
+      this.assertSellerAccessible(scope, sellerId);
+    } else if (!isSuperAdmin(scope)) {
       throw new ApiException(
-        'SELLER_NOT_FOUND',
-        'فروشنده یافت نشد',
+        'SELLER_REQUIRED',
+        'فروشنده برای ثبت قرارداد الزامی است',
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    await this.ensureAdminBelongsToSeller(scope, dto.adminId, dto.sellerId);
+    const userIds = [...new Set(dto.userIds)];
+    await this.ensureUsersBelongToSeller(scope, userIds, sellerId);
 
     const contract = await this.contractRepository.save(
       this.contractRepository.create({
-        sellerId: dto.sellerId,
+        sellerId,
         sellerName: dto.sellerName,
-        adminId: dto.adminId,
+        userIds,
         contractPartyName: dto.contractPartyName,
         description: dto.description ?? null,
         contractDate: new Date(dto.contractDate),
@@ -105,13 +107,14 @@ export class SellerContractsService {
 
     this.assertSellerAccessible(scope, contract.sellerId);
 
-    if (dto.adminId) {
-      await this.ensureAdminBelongsToSeller(
+    if (dto.userIds) {
+      const userIds = [...new Set(dto.userIds)];
+      await this.ensureUsersBelongToSeller(
         scope,
-        dto.adminId,
+        userIds,
         contract.sellerId,
       );
-      contract.adminId = dto.adminId;
+      contract.userIds = userIds;
     }
 
     if (dto.sellerName !== undefined) contract.sellerName = dto.sellerName;
@@ -142,16 +145,29 @@ export class SellerContractsService {
     return {};
   }
 
-  private async ensureAdminBelongsToSeller(
+  private async resolveSellerId(
+    sellerId?: string,
+  ): Promise<string | null> {
+    if (!sellerId) {
+      return null;
+    }
+
+    const seller = await this.sellerRepository.findById(sellerId);
+    return seller?.id ?? null;
+  }
+
+  private async ensureUsersBelongToSeller(
     scope: TenantScope,
-    adminId: string,
-    sellerId: string,
+    userIds: string[],
+    sellerId: string | null,
   ) {
-    const admin = await this.userRepository.findById(adminId);
-    if (!admin) {
+    const users = await this.userRepository.findByIds(userIds);
+    if (users.length !== userIds.length) {
+      const foundIds = new Set(users.map((user) => user.id));
+      const missing = userIds.filter((id) => !foundIds.has(id));
       throw new ApiException(
-        'ADMIN_NOT_FOUND',
-        'ادمین یافت نشد',
+        'USER_NOT_FOUND',
+        `کاربر یافت نشد: ${missing.join(', ')}`,
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -160,16 +176,32 @@ export class SellerContractsService {
       return;
     }
 
-    if (admin.sellerId !== sellerId) {
-      throw new ApiException(
-        'FORBIDDEN',
-        'ادمین انتخاب‌شده متعلق به این فروشنده نیست',
-        HttpStatus.BAD_REQUEST,
-      );
+    for (const user of users) {
+      if (!sellerId || user.sellerId !== sellerId) {
+        throw new ApiException(
+          'FORBIDDEN',
+          'کاربر انتخاب‌شده متعلق به این فروشنده نیست',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
   }
 
-  private assertSellerAccessible(scope: TenantScope, sellerId: string) {
+  private assertSellerAccessible(
+    scope: TenantScope,
+    sellerId: string | null | undefined,
+  ) {
+    if (!sellerId) {
+      if (!isSuperAdmin(scope)) {
+        throw new ApiException(
+          'FORBIDDEN',
+          'دسترسی به قرارداد این فروشنده مجاز نیست',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+      return;
+    }
+
     if (!canAccessSellerData(scope, sellerId)) {
       throw new ApiException(
         'FORBIDDEN',
