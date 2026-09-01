@@ -39,10 +39,18 @@ export const PERMISSIONS = {
     update: 'contracts:update',
     delete: 'contracts:delete',
   },
+  locations: {
+    read: 'locations:read',
+    create: 'locations:create',
+    update: 'locations:update',
+    delete: 'locations:delete',
+  },
   auth: {
     manage: 'auth:manage',
   },
 } as const;
+
+export const LOCATION_PERMISSIONS = PERMISSIONS.locations;
 
 export const PERMISSION_DEFINITIONS = [
   {
@@ -176,6 +184,26 @@ export const PERMISSION_DEFINITIONS = [
     group: 'contracts',
   },
   {
+    key: PERMISSIONS.locations.read,
+    label: 'مشاهده مکان‌ها',
+    group: 'locations',
+  },
+  {
+    key: PERMISSIONS.locations.create,
+    label: 'ایجاد مکان',
+    group: 'locations',
+  },
+  {
+    key: PERMISSIONS.locations.update,
+    label: 'ویرایش مکان',
+    group: 'locations',
+  },
+  {
+    key: PERMISSIONS.locations.delete,
+    label: 'حذف مکان',
+    group: 'locations',
+  },
+  {
     key: PERMISSIONS.auth.manage,
     label: 'مدیریت احراز هویت',
     group: 'auth',
@@ -226,6 +254,7 @@ const SELLER_PERMISSIONS: Permission[] = [
   PERMISSIONS.contracts.create,
   PERMISSIONS.contracts.update,
   PERMISSIONS.contracts.delete,
+  PERMISSIONS.locations.read,
 ];
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<
@@ -250,6 +279,9 @@ export const SUPER_ADMIN_ONLY_PERMISSIONS: readonly Permission[] = [
   PERMISSIONS.sellers.create,
   PERMISSIONS.sellers.delete,
   PERMISSIONS.auth.manage,
+  PERMISSIONS.locations.create,
+  PERMISSIONS.locations.update,
+  PERMISSIONS.locations.delete,
 ] as const;
 
 export const SELLER_ASSIGNABLE_PERMISSIONS: readonly Permission[] =
