@@ -86,31 +86,33 @@ export class SellersService {
     }
 
     const adminIds = [...new Set(dto.admins ?? [])];
-    const contractUserIds = dto.contract?.userIds?.length
-      ? [...new Set(dto.contract.userIds)]
-      : adminIds;
 
-    if (dto.contract && contractUserIds.length === 0) {
-      throw new ApiException(
-        'CONTRACT_USER_REQUIRED',
-        'برای ثبت قرارداد باید userIds یا admins ارسال شود',
-        HttpStatus.BAD_REQUEST,
-      );
+    let linkedContract: Awaited<
+      ReturnType<SellerContractRepository['findById']>
+    > = null;
+
+    if (dto.contractId) {
+      linkedContract = await this.contractRepository.findById(dto.contractId);
+      if (!linkedContract) {
+        throw new ApiException(
+          'CONTRACT_NOT_FOUND',
+          'قرارداد یافت نشد',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      if (linkedContract.sellerId) {
+        throw new ApiException(
+          'CONTRACT_ALREADY_LINKED',
+          'این قرارداد قبلاً به فروشنده دیگری اختصاص داده شده',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
     }
 
-    const assignAdminIds = [...new Set([...adminIds, ...contractUserIds])];
-
-    if (
-      dto.contract?.userIds?.length &&
-      adminIds.length > 0 &&
-      !dto.contract.userIds.every((id) => adminIds.includes(id))
-    ) {
-      throw new ApiException(
-        'CONTRACT_USER_MISMATCH',
-        'userIds قرارداد باید زیرمجموعه admins باشد',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    const assignAdminIds = [
+      ...new Set([...adminIds, ...(linkedContract?.userIds ?? [])]),
+    ];
 
     const adminRole = await this.roleRepository.findBySlug(
       DEFAULT_ROLE_SLUGS.ADMIN,
@@ -164,19 +166,11 @@ export class SellersService {
         });
       }
 
-      let contractId: string | null = null;
-      if (dto.contract) {
-        const contract = await qr.manager.save(
-          this.contractRepository.create({
-            sellerId: seller.id,
-            sellerName: seller.name,
-            userIds: contractUserIds,
-            contractPartyName: dto.contract.contractPartyName,
-            description: dto.contract.description ?? null,
-            contractDate: new Date(dto.contract.contractDate),
-          }),
-        );
-        contractId = contract.id;
+      if (dto.contractId) {
+        await qr.manager.update('seller_contracts', dto.contractId, {
+          sellerId: seller.id,
+          sellerName: seller.name,
+        });
       }
 
       await qr.commitTransaction();
@@ -213,7 +207,7 @@ export class SellersService {
       }
     }
 
-    const { contract: _contract, admins: _admins, ...sellerFields } = dto;
+    const { contractId: _contractId, admins: _admins, ...sellerFields } = dto;
     Object.assign(seller, sellerFields);
     const updated = await this.sellerRepository.save(seller);
     return this.buildSellerResponse(updated);

@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import {
   IsArray,
   IsEmail,
@@ -10,10 +9,8 @@ import {
   IsUUID,
   Matches,
   MaxLength,
-  ValidateNested,
 } from 'class-validator';
 import { BusinessType, SellerStatus } from '../entities/seller.enums.js';
-import { CreateSellerContractNestedDto } from './create-seller-contract-nested.dto.js';
 
 export class CreateSellerDto {
   @ApiProperty({ example: 'فروشگاه نمونه' })
@@ -88,13 +85,12 @@ export class CreateSellerDto {
   status?: SellerStatus;
 
   @ApiPropertyOptional({
-    type: CreateSellerContractNestedDto,
-    description: 'قرارداد فروشنده (همزمان با ایجاد seller ثبت می‌شود)',
+    example: 'fa52fea1-7b87-46a7-b578-ce8d2f98c294',
+    description: 'UUID قرارداد از قبل ثبت‌شده — به seller لینک می‌شود',
   })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => CreateSellerContractNestedDto)
-  contract?: CreateSellerContractNestedDto;
+  @IsUUID()
+  contractId?: string;
 
   @ApiPropertyOptional({
     type: [String],
