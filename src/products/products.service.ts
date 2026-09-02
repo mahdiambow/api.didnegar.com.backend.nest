@@ -12,12 +12,14 @@ import {
 } from './dto/product-response.dto.js';
 import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
+import { ProductVariantsService } from './product-variants.service.js';
 
 @Injectable()
 export class ProductsService {
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly brandRepository: BrandRepository,
+    private readonly productVariantsService: ProductVariantsService,
   ) {}
 
   async findAll(query: {
@@ -30,6 +32,7 @@ export class ProductsService {
     stockStatus?: string;
     categoryId?: string;
     subCategoryId?: string;
+    variantId?: string;
   }) {
     const { page, limit, offset } = getPaginationParams(query);
     const [items, total] = await this.productRepository.findPaginated(
@@ -43,6 +46,7 @@ export class ProductsService {
         stockStatus: query.stockStatus,
         categoryId: query.categoryId,
         subCategoryId: query.subCategoryId,
+        variantId: query.variantId,
       },
       true,
     );
@@ -73,36 +77,40 @@ export class ProductsService {
       await this.assertBrandExists(dto.brandId);
     }
 
+    const { variants, variantIds, ...productData } = dto;
     const legacyId = await this.productRepository.getNextLegacyId();
 
     const product = await this.productRepository.save(
       this.productRepository.create({
         legacyId,
         legacyTable: 'products',
-        name: dto.name,
-        slug: dto.slug,
-        description: dto.description ?? null,
-        shortDescription: dto.shortDescription ?? null,
-        status: dto.status ?? 'publish',
-        sku: dto.sku ?? null,
-        brandId: dto.brandId ?? null,
-        minPrice: dto.minPrice ?? null,
-        maxPrice: dto.maxPrice ?? null,
-        isVirtual: dto.isVirtual ?? false,
-        isDownloadable: dto.isDownloadable ?? false,
-        stockQuantity: dto.stockQuantity ?? null,
-        stockStatus: dto.stockStatus ?? null,
-        isOnSale: dto.isOnSale ?? false,
-        taxStatus: dto.taxStatus ?? null,
-        taxClass: dto.taxClass ?? null,
-        weight: dto.weight ?? null,
-        length: dto.length ?? null,
-        width: dto.width ?? null,
-        height: dto.height ?? null,
+        name: productData.name,
+        slug: productData.slug,
+        description: productData.description ?? null,
+        shortDescription: productData.shortDescription ?? null,
+        status: productData.status ?? 'publish',
+        sku: productData.sku ?? null,
+        brandId: productData.brandId ?? null,
+        minPrice: productData.minPrice ?? null,
+        maxPrice: productData.maxPrice ?? null,
+        isVirtual: productData.isVirtual ?? false,
+        isDownloadable: productData.isDownloadable ?? false,
+        stockQuantity: productData.stockQuantity ?? null,
+        stockStatus: productData.stockStatus ?? null,
+        isOnSale: productData.isOnSale ?? false,
+        taxStatus: productData.taxStatus ?? null,
+        taxClass: productData.taxClass ?? null,
+        weight: productData.weight ?? null,
+        length: productData.length ?? null,
+        width: productData.width ?? null,
+        height: productData.height ?? null,
       }),
     );
 
-    return toProductResponse(product);
+    await this.syncProductVariants(product.id, variants, variantIds);
+
+    const loaded = await this.productRepository.findById(product.id, true);
+    return toProductResponse(loaded!, true);
   }
 
   async update(id: string, dto: UpdateProductDto) {
@@ -115,8 +123,10 @@ export class ProductsService {
       );
     }
 
-    if (dto.slug && dto.slug !== product.slug) {
-      const slugTaken = await this.productRepository.findBySlug(dto.slug);
+    const { variants, variantIds, ...productData } = dto;
+
+    if (productData.slug && productData.slug !== product.slug) {
+      const slugTaken = await this.productRepository.findBySlug(productData.slug);
       if (slugTaken) {
         throw new ApiException(
           'PRODUCT_SLUG_EXISTS',
@@ -126,8 +136,8 @@ export class ProductsService {
       }
     }
 
-    if (dto.sku && dto.sku !== product.sku) {
-      const skuTaken = await this.productRepository.findBySku(dto.sku);
+    if (productData.sku && productData.sku !== product.sku) {
+      const skuTaken = await this.productRepository.findBySku(productData.sku);
       if (skuTaken) {
         throw new ApiException(
           'PRODUCT_SKU_EXISTS',
@@ -137,13 +147,16 @@ export class ProductsService {
       }
     }
 
-    if (dto.brandId) {
-      await this.assertBrandExists(dto.brandId);
+    if (productData.brandId) {
+      await this.assertBrandExists(productData.brandId);
     }
 
-    Object.assign(product, dto);
-    const updated = await this.productRepository.save(product);
-    return toProductResponse(updated);
+    Object.assign(product, productData);
+    await this.productRepository.save(product);
+    await this.syncProductVariants(id, variants, variantIds);
+
+    const loaded = await this.productRepository.findById(id, true);
+    return toProductResponse(loaded!, true);
   }
 
   async remove(id: string) {
@@ -164,6 +177,23 @@ export class ProductsService {
     return this.brandRepository
       .findAll()
       .then((brands) => brands.map(toBrandResponse));
+  }
+
+  private async syncProductVariants(
+    productId: string,
+    variants?: CreateProductDto['variants'],
+    variantIds?: string[],
+  ) {
+    if (variants?.length) {
+      await this.productVariantsService.createManyForProduct(productId, variants);
+    }
+
+    if (variantIds?.length) {
+      await this.productVariantsService.assignVariantIdsToProduct(
+        productId,
+        variantIds,
+      );
+    }
   }
 
   private async assertUniqueFields(slug: string, sku?: string) {

@@ -50,6 +50,7 @@ import { AuthModule } from '../auth/auth.module.js';
     ProductsService,
     ProductRepository,
     ProductVariantRepository,
+    ProductVariantsService,
     BrandRepository,
   ],
 })

@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsInt,
@@ -121,6 +121,11 @@ export class CreateProductVariantDto {
   @IsBoolean()
   isActive?: boolean;
 }
+
+export class CreateProductVariantNestedDto extends OmitType(
+  CreateProductVariantDto,
+  ['productId'] as const,
+) {}
 
 export class UpdateProductVariantDto extends PartialType(
   CreateProductVariantDto,

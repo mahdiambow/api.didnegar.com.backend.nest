@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsBoolean,
   IsInt,
   IsNotEmpty,
@@ -10,7 +11,11 @@ import {
   Matches,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreateProductVariantNestedDto } from './product-variant-response.dto.js';
+import { VARIANT_EXAMPLES } from './product-variant.examples.js';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'گوشی Galaxy S24' })
@@ -129,4 +134,24 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0)
   height?: number;
+
+  @ApiPropertyOptional({
+    type: [CreateProductVariantNestedDto],
+    description: 'ساخت واریانت هنگام ایجاد محصول',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductVariantNestedDto)
+  variants?: CreateProductVariantNestedDto[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: [VARIANT_EXAMPLES.variantId],
+    description: 'اتصال واریانت‌های موجود به محصول',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  variantIds?: string[];
 }

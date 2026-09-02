@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ProductVariant } from '../entities/product-variant.entity.js';
 
 @Injectable()
@@ -22,6 +22,14 @@ export class ProductVariantRepository {
 
   findBySku(sku: string) {
     return this.repo.findOne({ where: { sku } });
+  }
+
+  findByIds(ids: string[]) {
+    if (!ids.length) {
+      return Promise.resolve([]);
+    }
+
+    return this.repo.find({ where: { id: In(ids) } });
   }
 
   findByProductId(productId: string) {
@@ -76,6 +84,10 @@ export class ProductVariantRepository {
 
   save(variant: ProductVariant) {
     return this.repo.save(variant);
+  }
+
+  saveMany(variants: ProductVariant[]) {
+    return this.repo.save(variants);
   }
 
   remove(variant: ProductVariant) {

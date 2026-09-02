@@ -11,6 +11,7 @@ import { AttributeValueRepository } from './repositories/attribute-value.reposit
 import {
   AssignVariantAttributeDto,
   CreateProductVariantDto,
+  CreateProductVariantNestedDto,
   ListProductVariantsQueryDto,
   UpdateProductVariantDto,
   toProductVariantAttributeResponse,
@@ -67,46 +68,52 @@ export class ProductVariantsService {
 
   async create(dto: CreateProductVariantDto) {
     await this.assertProductExists(dto.productId);
-
-    if (dto.sku) {
-      const skuTaken = await this.productVariantRepository.findBySku(dto.sku);
-      if (skuTaken) {
-        throw new ApiException(
-          'PRODUCT_VARIANT_SKU_EXISTS',
-          'واریانت با این SKU از قبل وجود دارد',
-          HttpStatus.CONFLICT,
-        );
-      }
-    }
-
-    const legacyId = await this.productVariantRepository.getNextLegacyId();
-
-    const variant = await this.productVariantRepository.save(
-      this.productVariantRepository.create({
-        legacyId,
-        legacyTable: 'product_variants',
-        productId: dto.productId,
-        sku: dto.sku ?? null,
-        minPrice: dto.minPrice ?? null,
-        maxPrice: dto.maxPrice ?? null,
-        isVirtual: dto.isVirtual ?? false,
-        isDownloadable: dto.isDownloadable ?? false,
-        stockQuantity: dto.stockQuantity ?? null,
-        stockStatus: dto.stockStatus ?? null,
-        taxStatus: dto.taxStatus ?? null,
-        taxClass: dto.taxClass ?? null,
-        description: dto.description ?? null,
-        status: dto.status ?? 'publish',
-        weight: dto.weight ?? null,
-        length: dto.length ?? null,
-        width: dto.width ?? null,
-        height: dto.height ?? null,
-        isActive: dto.isActive ?? true,
-      }),
-    );
-
+    const variant = await this.createVariant(dto.productId, dto);
     const saved = await this.productVariantRepository.findById(variant.id);
     return toProductVariantResponse(saved!, true);
+  }
+
+  async createManyForProduct(
+    productId: string,
+    variants: CreateProductVariantNestedDto[],
+  ) {
+    if (!variants.length) {
+      return [];
+    }
+
+    await this.assertProductExists(productId);
+
+    const created = [];
+    for (const variantDto of variants) {
+      created.push(await this.createVariant(productId, variantDto));
+    }
+
+    return created;
+  }
+
+  async assignVariantIdsToProduct(productId: string, variantIds: string[]) {
+    if (!variantIds.length) {
+      return;
+    }
+
+    await this.assertProductExists(productId);
+
+    const uniqueIds = [...new Set(variantIds)];
+    const variants = await this.productVariantRepository.findByIds(uniqueIds);
+
+    if (variants.length !== uniqueIds.length) {
+      throw new ApiException(
+        'PRODUCT_VARIANT_NOT_FOUND',
+        'یک یا چند واریانت یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    for (const variant of variants) {
+      variant.productId = productId;
+    }
+
+    await this.productVariantRepository.saveMany(variants);
   }
 
   async update(id: string, dto: UpdateProductVariantDto) {
@@ -211,6 +218,48 @@ export class ProductVariantsService {
 
     await this.productVariantAttributeRepository.remove(link);
     return {};
+  }
+
+  private async createVariant(
+    productId: string,
+    dto: CreateProductVariantNestedDto,
+  ) {
+    if (dto.sku) {
+      const skuTaken = await this.productVariantRepository.findBySku(dto.sku);
+      if (skuTaken) {
+        throw new ApiException(
+          'PRODUCT_VARIANT_SKU_EXISTS',
+          'واریانت با این SKU از قبل وجود دارد',
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
+    const legacyId = await this.productVariantRepository.getNextLegacyId();
+
+    return this.productVariantRepository.save(
+      this.productVariantRepository.create({
+        legacyId,
+        legacyTable: 'product_variants',
+        productId,
+        sku: dto.sku ?? null,
+        minPrice: dto.minPrice ?? null,
+        maxPrice: dto.maxPrice ?? null,
+        isVirtual: dto.isVirtual ?? false,
+        isDownloadable: dto.isDownloadable ?? false,
+        stockQuantity: dto.stockQuantity ?? null,
+        stockStatus: dto.stockStatus ?? null,
+        taxStatus: dto.taxStatus ?? null,
+        taxClass: dto.taxClass ?? null,
+        description: dto.description ?? null,
+        status: dto.status ?? 'publish',
+        weight: dto.weight ?? null,
+        length: dto.length ?? null,
+        width: dto.width ?? null,
+        height: dto.height ?? null,
+        isActive: dto.isActive ?? true,
+      }),
+    );
   }
 
   private async assertProductExists(productId: string) {

@@ -117,6 +117,13 @@ export class ProductResponseDto {
     example: [PRODUCT_VARIANT_RESPONSE_EXAMPLE],
   })
   variants?: ProductVariantResponseDto[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: [PRODUCT_VARIANT_RESPONSE_EXAMPLE.id],
+    description: 'شناسه واریانت‌ها',
+  })
+  variantIds?: string[];
 }
 
 export function toBrandResponse(brand: Brand): BrandResponseDto {
@@ -170,6 +177,10 @@ export function toProductResponse(
     variants:
       includeRelations && product.variants
         ? product.variants.map((variant) => toProductVariantResponse(variant, true))
+        : undefined,
+    variantIds:
+      includeRelations && product.variants
+        ? product.variants.map((variant) => variant.id)
         : undefined,
   };
 }

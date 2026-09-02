@@ -11,6 +11,7 @@ export interface ProductFilters {
   stockStatus?: string;
   categoryId?: string;
   subCategoryId?: string;
+  variantId?: string;
 }
 
 @Injectable()
@@ -127,6 +128,15 @@ export class ProductRepository {
         'pcSubCategory',
         'pcSubCategory.subCategoryId = :subCategoryId',
         { subCategoryId: filters.subCategoryId },
+      );
+    }
+
+    if (filters.variantId) {
+      qb.innerJoin(
+        'product.variants',
+        'pcVariant',
+        'pcVariant.id = :variantId',
+        { variantId: filters.variantId },
       );
     }
 
