@@ -113,10 +113,11 @@ export class ProductResponseDto {
   categories?: ProductCategoryResponseDto[];
 
   @ApiPropertyOptional({
-    type: [ProductAttributeResponseDto],
-    example: [PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE],
+    type: [String],
+    example: [PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.id],
+    description: 'شناسه attributeهای محصول',
   })
-  attributes?: ProductAttributeResponseDto[];
+  attributes?: string[];
 
   @ApiPropertyOptional({
     type: [String],
@@ -126,11 +127,11 @@ export class ProductResponseDto {
   attributeIds?: string[];
 
   @ApiPropertyOptional({
-    type: [String],
-    example: [PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.id],
-    description: 'شناسه attributeهای محصول — معادل attributeIds',
+    type: [ProductAttributeResponseDto],
+    example: [PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE],
+    description: 'attributeهای populate‌شده محصول',
   })
-  variantIds?: string[];
+  variantIds?: ProductAttributeResponseDto[];
 }
 
 export function toBrandResponse(brand: Brand): BrandResponseDto {
@@ -183,7 +184,7 @@ export function toProductResponse(
         : undefined,
     attributes:
       includeRelations && product.variants
-        ? product.variants.map((item) => toProductAttributeResponse(item, true))
+        ? product.variants.map((item) => item.id)
         : undefined,
     attributeIds:
       includeRelations && product.variants
@@ -191,7 +192,7 @@ export function toProductResponse(
         : undefined,
     variantIds:
       includeRelations && product.variants
-        ? product.variants.map((item) => item.id)
+        ? product.variants.map((item) => toProductAttributeResponse(item, true))
         : undefined,
   };
 }
