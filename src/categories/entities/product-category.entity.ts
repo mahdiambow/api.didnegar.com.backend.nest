@@ -13,20 +13,22 @@ import type { Category } from './category.entity.js';
 import type { SubCategory } from './sub-category.entity.js';
 
 @Entity('product_categories')
-@Index(['productId', 'categoryId', 'subCategoryId'], { unique: true })
+@Index('uq_product_category', ['productId', 'categoryId', 'subCategoryId'], {
+  unique: true,
+})
 export class ProductCategory {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Index()
+  @Index('idx_product_categories_productId')
   @Column({ type: 'uuid' })
   productId: string;
 
-  @Index()
+  @Index('idx_product_categories_categoryId')
   @Column({ type: 'uuid', nullable: true })
   categoryId: string | null;
 
-  @Index()
+  @Index('idx_product_categories_subCategoryId')
   @Column({ type: 'uuid', nullable: true })
   subCategoryId: string | null;
 
@@ -42,13 +44,17 @@ export class ProductCategory {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne('Product', 'productCategories', { onDelete: 'CASCADE' })
+  @ManyToOne('Product', 'productCategories', {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   @JoinColumn({ name: 'productId' })
   product: Product;
 
   @ManyToOne('Category', 'productCategories', {
     nullable: true,
     onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
   })
   @JoinColumn({ name: 'categoryId' })
   category: Category | null;
@@ -56,6 +62,7 @@ export class ProductCategory {
   @ManyToOne('SubCategory', 'productCategories', {
     nullable: true,
     onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
   })
   @JoinColumn({ name: 'subCategoryId' })
   subCategory: SubCategory | null;

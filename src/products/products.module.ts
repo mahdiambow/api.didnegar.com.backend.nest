@@ -19,6 +19,7 @@ import { ProductVariantRepository } from './repositories/product-variant.reposit
 import { ProductVariantAttributeRepository } from './repositories/product-variant-attribute.repository.js';
 import { AttributesModule } from '../attributes/attributes.module.js';
 import { AuthModule } from '../auth/auth.module.js';
+import { CategoriesModule } from '../categories/categories.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AuthModule } from '../auth/auth.module.js';
       ProductVariantAttribute,
     ]),
     forwardRef(() => AuthModule),
+    forwardRef(() => CategoriesModule),
     AttributesModule,
   ],
   controllers: [

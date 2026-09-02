@@ -107,8 +107,16 @@ export class ProductResponseDto {
   brand?: BrandResponseDto | null;
 
   @ApiPropertyOptional({
+    type: [String],
+    example: [PRODUCT_CATEGORY_RESPONSE_EXAMPLE.subCategoryId],
+    description: 'شناسه category/subCategoryهای محصول',
+  })
+  categoryIds?: string[];
+
+  @ApiPropertyOptional({
     type: [ProductCategoryResponseDto],
     example: [PRODUCT_CATEGORY_RESPONSE_EXAMPLE],
+    description: 'دسته‌های populate‌شده — شامل subCategory و category',
   })
   categories?: ProductCategoryResponseDto[];
 
@@ -174,6 +182,12 @@ export function toProductResponse(
     categories:
       includeRelations && product.productCategories
         ? product.productCategories.map(toProductCategoryResponse)
+        : undefined,
+    categoryIds:
+      includeRelations && product.productCategories
+        ? product.productCategories.map(
+            (item) => item.subCategoryId ?? item.categoryId!,
+          )
         : undefined,
     variantIds:
       includeRelations && product.variants

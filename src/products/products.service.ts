@@ -1,9 +1,10 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
+import { CategoriesService } from '../categories/categories.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { toProductEntityData } from './dto/product-fields.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
@@ -21,6 +22,8 @@ export class ProductsService {
     private readonly productRepository: ProductRepository,
     private readonly brandRepository: BrandRepository,
     private readonly productVariantsService: ProductVariantsService,
+    @Inject(forwardRef(() => CategoriesService))
+    private readonly categoriesService: CategoriesService,
   ) {}
 
   async findAll(query: {
@@ -73,7 +76,7 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto) {
-    const { variantIds, ...productData } = dto;
+    const { variantIds, categoryIds, ...productData } = dto;
 
     await this.assertUniqueFields(productData.slug, productData.sku);
     if (productData.brandId) {
@@ -88,6 +91,10 @@ export class ProductsService {
     );
 
     await this.syncVariantIds(product.id, variantIds);
+    await this.categoriesService.assignCategoryIdsToProduct(
+      product.id,
+      categoryIds ?? [],
+    );
 
     const loaded = await this.productRepository.findById(product.id, true);
     return toProductResponse(loaded!, true);
@@ -103,7 +110,7 @@ export class ProductsService {
       );
     }
 
-    const { variantIds, ...productData } = dto;
+    const { variantIds, categoryIds, ...productData } = dto;
 
     if (productData.slug && productData.slug !== product.slug) {
       const slugTaken = await this.productRepository.findBySlug(productData.slug);
@@ -134,6 +141,10 @@ export class ProductsService {
     Object.assign(product, productData);
     await this.productRepository.save(product);
     await this.syncVariantIds(id, variantIds);
+    await this.categoriesService.assignCategoryIdsToProduct(
+      id,
+      categoryIds ?? [],
+    );
 
     const loaded = await this.productRepository.findById(id, true);
     return toProductResponse(loaded!, true);

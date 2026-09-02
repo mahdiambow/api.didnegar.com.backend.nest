@@ -23,6 +23,7 @@ import {
   toSubCategoryResponse,
   toProductCategoryResponse,
 } from './dto/category-response.dto.js';
+import { ProductCategoryLinkInput } from './dto/product-category-link.dto.js';
 
 @Injectable()
 export class CategoriesService {
@@ -206,13 +207,52 @@ export class CategoriesService {
   async assignProductCategory(dto: CreateProductCategoryDto) {
     await this.assertProductExists(dto.productId);
 
-    const { categoryId, subCategoryId } = await this.resolveFromSubCategoryId(
-      dto.subCategoryId,
-    );
+    const saved = await this.createProductCategoryLink(dto.productId, dto);
+    return toProductCategoryResponse(saved);
+  }
+
+  async assignProductCategories(
+    productId: string,
+    links: ProductCategoryLinkInput[],
+  ) {
+    if (!links.length) {
+      return;
+    }
+
+    await this.assertProductExists(productId);
+
+    for (const link of links) {
+      await this.createProductCategoryLink(productId, link);
+    }
+  }
+
+  async assignCategoryIdsToProduct(productId: string, categoryIds: string[]) {
+    if (!categoryIds.length) {
+      return;
+    }
+
+    await this.assertProductExists(productId);
+
+    const uniqueIds = [...new Set(categoryIds)];
+    for (let index = 0; index < uniqueIds.length; index++) {
+      const link = await this.resolveCategoryId(uniqueIds[index]!);
+      await this.createProductCategoryLink(productId, {
+        ...link,
+        position: index,
+      });
+    }
+  }
+
+  private async createProductCategoryLink(
+    productId: string,
+    link: ProductCategoryLinkInput,
+  ) {
+    const { categoryId, subCategoryId } =
+      await this.resolveCategoryLink(link);
 
     const duplicate =
       await this.productCategoryRepository.findByProductCategorySubCategory(
-        dto.productId,
+        productId,
         categoryId,
         subCategoryId,
       );
@@ -225,22 +265,22 @@ export class CategoriesService {
       );
     }
 
-    if (dto.isPrimary) {
-      await this.productCategoryRepository.clearPrimaryForProduct(dto.productId);
+    if (link.isPrimary) {
+      await this.productCategoryRepository.clearPrimaryForProduct(productId);
     }
 
-    const link = await this.productCategoryRepository.save(
+    const saved = await this.productCategoryRepository.save(
       this.productCategoryRepository.create({
-        productId: dto.productId,
+        productId,
         categoryId,
         subCategoryId,
-        isPrimary: dto.isPrimary ?? false,
-        position: dto.position ?? 0,
+        isPrimary: link.isPrimary ?? false,
+        position: link.position ?? 0,
       }),
     );
 
-    const saved = await this.productCategoryRepository.findById(link.id);
-    return toProductCategoryResponse(saved!);
+    const loaded = await this.productCategoryRepository.findById(saved.id);
+    return loaded!;
   }
 
   async updateProductCategory(id: string, dto: UpdateProductCategoryDto) {
@@ -253,9 +293,15 @@ export class CategoriesService {
       );
     }
 
-    if (dto.subCategoryId !== undefined) {
+    if (dto.categoryId !== undefined || dto.subCategoryId !== undefined) {
       const { categoryId: nextCategoryId, subCategoryId: nextSubCategoryId } =
-        await this.resolveFromSubCategoryId(dto.subCategoryId);
+        await this.resolveCategoryLink({
+          categoryId: dto.categoryId ?? link.categoryId ?? undefined,
+          subCategoryId:
+            dto.subCategoryId !== undefined
+              ? dto.subCategoryId
+              : (link.subCategoryId ?? undefined),
+        });
 
       const duplicate =
         await this.productCategoryRepository.findByProductCategorySubCategory(
@@ -334,22 +380,63 @@ export class CategoriesService {
     }
   }
 
-  private async resolveFromSubCategoryId(subCategoryId: string) {
-    const subCategory =
-      await this.subCategoryRepository.findById(subCategoryId);
-    if (!subCategory) {
+  private async resolveCategoryId(id: string): Promise<ProductCategoryLinkInput> {
+    const subCategory = await this.subCategoryRepository.findById(id);
+    if (subCategory) {
+      return {
+        categoryId: subCategory.categoryId,
+        subCategoryId: subCategory.id,
+      };
+    }
+
+    await this.assertCategoryExists(id);
+
+    return { categoryId: id };
+  }
+
+  private async resolveCategoryLink(input: ProductCategoryLinkInput) {
+    const { categoryId, subCategoryId } = input;
+
+    if (!categoryId && !subCategoryId) {
       throw new ApiException(
-        'SUB_CATEGORY_NOT_FOUND',
-        'زیردسته یافت نشد',
-        HttpStatus.NOT_FOUND,
+        'PRODUCT_CATEGORY_INVALID',
+        'categoryId یا subCategoryId الزامی است',
+        HttpStatus.BAD_REQUEST,
       );
     }
 
-    await this.assertCategoryExists(subCategory.categoryId);
+    if (subCategoryId) {
+      const subCategory =
+        await this.subCategoryRepository.findById(subCategoryId);
+      if (!subCategory) {
+        throw new ApiException(
+          'SUB_CATEGORY_NOT_FOUND',
+          'زیردسته یافت نشد',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      if (categoryId && categoryId !== subCategory.categoryId) {
+        throw new ApiException(
+          'PRODUCT_CATEGORY_MISMATCH',
+          'subCategoryId به categoryId تعلق ندارد',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      await this.assertCategoryExists(subCategory.categoryId);
+
+      return {
+        categoryId: subCategory.categoryId,
+        subCategoryId: subCategory.id,
+      };
+    }
+
+    await this.assertCategoryExists(categoryId!);
 
     return {
-      categoryId: subCategory.categoryId,
-      subCategoryId: subCategory.id,
+      categoryId: categoryId!,
+      subCategoryId: null,
     };
   }
 }

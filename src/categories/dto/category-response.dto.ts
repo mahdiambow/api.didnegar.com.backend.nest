@@ -1,11 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsInt,
-  IsOptional,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
+import { IsOptional, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Category } from '../entities/category.entity.js';
 import { SubCategory } from '../entities/sub-category.entity.js';
@@ -16,59 +10,22 @@ import {
   PRODUCT_CATEGORY_RESPONSE_EXAMPLE,
   SUB_CATEGORY_RESPONSE_EXAMPLE,
 } from './category.examples.js';
+import {
+  ProductCategoryLinkDto,
+} from './product-category-link.dto.js';
 
-export class CreateProductCategoryDto {
+export class CreateProductCategoryDto extends ProductCategoryLinkDto {
   @ApiProperty({
     example: CATEGORY_EXAMPLES.productId,
     description: 'شناسه محصول',
   })
   @IsUUID()
   productId: string;
-
-  @ApiProperty({
-    example: CATEGORY_EXAMPLES.subCategoryId,
-    description: 'زیردسته — دسته اصلی از روی آن پر می‌شود',
-  })
-  @IsUUID()
-  subCategoryId: string;
-
-  @ApiPropertyOptional({
-    example: true,
-    default: false,
-    description: 'دسته اصلی نمایش محصول در فروشگاه',
-  })
-  @IsOptional()
-  @IsBoolean()
-  isPrimary?: boolean;
-
-  @ApiPropertyOptional({
-    example: 0,
-    default: 0,
-    description: 'ترتیب نمایش',
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  position?: number;
 }
 
-export class UpdateProductCategoryDto {
-  @ApiPropertyOptional({ example: CATEGORY_EXAMPLES.subCategoryId })
-  @IsOptional()
-  @IsUUID()
-  subCategoryId?: string;
-
-  @ApiPropertyOptional({ example: false })
-  @IsOptional()
-  @IsBoolean()
-  isPrimary?: boolean;
-
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  position?: number;
-}
+export class UpdateProductCategoryDto extends PartialType(
+  ProductCategoryLinkDto,
+) {}
 
 export class ListProductCategoriesQueryDto {
   @ApiPropertyOptional({ example: CATEGORY_EXAMPLES.productId })
@@ -172,6 +129,12 @@ export class ProductCategoryResponseDto {
     nullable: true,
   })
   subCategory?: SubCategoryResponseDto | null;
+
+  @ApiProperty({ example: PRODUCT_CATEGORY_RESPONSE_EXAMPLE.createdAt })
+  createdAt: Date;
+
+  @ApiProperty({ example: PRODUCT_CATEGORY_RESPONSE_EXAMPLE.updatedAt })
+  updatedAt: Date;
 }
 
 export function toCategoryResponse(category: Category): CategoryResponseDto {
@@ -218,5 +181,7 @@ export function toProductCategoryResponse(
     subCategory: link.subCategory
       ? toSubCategoryResponse(link.subCategory, true)
       : null,
+    createdAt: link.createdAt,
+    updatedAt: link.updatedAt,
   };
 }

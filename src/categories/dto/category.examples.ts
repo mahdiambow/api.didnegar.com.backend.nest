@@ -23,11 +23,16 @@ export const SUB_CATEGORY_RESPONSE_EXAMPLE = {
   category: CATEGORY_RESPONSE_EXAMPLE,
 };
 
-export const CREATE_PRODUCT_CATEGORY_EXAMPLE = {
-  productId: CATEGORY_EXAMPLES.productId,
+export const PRODUCT_CATEGORY_LINK_EXAMPLE = {
+  categoryId: CATEGORY_EXAMPLES.categoryId,
   subCategoryId: CATEGORY_EXAMPLES.subCategoryId,
   isPrimary: true,
   position: 0,
+};
+
+export const CREATE_PRODUCT_CATEGORY_EXAMPLE = {
+  productId: CATEGORY_EXAMPLES.productId,
+  ...PRODUCT_CATEGORY_LINK_EXAMPLE,
 };
 
 export const PRODUCT_CATEGORY_RESPONSE_EXAMPLE = {
@@ -37,6 +42,8 @@ export const PRODUCT_CATEGORY_RESPONSE_EXAMPLE = {
   subCategoryId: CATEGORY_EXAMPLES.subCategoryId,
   isPrimary: true,
   position: 0,
+  createdAt: CATEGORY_EXAMPLES.createdAt,
+  updatedAt: CATEGORY_EXAMPLES.createdAt,
   category: CATEGORY_RESPONSE_EXAMPLE,
   subCategory: SUB_CATEGORY_RESPONSE_EXAMPLE,
 };
