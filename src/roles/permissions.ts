@@ -14,6 +14,28 @@ export const PERMISSIONS = {
   auth: {
     manage: 'auth:manage',
   },
+  products: {
+    read: 'products:read',
+    create: 'products:create',
+    update: 'products:update',
+    delete: 'products:delete',
+    adjustPrices: 'products:adjust-prices',
+    importPrices: 'products:import-prices',
+  },
+  orders: {
+    read: 'orders:read',
+    create: 'orders:create',
+  },
+  payments: {
+    read: 'payments:read',
+    create: 'payments:create',
+  },
+  shipping: {
+    read: 'shipping:read',
+    create: 'shipping:create',
+    update: 'shipping:update',
+    delete: 'shipping:delete',
+  },
 } as const;
 
 export type Permission =
@@ -64,6 +86,76 @@ export const PERMISSION_DEFINITIONS = [
     key: PERMISSIONS.auth.manage,
     label: 'مدیریت احراز هویت',
     group: 'auth',
+  },
+  {
+    key: PERMISSIONS.products.read,
+    label: 'مشاهده محصولات',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.products.create,
+    label: 'ایجاد محصول',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.products.update,
+    label: 'ویرایش محصول',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.products.delete,
+    label: 'حذف محصول',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.products.adjustPrices,
+    label: 'تغییر گروهی قیمت محصولات',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.products.importPrices,
+    label: 'ایمپورت قیمت از اکسل',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.orders.read,
+    label: 'مشاهده سفارش‌ها',
+    group: 'orders',
+  },
+  {
+    key: PERMISSIONS.orders.create,
+    label: 'ایجاد سفارش',
+    group: 'orders',
+  },
+  {
+    key: PERMISSIONS.payments.read,
+    label: 'مشاهده پرداخت‌ها',
+    group: 'payments',
+  },
+  {
+    key: PERMISSIONS.payments.create,
+    label: 'ایجاد پرداخت',
+    group: 'payments',
+  },
+  {
+    key: PERMISSIONS.shipping.read,
+    label: 'مشاهده روش‌های ارسال',
+    group: 'shipping',
+  },
+  {
+    key: PERMISSIONS.shipping.create,
+    label: 'ایجاد روش ارسال',
+    group: 'shipping',
+  },
+  {
+    key: PERMISSIONS.shipping.update,
+    label: 'ویرایش روش ارسال',
+    group: 'shipping',
+  },
+  {
+    key: PERMISSIONS.shipping.delete,
+    label: 'حذف روش ارسال',
+    group: 'shipping',
   },
 ] as const;
 
