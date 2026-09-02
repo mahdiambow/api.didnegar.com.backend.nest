@@ -6,6 +6,8 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
+import { ALL_PERMISSIONS } from '../permissions.js';
+import { IsPermissionArray } from '../validators/is-permission.validator.js';
 
 export class UpdateRoleDto {
   @ApiPropertyOptional({ example: 'editor' })
@@ -25,10 +27,12 @@ export class UpdateRoleDto {
 
   @ApiPropertyOptional({
     example: ['users:read'],
-    type: [String],
+    enum: ALL_PERMISSIONS,
+    isArray: true,
   })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  @IsPermissionArray()
   permissions?: string[];
 }

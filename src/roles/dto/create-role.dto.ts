@@ -1,5 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsNotEmpty, IsString, Matches, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
+import { ALL_PERMISSIONS } from '../permissions.js';
+import { IsPermissionArray } from '../validators/is-permission.validator.js';
 
 export class CreateRoleDto {
   @ApiProperty({ example: 'editor' })
@@ -19,9 +21,19 @@ export class CreateRoleDto {
 
   @ApiProperty({
     example: ['users:read', 'users:update'],
-    type: [String],
+    enum: ALL_PERMISSIONS,
+    isArray: true,
   })
   @IsArray()
   @IsString({ each: true })
+  @IsPermissionArray()
   permissions: string[];
+
+  @ApiPropertyOptional({
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'فقط super-admin می‌تواند sellerId تعیین کند',
+  })
+  @IsOptional()
+  @IsUUID()
+  sellerId?: string;
 }

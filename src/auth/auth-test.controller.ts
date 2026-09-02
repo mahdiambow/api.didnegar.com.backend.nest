@@ -16,11 +16,13 @@ import { RequireRole } from './decorators/require-role.decorator.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { PermissionsGuard } from './guards/permissions.guard.js';
 import { RoleGuard } from './guards/role.guard.js';
+import type { AuthUser } from './types/auth-user.type.js';
 
 class AuthTestResponseDto {
   message: string;
   userId: string;
   role: string;
+  sellerId: string | null;
 }
 
 const AuthTestApiResponseDto = createSuccessResponseDto(AuthTestResponseDto, {
@@ -34,24 +36,47 @@ const AuthTestApiResponseDto = createSuccessResponseDto(AuthTestResponseDto, {
 @UseGuards(JwtAuthGuard)
 @Controller('auth/test')
 export class AuthTestController {
-  @Get('admin')
-  @UseGuards(PermissionsGuard)
-  @RequirePermissions(PERMISSIONS.roles.read)
+  @Get('super-admin')
+  @UseGuards(RoleGuard)
+  @RequireRole(DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
   @ApiResponseMeta({
-    code: 'ADMIN_TEST_OK',
-    message: 'Admin test endpoint accessed successfully',
+    code: 'SUPER_ADMIN_TEST_OK',
+    message: 'Super admin test endpoint accessed successfully',
   })
   @ApiOperation({
-    summary: 'تست guard ادمین — نیاز به permission roles:read',
+    summary: 'تست Didnegar super-admin — دسترسی cross-tenant',
   })
   @ApiOkResponse({ type: AuthTestApiResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
   @ApiForbiddenResponse({ type: ApiErrorResponseDto })
-  adminTest(@Req() req: { user: { sub: string; role: string } }) {
+  superAdminTest(@Req() req: { user: AuthUser }) {
     return {
-      message: 'سلام ادمین — دسترسی permission-based تأیید شد',
+      message: 'سلام Didnegar — دسترسی super-admin تأیید شد',
       userId: req.user.sub,
       role: req.user.role,
+      sellerId: req.user.sellerId,
+    };
+  }
+
+  @Get('seller')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.inventory.read)
+  @ApiResponseMeta({
+    code: 'SELLER_TEST_OK',
+    message: 'Seller test endpoint accessed successfully',
+  })
+  @ApiOperation({
+    summary: 'تست seller — نیاز به permission inventory:read',
+  })
+  @ApiOkResponse({ type: AuthTestApiResponseDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
+  @ApiForbiddenResponse({ type: ApiErrorResponseDto })
+  sellerTest(@Req() req: { user: AuthUser }) {
+    return {
+      message: 'سلام فروشنده — دسترسی tenant-based تأیید شد',
+      userId: req.user.sub,
+      role: req.user.role,
+      sellerId: req.user.sellerId,
     };
   }
 
@@ -68,11 +93,12 @@ export class AuthTestController {
   @ApiOkResponse({ type: AuthTestApiResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
   @ApiForbiddenResponse({ type: ApiErrorResponseDto })
-  userTest(@Req() req: { user: { sub: string; role: string } }) {
+  userTest(@Req() req: { user: AuthUser }) {
     return {
       message: 'سلام کاربر — دسترسی role-based تأیید شد',
       userId: req.user.sub,
       role: req.user.role,
+      sellerId: req.user.sellerId,
     };
   }
 }

@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -19,6 +20,7 @@ import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js'
 import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import type { AuthUser } from '../auth/types/auth-user.type.js';
 import { UserResponseDto } from '../auth/dto/user-response.dto.js';
 import { UsersService } from './users.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
@@ -54,8 +56,8 @@ export class UsersController {
   })
   @ApiOperation({ summary: 'لیست کاربران با pagination' })
   @ApiOkResponse({ type: UsersPaginatedApiResponseDto })
-  findAll(@Query() query: ListUsersQueryDto) {
-    return this.usersService.findAll(query);
+  findAll(@Req() req: { user: AuthUser }, @Query() query: ListUsersQueryDto) {
+    return this.usersService.findAll(req.user, query);
   }
 
   @Get(':id')
@@ -65,8 +67,8 @@ export class UsersController {
   })
   @ApiOperation({ summary: 'دریافت یک کاربر' })
   @ApiOkResponse({ type: UserApiResponseDto })
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+  findOne(@Req() req: { user: AuthUser }, @Param('id') id: string) {
+    return this.usersService.findOne(req.user, id);
   }
 
   @Post()
@@ -76,8 +78,8 @@ export class UsersController {
   })
   @ApiOperation({ summary: 'ایجاد کاربر' })
   @ApiOkResponse({ type: UserApiResponseDto })
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  create(@Req() req: { user: AuthUser }, @Body() dto: CreateUserDto) {
+    return this.usersService.create(req.user, dto);
   }
 
   @Patch(':id')
@@ -87,8 +89,12 @@ export class UsersController {
   })
   @ApiOperation({ summary: 'ویرایش کاربر' })
   @ApiOkResponse({ type: UserApiResponseDto })
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(id, dto);
+  update(
+    @Req() req: { user: AuthUser },
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+  ) {
+    return this.usersService.update(req.user, id, dto);
   }
 
   @Delete(':id')
@@ -97,7 +103,7 @@ export class UsersController {
     message: 'User deleted successfully',
   })
   @ApiOperation({ summary: 'حذف کاربر' })
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(@Req() req: { user: AuthUser }, @Param('id') id: string) {
+    return this.usersService.remove(req.user, id);
   }
 }

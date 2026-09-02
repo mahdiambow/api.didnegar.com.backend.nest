@@ -21,17 +21,31 @@ export class UserRepository {
     return this.repo.findOne({ where: { username } });
   }
 
-  findPaginated(offset: number, limit: number) {
-    return this.repo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip: offset,
-      take: limit,
-    });
+  findPaginatedForTenant(
+    offset: number,
+    limit: number,
+    options: { sellerId: string | null; isSuperAdmin: boolean },
+  ) {
+    const qb = this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.seller', 'seller')
+      .orderBy('user.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit);
+
+    if (!options.isSuperAdmin) {
+      qb.andWhere('user.sellerId = :sellerId', { sellerId: options.sellerId });
+    }
+
+    return qb.getManyAndCount();
   }
 
   findByUsernameWithPassword(username: string) {
     return this.repo
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.seller', 'seller')
       .addSelect('user.password')
       .where('user.username = :username', { username })
       .getOne();
@@ -41,9 +55,38 @@ export class UserRepository {
     return this.repo
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.seller', 'seller')
       .addSelect(['user.otpCode', 'user.otpExpiresAt', 'user.password'])
       .where('user.username = :username', { username })
       .getOne();
+  }
+
+  findByIds(ids: string[]) {
+    if (ids.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    return this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .where('user.id IN (:...ids)', { ids })
+      .getMany();
+  }
+
+  findAdminIdsBySellerId(sellerId: string) {
+    return this.findUsersBySellerId(sellerId).then((users) =>
+      users.map((user) => user.id),
+    );
+  }
+
+  findUsersBySellerId(sellerId: string) {
+    return this.repo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.role', 'role')
+      .leftJoinAndSelect('user.seller', 'seller')
+      .where('user.sellerId = :sellerId', { sellerId })
+      .orderBy('user.createdAt', 'ASC')
+      .getMany();
   }
 
   create(data: Partial<User>) {
