@@ -124,6 +124,13 @@ export class ProductResponseDto {
     description: 'شناسه attributeهای محصول',
   })
   attributeIds?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: [PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.id],
+    description: 'شناسه attributeهای محصول — معادل attributeIds',
+  })
+  variantIds?: string[];
 }
 
 export function toBrandResponse(brand: Brand): BrandResponseDto {
@@ -179,6 +186,10 @@ export function toProductResponse(
         ? product.variants.map((item) => toProductAttributeResponse(item, true))
         : undefined,
     attributeIds:
+      includeRelations && product.variants
+        ? product.variants.map((item) => item.id)
+        : undefined,
+    variantIds:
       includeRelations && product.variants
         ? product.variants.map((item) => item.id)
         : undefined,

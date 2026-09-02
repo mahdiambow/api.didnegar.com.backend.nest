@@ -77,7 +77,7 @@ export class ProductsService {
       await this.assertBrandExists(dto.brandId);
     }
 
-    const { attributeIds, ...productData } = dto;
+    const { attributeIds, variantIds, ...productData } = dto;
     const legacyId = await this.productRepository.getNextLegacyId();
 
     const product = await this.productRepository.save(
@@ -107,7 +107,11 @@ export class ProductsService {
       }),
     );
 
-    await this.syncProductAttributes(product.id, attributeIds);
+    await this.syncProductAttributes(
+      product.id,
+      attributeIds,
+      variantIds,
+    );
 
     const loaded = await this.productRepository.findById(product.id, true);
     return toProductResponse(loaded!, true);
@@ -123,7 +127,7 @@ export class ProductsService {
       );
     }
 
-    const { attributeIds, ...productData } = dto;
+    const { attributeIds, variantIds, ...productData } = dto;
 
     if (productData.slug && productData.slug !== product.slug) {
       const slugTaken = await this.productRepository.findBySlug(productData.slug);
@@ -153,7 +157,7 @@ export class ProductsService {
 
     Object.assign(product, productData);
     await this.productRepository.save(product);
-    await this.syncProductAttributes(id, attributeIds);
+    await this.syncProductAttributes(id, attributeIds, variantIds);
 
     const loaded = await this.productRepository.findById(id, true);
     return toProductResponse(loaded!, true);
@@ -179,11 +183,16 @@ export class ProductsService {
       .then((brands) => brands.map(toBrandResponse));
   }
 
-  private async syncProductAttributes(productId: string, attributeIds?: string[]) {
-    if (attributeIds?.length) {
+  private async syncProductAttributes(
+    productId: string,
+    attributeIds?: string[],
+    variantIds?: string[],
+  ) {
+    const ids = [...new Set([...(attributeIds ?? []), ...(variantIds ?? [])])];
+    if (ids.length) {
       await this.productVariantsService.assignAttributeIdsToProduct(
         productId,
-        attributeIds,
+        ids,
       );
     }
   }

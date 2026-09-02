@@ -140,4 +140,14 @@ export class UpdateProductDto {
   @IsArray()
   @IsUUID('4', { each: true })
   attributeIds?: string[];
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: [PRODUCT_ATTRIBUTE_EXAMPLES.attributeId],
+    description: 'همان attributeIds — POST /product-attributes',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  variantIds?: string[];
 }
