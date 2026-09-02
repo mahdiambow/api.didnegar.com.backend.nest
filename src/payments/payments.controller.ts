@@ -18,27 +18,28 @@ import { createSuccessResponseDto } from '../common/response/dto/create-success-
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { PaymentsService } from './payments.service.js';
 import {
+  PaymentResponseDto,
+  PaymentVerifyResponseDto,
+} from './dto/payment.dto.js';
+import {
   CreateZarinpalPaymentDto,
   VerifyZarinpalPaymentQueryDto,
-  ZarinpalPaymentResponseDto,
-  ZarinpalVerifyResponseDto,
 } from './dto/zarinpal-payment.dto.js';
+import { CreatePaymentDto } from './dto/payment.dto.js';
+import { VerifyZibalPaymentQueryDto } from './dto/zibal-payment.dto.js';
 
-const ZarinpalPaymentApiResponseDto = createSuccessResponseDto(
-  ZarinpalPaymentResponseDto,
-  {
-    code: 'PAYMENT_REQUESTED',
-    message: 'Payment request created successfully',
-    name: 'ZarinpalPayment',
-  },
-);
+const PaymentApiResponseDto = createSuccessResponseDto(PaymentResponseDto, {
+  code: 'PAYMENT_REQUESTED',
+  message: 'Payment request created successfully',
+  name: 'Payment',
+});
 
-const ZarinpalVerifyApiResponseDto = createSuccessResponseDto(
-  ZarinpalVerifyResponseDto,
+const PaymentVerifyApiResponseDto = createSuccessResponseDto(
+  PaymentVerifyResponseDto,
   {
     code: 'PAYMENT_VERIFIED',
     message: 'Payment verified successfully',
-    name: 'ZarinpalVerify',
+    name: 'PaymentVerify',
   },
 );
 
@@ -55,12 +56,12 @@ export class PaymentsController {
     message: 'Payment request created successfully',
   })
   @ApiOperation({ summary: 'درخواست پرداخت زرین‌پال (mock)' })
-  @ApiOkResponse({ type: ZarinpalPaymentApiResponseDto })
-  requestPayment(
+  @ApiOkResponse({ type: PaymentApiResponseDto })
+  requestZarinpalPayment(
     @Req() req: { user: { sub: string } },
     @Body() dto: CreateZarinpalPaymentDto,
   ) {
-    return this.paymentsService.createZarinpalPayment(req.user.sub, dto);
+    return this.paymentsService.createZarinpalPayment(req.user.sub, dto.orderId);
   }
 
   @Get('zarinpal/verify')
@@ -69,11 +70,41 @@ export class PaymentsController {
     message: 'Payment verified successfully',
   })
   @ApiOperation({ summary: 'تأیید پرداخت زرین‌پال (mock callback)' })
-  @ApiOkResponse({ type: ZarinpalVerifyApiResponseDto })
-  verifyPayment(@Query() query: VerifyZarinpalPaymentQueryDto) {
+  @ApiOkResponse({ type: PaymentVerifyApiResponseDto })
+  verifyZarinpalPayment(@Query() query: VerifyZarinpalPaymentQueryDto) {
     return this.paymentsService.verifyZarinpalPayment(
       query.Authority,
       query.Status,
+    );
+  }
+
+  @Post('zibal/request')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiResponseMeta({
+    code: 'PAYMENT_REQUESTED',
+    message: 'Payment request created successfully',
+  })
+  @ApiOperation({ summary: 'درخواست پرداخت زیبال (mock)' })
+  @ApiOkResponse({ type: PaymentApiResponseDto })
+  requestZibalPayment(
+    @Req() req: { user: { sub: string } },
+    @Body() dto: CreatePaymentDto,
+  ) {
+    return this.paymentsService.createZibalPayment(req.user.sub, dto.orderId);
+  }
+
+  @Get('zibal/verify')
+  @ApiResponseMeta({
+    code: 'PAYMENT_VERIFIED',
+    message: 'Payment verified successfully',
+  })
+  @ApiOperation({ summary: 'تأیید پرداخت زیبال (mock callback)' })
+  @ApiOkResponse({ type: PaymentVerifyApiResponseDto })
+  verifyZibalPayment(@Query() query: VerifyZibalPaymentQueryDto) {
+    return this.paymentsService.verifyZibalPayment(
+      query.trackId,
+      query.success,
     );
   }
 }

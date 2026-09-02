@@ -11,7 +11,7 @@ import {
 import type { Order } from './order.entity.js';
 
 export type PaymentStatus = 'pending' | 'success' | 'failed';
-export type PaymentGateway = 'zarinpal';
+export type PaymentGateway = 'zarinpal' | 'zibal';
 
 @Entity('payments')
 export class Payment {

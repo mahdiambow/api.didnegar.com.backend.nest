@@ -3,26 +3,54 @@ import { ApiException } from '../common/exceptions/api.exception.js';
 import { toShippingMethodResponse } from '../shipping/dto/shipping.dto.js';
 import { OrderRepository } from '../orders/repositories/order.repository.js';
 import { ZarinpalMockService } from './services/zarinpal-mock.service.js';
+import { ZibalMockService } from './services/zibal-mock.service.js';
+import type { PaymentGatewayAdapter } from './services/payment-gateway.interface.js';
 import { PaymentRepository } from './repositories/payment.repository.js';
-import { CreateZarinpalPaymentDto } from './dto/zarinpal-payment.dto.js';
 import {
-  toZarinpalPaymentResponse,
-  toZarinpalVerifyResponse,
-} from './dto/zarinpal-payment.dto.js';
+  toPaymentResponse,
+  toPaymentVerifyResponse,
+} from './dto/payment.dto.js';
+import type { PaymentGateway } from './entities/payment.entity.js';
 
 @Injectable()
 export class PaymentsService {
+  private readonly gateways: Record<PaymentGateway, PaymentGatewayAdapter>;
+
   constructor(
     private readonly orderRepository: OrderRepository,
     private readonly paymentRepository: PaymentRepository,
-    private readonly zarinpalMockService: ZarinpalMockService,
-  ) {}
+    zarinpalMockService: ZarinpalMockService,
+    zibalMockService: ZibalMockService,
+  ) {
+    this.gateways = {
+      zarinpal: zarinpalMockService,
+      zibal: zibalMockService,
+    };
+  }
 
-  async createZarinpalPayment(userId: string, dto: CreateZarinpalPaymentDto) {
-    const order = await this.orderRepository.findByIdForUser(
-      dto.orderId,
-      userId,
-    );
+  createZarinpalPayment(userId: string, orderId: string) {
+    return this.createPayment(userId, orderId, 'zarinpal');
+  }
+
+  createZibalPayment(userId: string, orderId: string) {
+    return this.createPayment(userId, orderId, 'zibal');
+  }
+
+  verifyZarinpalPayment(authority: string, status: string) {
+    return this.verifyPayment('zarinpal', authority, status === 'OK');
+  }
+
+  verifyZibalPayment(trackId: number, success: number) {
+    return this.verifyPayment('zibal', String(trackId), success === 1);
+  }
+
+  private async createPayment(
+    userId: string,
+    orderId: string,
+    gateway: PaymentGateway,
+  ) {
+    const adapter = this.gateways[gateway];
+    const order = await this.orderRepository.findByIdForUser(orderId, userId);
 
     if (!order) {
       throw new ApiException(
@@ -40,9 +68,7 @@ export class PaymentsService {
       );
     }
 
-    const existingPayment = await this.paymentRepository.findByOrderId(
-      order.id,
-    );
+    const existingPayment = await this.paymentRepository.findByOrderId(order.id);
 
     if (existingPayment?.status === 'success') {
       throw new ApiException(
@@ -52,17 +78,24 @@ export class PaymentsService {
       );
     }
 
-    if (existingPayment?.status === 'pending') {
-      return toZarinpalPaymentResponse({
+    const breakdown = this.getOrderBreakdown(order);
+    const shippingMethod = order.shippingMethod
+      ? toShippingMethodResponse(order.shippingMethod)
+      : null;
+
+    if (
+      existingPayment?.status === 'pending' &&
+      existingPayment.gateway === gateway
+    ) {
+      return toPaymentResponse({
         orderId: order.id,
         paymentId: existingPayment.id,
+        gateway,
         authority: existingPayment.authority,
-        paymentUrl: `${process.env.ZARINPAL_SANDBOX_URL ?? 'https://sandbox.zarinpal.com/pg/StartPay'}/${existingPayment.authority}`,
+        paymentUrl: adapter.buildPaymentUrl(existingPayment.authority),
         amount: Number(existingPayment.amount),
-        ...this.getOrderBreakdown(order),
-        shippingMethod: order.shippingMethod
-          ? toShippingMethodResponse(order.shippingMethod)
-          : null,
+        ...breakdown,
+        shippingMethod,
         gatewayMessage: 'درخواست پرداخت قبلی برای این سفارش فعال است',
       });
     }
@@ -70,40 +103,56 @@ export class PaymentsService {
     const amount = Number(order.amount);
     const productName = order.product?.name ?? 'سفارش';
 
-    const gatewayResult = this.zarinpalMockService.requestPayment(
-      amount,
-      productName,
-    );
+    const gatewayResult = adapter.requestPayment(amount, productName, order.id);
 
-    const payment = await this.paymentRepository.save(
-      this.paymentRepository.create({
-        orderId: order.id,
-        gateway: 'zarinpal',
-        authority: gatewayResult.authority,
-        amount,
-        status: 'pending',
-        callbackUrl: process.env.ZARINPAL_CALLBACK_URL ?? null,
-      }),
-    );
+    const payment = existingPayment
+      ? await this.paymentRepository.save(
+          Object.assign(existingPayment, {
+            gateway,
+            authority: gatewayResult.authority,
+            amount,
+            status: 'pending' as const,
+            refId: null,
+            callbackUrl:
+              gateway === 'zarinpal'
+                ? (process.env.ZARINPAL_CALLBACK_URL ?? null)
+                : (process.env.ZIBAL_CALLBACK_URL ?? null),
+          }),
+        )
+      : await this.paymentRepository.save(
+          this.paymentRepository.create({
+            orderId: order.id,
+            gateway,
+            authority: gatewayResult.authority,
+            amount,
+            status: 'pending',
+            callbackUrl:
+              gateway === 'zarinpal'
+                ? (process.env.ZARINPAL_CALLBACK_URL ?? null)
+                : (process.env.ZIBAL_CALLBACK_URL ?? null),
+          }),
+        );
 
-    const breakdown = this.getOrderBreakdown(order);
-
-    return toZarinpalPaymentResponse({
+    return toPaymentResponse({
       orderId: order.id,
       paymentId: payment.id,
+      gateway,
       authority: gatewayResult.authority,
       paymentUrl: gatewayResult.paymentUrl,
       amount,
       ...breakdown,
-      shippingMethod: order.shippingMethod
-        ? toShippingMethodResponse(order.shippingMethod)
-        : null,
+      shippingMethod,
       gatewayMessage: gatewayResult.message,
     });
   }
 
-  async verifyZarinpalPayment(authority: string, status: string) {
+  private async verifyPayment(
+    gateway: PaymentGateway,
+    authority: string,
+    isSuccess: boolean,
+  ) {
     const payment = await this.paymentRepository.findByAuthority(authority);
+
     if (!payment) {
       throw new ApiException(
         'PAYMENT_NOT_FOUND',
@@ -112,12 +161,22 @@ export class PaymentsService {
       );
     }
 
+    if (payment.gateway !== gateway) {
+      throw new ApiException(
+        'PAYMENT_GATEWAY_MISMATCH',
+        'درگاه پرداخت با تراکنش مطابقت ندارد',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const adapter = this.gateways[gateway];
     const orderBreakdown = this.getOrderBreakdown(payment.order);
 
     if (payment.status === 'success') {
-      return toZarinpalVerifyResponse({
+      return toPaymentVerifyResponse({
         orderId: payment.orderId,
         paymentId: payment.id,
+        gateway,
         refId: payment.refId ?? '',
         status: 'success',
         amount: Number(payment.amount),
@@ -127,7 +186,7 @@ export class PaymentsService {
       });
     }
 
-    if (status !== 'OK') {
+    if (!isSuccess) {
       payment.status = 'failed';
       if (payment.order) {
         payment.order.status = 'failed';
@@ -142,7 +201,7 @@ export class PaymentsService {
       );
     }
 
-    const verifyResult = this.zarinpalMockService.verifyPayment(
+    const verifyResult = adapter.verifyPayment(
       authority,
       Number(payment.amount),
     );
@@ -157,9 +216,10 @@ export class PaymentsService {
 
     await this.paymentRepository.save(payment);
 
-    return toZarinpalVerifyResponse({
+    return toPaymentVerifyResponse({
       orderId: payment.orderId,
       paymentId: payment.id,
+      gateway,
       refId: verifyResult.refId,
       status: 'success',
       amount: Number(payment.amount),
