@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
+import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
 
 export class ListProductsQueryDto {
   @ApiProperty({ example: 1, required: false })
@@ -34,8 +35,19 @@ export class ListProductsQueryDto {
   @IsBoolean()
   isOnSale?: boolean;
 
-  @ApiPropertyOptional({ example: 'instock' })
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.categoryId,
+    description: 'فیلتر بر اساس دسته اصلی',
+  })
   @IsOptional()
-  @IsString()
-  stockStatus?: string;
+  @IsUUID()
+  categoryId?: string;
+
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.subCategoryId,
+    description: 'فیلتر بر اساس زیردسته — مثلاً گوشی',
+  })
+  @IsOptional()
+  @IsUUID()
+  subCategoryId?: string;
 }

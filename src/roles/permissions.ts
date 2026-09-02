@@ -37,6 +37,12 @@ export const PERMISSIONS = {
     update: 'shipping:update',
     delete: 'shipping:delete',
   },
+  categories: {
+    read: 'categories:read',
+    create: 'categories:create',
+    update: 'categories:update',
+    delete: 'categories:delete',
+  },
 } as const;
 
 export type Permission =
@@ -162,6 +168,26 @@ export const PERMISSION_DEFINITIONS = [
     key: PERMISSIONS.shipping.delete,
     label: 'حذف روش ارسال',
     group: 'shipping',
+  },
+  {
+    key: PERMISSIONS.categories.read,
+    label: 'مشاهده دسته‌بندی‌ها',
+    group: 'categories',
+  },
+  {
+    key: PERMISSIONS.categories.create,
+    label: 'ایجاد دسته‌بندی',
+    group: 'categories',
+  },
+  {
+    key: PERMISSIONS.categories.update,
+    label: 'ویرایش دسته‌بندی',
+    group: 'categories',
+  },
+  {
+    key: PERMISSIONS.categories.delete,
+    label: 'حذف دسته‌بندی',
+    group: 'categories',
   },
 ] as const;
 

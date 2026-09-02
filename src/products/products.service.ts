@@ -28,6 +28,8 @@ export class ProductsService {
     name?: string;
     isOnSale?: boolean;
     stockStatus?: string;
+    categoryId?: string;
+    subCategoryId?: string;
   }) {
     const { page, limit, offset } = getPaginationParams(query);
     const [items, total] = await this.productRepository.findPaginated(
@@ -39,6 +41,8 @@ export class ProductsService {
         name: query.name,
         isOnSale: query.isOnSale,
         stockStatus: query.stockStatus,
+        categoryId: query.categoryId,
+        subCategoryId: query.subCategoryId,
       },
       true,
     );

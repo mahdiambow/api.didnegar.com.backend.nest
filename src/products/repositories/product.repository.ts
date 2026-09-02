@@ -9,6 +9,8 @@ export interface ProductFilters {
   name?: string;
   isOnSale?: boolean;
   stockStatus?: string;
+  categoryId?: string;
+  subCategoryId?: string;
 }
 
 @Injectable()
@@ -17,10 +19,18 @@ export class ProductRepository {
     @InjectRepository(Product) private readonly repo: Repository<Product>,
   ) {}
 
-  findById(id: string, includeBrand = false) {
+  findById(id: string, includeRelations = false) {
     return this.repo.findOne({
       where: { id },
-      relations: includeBrand ? { brand: true } : undefined,
+      relations: includeRelations
+        ? {
+            brand: true,
+            productCategories: {
+              category: true,
+              subCategory: { category: true },
+            },
+          }
+        : undefined,
     });
   }
 
@@ -82,7 +92,7 @@ export class ProductRepository {
     offset: number,
     limit: number,
     filters: ProductFilters = {},
-    includeBrand = false,
+    includeRelations = false,
   ) {
     const qb = this.repo
       .createQueryBuilder('product')
@@ -90,8 +100,30 @@ export class ProductRepository {
       .skip(offset)
       .take(limit);
 
-    if (includeBrand) {
-      qb.leftJoinAndSelect('product.brand', 'brand');
+    if (includeRelations) {
+      qb.leftJoinAndSelect('product.brand', 'brand')
+        .leftJoinAndSelect('product.productCategories', 'productCategories')
+        .leftJoinAndSelect('productCategories.category', 'category')
+        .leftJoinAndSelect('productCategories.subCategory', 'subCategory')
+        .leftJoinAndSelect('subCategory.category', 'subCategoryCategory');
+    }
+
+    if (filters.categoryId) {
+      qb.innerJoin(
+        'product.productCategories',
+        'pcCategory',
+        'pcCategory.categoryId = :categoryId',
+        { categoryId: filters.categoryId },
+      );
+    }
+
+    if (filters.subCategoryId) {
+      qb.innerJoin(
+        'product.productCategories',
+        'pcSubCategory',
+        'pcSubCategory.subCategoryId = :subCategoryId',
+        { subCategoryId: filters.subCategoryId },
+      );
     }
 
     if (filters.status) {

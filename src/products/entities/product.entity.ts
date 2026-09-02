@@ -7,8 +7,10 @@ import {
   ManyToOne,
   JoinColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import type { Brand } from './brand.entity.js';
+import type { ProductCategory } from '../../categories/entities/product-category.entity.js';
 
 @Entity('products')
 @Index(['legacyTable', 'legacyId'], { unique: true })
@@ -110,4 +112,7 @@ export class Product {
   @ManyToOne('Brand', 'products', { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'brandId' })
   brand: Brand | null;
+
+  @OneToMany('ProductCategory', 'product')
+  productCategories: ProductCategory[];
 }

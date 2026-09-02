@@ -1,4 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ProductCategoryResponseDto } from '../../categories/dto/category-response.dto.js';
+import { toProductCategoryResponse } from '../../categories/dto/category-response.dto.js';
+import { PRODUCT_CATEGORY_RESPONSE_EXAMPLE } from '../../categories/dto/category.examples.js';
 import { Brand } from '../entities/brand.entity.js';
 import { Product } from '../entities/product.entity.js';
 
@@ -97,6 +100,12 @@ export class ProductResponseDto {
 
   @ApiPropertyOptional({ type: BrandResponseDto, nullable: true })
   brand?: BrandResponseDto | null;
+
+  @ApiPropertyOptional({
+    type: [ProductCategoryResponseDto],
+    example: [PRODUCT_CATEGORY_RESPONSE_EXAMPLE],
+  })
+  categories?: ProductCategoryResponseDto[];
 }
 
 export function toBrandResponse(brand: Brand): BrandResponseDto {
@@ -110,7 +119,7 @@ export function toBrandResponse(brand: Brand): BrandResponseDto {
 
 export function toProductResponse(
   product: Product,
-  includeBrand = false,
+  includeRelations = false,
 ): ProductResponseDto {
   return {
     id: product.id,
@@ -140,8 +149,12 @@ export function toProductResponse(
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
     brand:
-      includeBrand && product.brand
+      includeRelations && product.brand
         ? toBrandResponse(product.brand)
+        : undefined,
+    categories:
+      includeRelations && product.productCategories
+        ? product.productCategories.map(toProductCategoryResponse)
         : undefined,
   };
 }
