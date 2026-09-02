@@ -154,6 +154,8 @@ export class ProductsSeedService implements OnModuleInit {
           name: brand.name,
           legacyId: brand.legacyId,
           legacyTable: 'brands',
+          description: null,
+          isActive: true,
         }),
       );
       brandMap.set(brand.slug, created.id);

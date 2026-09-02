@@ -9,6 +9,7 @@ import {
 import { PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE } from './product-variant.examples.js';
 import { Brand } from '../entities/brand.entity.js';
 import { Product } from '../entities/product.entity.js';
+import { BRAND_EXAMPLES, BRAND_RESPONSE_EXAMPLE } from './brand.examples.js';
 
 export class BrandResponseDto {
   @ApiProperty()
@@ -20,8 +21,17 @@ export class BrandResponseDto {
   @ApiProperty()
   slug: string;
 
+  @ApiPropertyOptional({ nullable: true })
+  description: string | null;
+
+  @ApiProperty()
+  isActive: boolean;
+
   @ApiProperty()
   createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
 }
 
 export class ProductResponseDto {
@@ -46,7 +56,7 @@ export class ProductResponseDto {
   @ApiPropertyOptional({ nullable: true })
   sku: string | null;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ nullable: true, example: BRAND_EXAMPLES.brandId })
   brandId: string | null;
 
   @ApiPropertyOptional({ nullable: true })
@@ -103,7 +113,7 @@ export class ProductResponseDto {
   @ApiProperty()
   updatedAt: Date;
 
-  @ApiPropertyOptional({ type: BrandResponseDto, nullable: true })
+  @ApiPropertyOptional({ type: BrandResponseDto, nullable: true, example: BRAND_RESPONSE_EXAMPLE })
   brand?: BrandResponseDto | null;
 
   @ApiPropertyOptional({
@@ -140,7 +150,10 @@ export function toBrandResponse(brand: Brand): BrandResponseDto {
     id: brand.id,
     name: brand.name,
     slug: brand.slug,
+    description: brand.description,
+    isActive: brand.isActive,
     createdAt: brand.createdAt,
+    updatedAt: brand.updatedAt,
   };
 }
 

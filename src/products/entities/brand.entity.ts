@@ -10,22 +10,30 @@ import {
 import type { Product } from './product.entity.js';
 
 @Entity('brands')
+@Index(['legacyTable', 'legacyId'], { unique: true })
 export class Brand {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'bigint', nullable: true })
-  legacyId: number | null;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  legacyTable: string | null;
+  @Column({ type: 'bigint' })
+  legacyId: number;
 
   @Column({ type: 'varchar', length: 255 })
+  legacyTable: string;
+
+  @Index()
+  @Column({ type: 'varchar', length: 200 })
   name: string;
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 200 })
   slug: string;
+
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
+
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;

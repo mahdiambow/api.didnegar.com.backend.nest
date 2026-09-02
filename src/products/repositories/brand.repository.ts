@@ -17,6 +17,23 @@ export class BrandRepository {
     return this.repo.findOne({ where: { slug } });
   }
 
+  async getNextLegacyId(): Promise<number> {
+    const result = await this.repo
+      .createQueryBuilder('brand')
+      .select('COALESCE(MAX(brand.legacyId), 0) + 1', 'next')
+      .where('brand.legacyTable = :table', { table: 'brands' })
+      .getRawOne<{ next: string }>();
+
+    return Number(result?.next ?? 1);
+  }
+
+  findAllActive() {
+    return this.repo.find({
+      where: { isActive: true },
+      order: { name: 'ASC' },
+    });
+  }
+
   findAll() {
     return this.repo.find({ order: { name: 'ASC' } });
   }

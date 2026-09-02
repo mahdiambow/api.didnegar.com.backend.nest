@@ -166,7 +166,7 @@ export class ProductsService {
 
   findAllBrands() {
     return this.brandRepository
-      .findAll()
+      .findAllActive()
       .then((brands) => brands.map(toBrandResponse));
   }
 
@@ -208,6 +208,14 @@ export class ProductsService {
         'BRAND_NOT_FOUND',
         'برند یافت نشد',
         HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (!brand.isActive) {
+      throw new ApiException(
+        'BRAND_INACTIVE',
+        'برند غیرفعال است',
+        HttpStatus.BAD_REQUEST,
       );
     }
   }

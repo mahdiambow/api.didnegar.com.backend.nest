@@ -51,11 +51,6 @@ export class ProductWritableFieldsDto {
   @MaxLength(100)
   sku?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsUUID()
-  brandId?: string;
-
   @ApiPropertyOptional({ example: 25_000_000 })
   @IsOptional()
   @IsNumber()
@@ -138,6 +133,7 @@ export type ProductWritableData = Omit<
 > & {
   name: string;
   slug: string;
+  brandId?: string | null;
 };
 
 export function toProductEntityData(
