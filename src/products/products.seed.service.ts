@@ -1,6 +1,9 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
+import { ProductVariantRepository } from './repositories/product-variant.repository.js';
+import { ProductVariantAttributeRepository } from './repositories/product-variant-attribute.repository.js';
+import { AttributeValueRepository } from './repositories/attribute-value.repository.js';
 
 const FAKE_BRANDS = [
   { slug: 'samsung', name: 'سامسونگ', legacyId: 1 },
@@ -86,11 +89,51 @@ const FAKE_PRODUCTS = [
   },
 ] as const;
 
+const SEED_ATTRIBUTE_VALUES = [
+  { slug: '256gb', value: '256GB', legacyId: 1 },
+  { slug: '512gb', value: '512GB', legacyId: 2 },
+  { slug: 'black', value: 'مشکی', legacyId: 3 },
+  { slug: 'titanium', value: 'تیتانیوم', legacyId: 4 },
+] as const;
+
+const SEED_VARIANTS = [
+  {
+    productSlug: 'galaxy-s24-ultra',
+    sku: 'SAM-S24U-256-BLK',
+    minPrice: 65000000,
+    maxPrice: 72000000,
+    stockQuantity: 10,
+    description: 'Galaxy S24 Ultra 256GB مشکی',
+    attributes: ['256gb', 'black'],
+  },
+  {
+    productSlug: 'galaxy-s24-ultra',
+    sku: 'SAM-S24U-512-BLK',
+    minPrice: 72000000,
+    maxPrice: 79000000,
+    stockQuantity: 5,
+    description: 'Galaxy S24 Ultra 512GB مشکی',
+    attributes: ['512gb', 'black'],
+  },
+  {
+    productSlug: 'iphone-15-pro',
+    sku: 'APL-IP15P-256-TIT',
+    minPrice: 78000000,
+    maxPrice: 85000000,
+    stockQuantity: 8,
+    description: 'آیفون 15 Pro 256GB تیتانیوم',
+    attributes: ['256gb', 'titanium'],
+  },
+] as const;
+
 @Injectable()
 export class ProductsSeedService implements OnModuleInit {
   constructor(
     private readonly brandRepository: BrandRepository,
     private readonly productRepository: ProductRepository,
+    private readonly productVariantRepository: ProductVariantRepository,
+    private readonly productVariantAttributeRepository: ProductVariantAttributeRepository,
+    private readonly attributeValueRepository: AttributeValueRepository,
   ) {}
 
   async onModuleInit() {
@@ -140,6 +183,73 @@ export class ProductsSeedService implements OnModuleInit {
           totalSales: product.totalSales,
         }),
       );
+    }
+
+    const attributeMap = new Map<string, string>();
+    for (const attribute of SEED_ATTRIBUTE_VALUES) {
+      let attributeValue = await this.attributeValueRepository.findBySlug(
+        attribute.slug,
+      );
+      if (!attributeValue) {
+        attributeValue = await this.attributeValueRepository.save(
+          this.attributeValueRepository.create({
+            slug: attribute.slug,
+            value: attribute.value,
+            legacyId: attribute.legacyId,
+            legacyTable: 'attribute_values',
+          }),
+        );
+      }
+      attributeMap.set(attribute.slug, attributeValue.id);
+    }
+
+    let variantLegacyId = await this.productVariantRepository.getNextLegacyId();
+
+    for (const variantSeed of SEED_VARIANTS) {
+      const product = await this.productRepository.findBySlug(
+        variantSeed.productSlug,
+      );
+      if (!product) continue;
+
+      const existing = await this.productVariantRepository.findBySku(
+        variantSeed.sku,
+      );
+      if (existing) continue;
+
+      const variant = await this.productVariantRepository.save(
+        this.productVariantRepository.create({
+          legacyId: variantLegacyId++,
+          legacyTable: 'product_variants',
+          productId: product.id,
+          sku: variantSeed.sku,
+          minPrice: variantSeed.minPrice,
+          maxPrice: variantSeed.maxPrice,
+          stockQuantity: variantSeed.stockQuantity,
+          stockStatus: 'instock',
+          description: variantSeed.description,
+          status: 'publish',
+          isActive: true,
+        }),
+      );
+
+      for (const attributeSlug of variantSeed.attributes) {
+        const attributeValueId = attributeMap.get(attributeSlug);
+        if (!attributeValueId) continue;
+
+        const linkExists =
+          await this.productVariantAttributeRepository.findByVariantAndAttributeValue(
+            variant.id,
+            attributeValueId,
+          );
+        if (linkExists) continue;
+
+        await this.productVariantAttributeRepository.save(
+          this.productVariantAttributeRepository.create({
+            variantId: variant.id,
+            attributeValueId,
+          }),
+        );
+      }
     }
   }
 }

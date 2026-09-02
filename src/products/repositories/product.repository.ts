@@ -29,6 +29,7 @@ export class ProductRepository {
               category: true,
               subCategory: { category: true },
             },
+            variants: { variantAttributes: { attributeValue: true } },
           }
         : undefined,
     });
@@ -105,7 +106,10 @@ export class ProductRepository {
         .leftJoinAndSelect('product.productCategories', 'productCategories')
         .leftJoinAndSelect('productCategories.category', 'category')
         .leftJoinAndSelect('productCategories.subCategory', 'subCategory')
-        .leftJoinAndSelect('subCategory.category', 'subCategoryCategory');
+        .leftJoinAndSelect('subCategory.category', 'subCategoryCategory')
+        .leftJoinAndSelect('product.variants', 'variants')
+        .leftJoinAndSelect('variants.variantAttributes', 'variantAttributes')
+        .leftJoinAndSelect('variantAttributes.attributeValue', 'attributeValue');
     }
 
     if (filters.categoryId) {

@@ -9,13 +9,12 @@ import {
   Index,
   OneToMany,
 } from 'typeorm';
-import type { Brand } from './brand.entity.js';
-import type { ProductCategory } from '../../categories/entities/product-category.entity.js';
-import type { ProductVariant } from './product-variant.entity.js';
+import type { Product } from './product.entity.js';
+import type { ProductVariantAttribute } from './product-variant-attribute.entity.js';
 
-@Entity('products')
+@Entity('product_variants')
 @Index(['legacyTable', 'legacyId'], { unique: true })
-export class Product {
+export class ProductVariant {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -26,30 +25,12 @@ export class Product {
   legacyTable: string;
 
   @Index()
-  @Column({ type: 'varchar', length: 255 })
-  name: string;
-
-  @Index({ unique: true })
-  @Column({ type: 'varchar', length: 200 })
-  slug: string;
-
-  @Column({ type: 'text', nullable: true })
-  description: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  shortDescription: string | null;
-
-  @Index()
-  @Column({ type: 'varchar', length: 50, default: 'publish' })
-  status: string;
+  @Column({ type: 'uuid' })
+  productId: string;
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 100, nullable: true })
   sku: string | null;
-
-  @Index()
-  @Column({ type: 'uuid', nullable: true })
-  brandId: string | null;
 
   @Column({ type: 'decimal', precision: 19, scale: 4, nullable: true })
   minPrice: number | null;
@@ -70,27 +51,17 @@ export class Product {
   @Column({ type: 'varchar', length: 50, nullable: true })
   stockStatus: string | null;
 
-  @Index()
-  @Column({ type: 'boolean', default: false })
-  isOnSale: boolean;
-
-  @Column({ type: 'int', default: 0 })
-  ratingCount: number;
-
-  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0 })
-  averageRating: number;
-
-  @Column({ type: 'int', default: 0 })
-  totalSales: number;
-
   @Column({ type: 'varchar', length: 50, nullable: true })
   taxStatus: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   taxClass: string | null;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  globalUniqueId: string | null;
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
+
+  @Column({ type: 'varchar', length: 50, default: 'publish' })
+  status: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   weight: number | null;
@@ -104,19 +75,19 @@ export class Product {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   height: number | null;
 
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne('Brand', 'products', { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'brandId' })
-  brand: Brand | null;
+  @ManyToOne('Product', 'variants', { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'productId' })
+  product: Product;
 
-  @OneToMany('ProductCategory', 'product')
-  productCategories: ProductCategory[];
-
-  @OneToMany('ProductVariant', 'product')
-  variants: ProductVariant[];
+  @OneToMany('ProductVariantAttribute', 'variant')
+  variantAttributes: ProductVariantAttribute[];
 }

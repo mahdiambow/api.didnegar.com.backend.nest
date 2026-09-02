@@ -2,28 +2,55 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Brand } from './entities/brand.entity.js';
 import { Product } from './entities/product.entity.js';
+import { ProductVariant } from './entities/product-variant.entity.js';
+import { ProductVariantAttribute } from './entities/product-variant-attribute.entity.js';
+import { AttributeValue } from './entities/attribute-value.entity.js';
 import { ProductsService } from './products.service.js';
 import { ProductsController } from './products.controller.js';
 import { ProductsPricingController } from './products-pricing.controller.js';
+import { ProductVariantsController } from './product-variants.controller.js';
 import { ProductsSeedService } from './products.seed.service.js';
 import { ProductPricingService } from './product-pricing.service.js';
+import { ProductVariantsService } from './product-variants.service.js';
 import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
+import { ProductVariantRepository } from './repositories/product-variant.repository.js';
+import { ProductVariantAttributeRepository } from './repositories/product-variant-attribute.repository.js';
+import { AttributeValueRepository } from './repositories/attribute-value.repository.js';
 import { AuthModule } from '../auth/auth.module.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Brand, Product]),
+    TypeOrmModule.forFeature([
+      Brand,
+      Product,
+      ProductVariant,
+      ProductVariantAttribute,
+      AttributeValue,
+    ]),
     forwardRef(() => AuthModule),
   ],
-  controllers: [ProductsController, ProductsPricingController],
+  controllers: [
+    ProductsController,
+    ProductsPricingController,
+    ProductVariantsController,
+  ],
   providers: [
     ProductsService,
     ProductPricingService,
+    ProductVariantsService,
     ProductsSeedService,
     BrandRepository,
     ProductRepository,
+    ProductVariantRepository,
+    ProductVariantAttributeRepository,
+    AttributeValueRepository,
   ],
-  exports: [ProductsService, ProductRepository, BrandRepository],
+  exports: [
+    ProductsService,
+    ProductRepository,
+    ProductVariantRepository,
+    BrandRepository,
+  ],
 })
 export class ProductsModule {}

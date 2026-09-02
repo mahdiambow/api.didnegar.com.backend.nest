@@ -2,6 +2,11 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ProductCategoryResponseDto } from '../../categories/dto/category-response.dto.js';
 import { toProductCategoryResponse } from '../../categories/dto/category-response.dto.js';
 import { PRODUCT_CATEGORY_RESPONSE_EXAMPLE } from '../../categories/dto/category.examples.js';
+import {
+  ProductVariantResponseDto,
+  toProductVariantResponse,
+} from './product-variant-response.dto.js';
+import { PRODUCT_VARIANT_RESPONSE_EXAMPLE } from './product-variant.examples.js';
 import { Brand } from '../entities/brand.entity.js';
 import { Product } from '../entities/product.entity.js';
 
@@ -106,6 +111,12 @@ export class ProductResponseDto {
     example: [PRODUCT_CATEGORY_RESPONSE_EXAMPLE],
   })
   categories?: ProductCategoryResponseDto[];
+
+  @ApiPropertyOptional({
+    type: [ProductVariantResponseDto],
+    example: [PRODUCT_VARIANT_RESPONSE_EXAMPLE],
+  })
+  variants?: ProductVariantResponseDto[];
 }
 
 export function toBrandResponse(brand: Brand): BrandResponseDto {
@@ -155,6 +166,10 @@ export function toProductResponse(
     categories:
       includeRelations && product.productCategories
         ? product.productCategories.map(toProductCategoryResponse)
+        : undefined,
+    variants:
+      includeRelations && product.variants
+        ? product.variants.map((variant) => toProductVariantResponse(variant, true))
         : undefined,
   };
 }
