@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
+import { DEFAULT_ROLE_SLUGS } from '../permissions.js';
 import { Role } from '../entities/role.entity.js';
 
 @Injectable()
@@ -13,16 +14,37 @@ export class RoleRepository {
     return this.repo.findOne({ where: { id } });
   }
 
-  findBySlug(slug: string) {
-    return this.repo.findOne({ where: { slug } });
+  findBySlug(slug: string, sellerId: string | null = null) {
+    return this.repo.findOne({
+      where: {
+        slug,
+        sellerId: sellerId === null ? IsNull() : sellerId,
+      },
+    });
   }
 
-  findPaginated(offset: number, limit: number) {
-    return this.repo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip: offset,
-      take: limit,
-    });
+  findPaginatedForTenant(
+    offset: number,
+    limit: number,
+    options: { sellerId: string | null; isSuperAdmin: boolean },
+  ) {
+    const qb = this.repo
+      .createQueryBuilder('role')
+      .orderBy('role.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit);
+
+    if (!options.isSuperAdmin) {
+      qb.andWhere(
+        `(role."sellerId" = :sellerId OR (role."sellerId" IS NULL AND role.slug != :superAdminSlug))`,
+        {
+          sellerId: options.sellerId,
+          superAdminSlug: DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+        },
+      );
+    }
+
+    return qb.getManyAndCount();
   }
 
   create(data: Partial<Role>) {

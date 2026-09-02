@@ -18,6 +18,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('توکن نامعتبر است');
     }
 
-    return { sub: payload.sub, role: payload.role };
+    return { sub: payload.sub, role: payload.role, sellerId: payload.sellerId ?? null };
   }
 }

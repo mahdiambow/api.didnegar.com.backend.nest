@@ -5,16 +5,17 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
-  Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import type { User } from '../../auth/entities/user.entity.js';
+import type { Seller } from '../../sellers/entities/seller.entity.js';
 
 @Entity('roles')
 export class Role {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Index({ unique: true })
   @Column({ type: 'varchar', length: 50 })
   slug: string;
 
@@ -27,6 +28,9 @@ export class Role {
   @Column({ type: 'boolean', default: false })
   isSystem: boolean;
 
+  @Column({ type: 'uuid', nullable: true })
+  sellerId: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -35,4 +39,8 @@ export class Role {
 
   @OneToMany('User', 'role')
   users: User[];
+
+  @ManyToOne('Seller', 'roles', { nullable: true })
+  @JoinColumn({ name: 'sellerId' })
+  seller: Seller | null;
 }

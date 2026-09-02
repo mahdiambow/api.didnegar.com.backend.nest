@@ -5,10 +5,21 @@ export class UserRoleSummaryDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   id: string;
 
-  @ApiProperty({ example: 'user' })
+  @ApiProperty({ example: 'seller' })
   slug: string;
 
-  @ApiProperty({ example: 'کاربر' })
+  @ApiProperty({ example: 'فروشنده' })
+  name: string;
+}
+
+export class UserSellerSummaryDto {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  id: string;
+
+  @ApiProperty({ example: 'my-shop' })
+  slug: string;
+
+  @ApiProperty({ example: 'فروشگاه من' })
   name: string;
 }
 
@@ -40,6 +51,9 @@ export class UserResponseDto {
   @ApiProperty({ type: UserRoleSummaryDto })
   role: UserRoleSummaryDto;
 
+  @ApiPropertyOptional({ type: UserSellerSummaryDto })
+  seller: UserSellerSummaryDto | null;
+
   @ApiProperty({ example: '2026-08-31T12:00:00.000Z' })
   createdAt: Date;
 
@@ -62,6 +76,13 @@ export function toUserResponse(user: User): UserResponseDto {
       slug: user.role.slug,
       name: user.role.name,
     },
+    seller: user.seller
+      ? {
+          id: user.seller.id,
+          slug: user.seller.slug,
+          name: user.seller.name,
+        }
+      : null,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
