@@ -66,14 +66,14 @@ export class ProductVariantsService {
     return toProductAttributeResponse(saved!, true);
   }
 
-  async assignAttributeIdsToProduct(productId: string, attributeIds: string[]) {
-    if (!attributeIds.length) {
+  async assignVariantIdsToProduct(productId: string, variantIds: string[]) {
+    if (!variantIds.length) {
       return;
     }
 
     await this.assertProductExists(productId);
 
-    const uniqueIds = [...new Set(attributeIds)];
+    const uniqueIds = [...new Set(variantIds)];
     const variants = await this.productVariantRepository.findByIds(uniqueIds);
 
     if (variants.length !== uniqueIds.length) {

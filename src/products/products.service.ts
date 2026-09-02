@@ -5,6 +5,7 @@ import {
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
+import { toProductEntityData } from './dto/product-fields.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import {
   toBrandResponse,
@@ -72,46 +73,21 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto) {
-    await this.assertUniqueFields(dto.slug, dto.sku);
-    if (dto.brandId) {
-      await this.assertBrandExists(dto.brandId);
+    const { variantIds, ...productData } = dto;
+
+    await this.assertUniqueFields(productData.slug, productData.sku);
+    if (productData.brandId) {
+      await this.assertBrandExists(productData.brandId);
     }
 
-    const { attributeIds, variantIds, ...productData } = dto;
     const legacyId = await this.productRepository.getNextLegacyId();
-
     const product = await this.productRepository.save(
-      this.productRepository.create({
-        legacyId,
-        legacyTable: 'products',
-        name: productData.name,
-        slug: productData.slug,
-        description: productData.description ?? null,
-        shortDescription: productData.shortDescription ?? null,
-        status: productData.status ?? 'publish',
-        sku: productData.sku ?? null,
-        brandId: productData.brandId ?? null,
-        minPrice: productData.minPrice ?? null,
-        maxPrice: productData.maxPrice ?? null,
-        isVirtual: productData.isVirtual ?? false,
-        isDownloadable: productData.isDownloadable ?? false,
-        stockQuantity: productData.stockQuantity ?? null,
-        stockStatus: productData.stockStatus ?? null,
-        isOnSale: productData.isOnSale ?? false,
-        taxStatus: productData.taxStatus ?? null,
-        taxClass: productData.taxClass ?? null,
-        weight: productData.weight ?? null,
-        length: productData.length ?? null,
-        width: productData.width ?? null,
-        height: productData.height ?? null,
-      }),
+      this.productRepository.create(
+        toProductEntityData(productData, legacyId),
+      ),
     );
 
-    await this.syncProductAttributes(
-      product.id,
-      attributeIds,
-      variantIds,
-    );
+    await this.syncVariantIds(product.id, variantIds);
 
     const loaded = await this.productRepository.findById(product.id, true);
     return toProductResponse(loaded!, true);
@@ -127,7 +103,7 @@ export class ProductsService {
       );
     }
 
-    const { attributeIds, variantIds, ...productData } = dto;
+    const { variantIds, ...productData } = dto;
 
     if (productData.slug && productData.slug !== product.slug) {
       const slugTaken = await this.productRepository.findBySlug(productData.slug);
@@ -157,7 +133,7 @@ export class ProductsService {
 
     Object.assign(product, productData);
     await this.productRepository.save(product);
-    await this.syncProductAttributes(id, attributeIds, variantIds);
+    await this.syncVariantIds(id, variantIds);
 
     const loaded = await this.productRepository.findById(id, true);
     return toProductResponse(loaded!, true);
@@ -183,16 +159,11 @@ export class ProductsService {
       .then((brands) => brands.map(toBrandResponse));
   }
 
-  private async syncProductAttributes(
-    productId: string,
-    attributeIds?: string[],
-    variantIds?: string[],
-  ) {
-    const ids = [...new Set([...(attributeIds ?? []), ...(variantIds ?? [])])];
-    if (ids.length) {
-      await this.productVariantsService.assignAttributeIdsToProduct(
+  private async syncVariantIds(productId: string, variantIds?: string[]) {
+    if (variantIds?.length) {
+      await this.productVariantsService.assignVariantIdsToProduct(
         productId,
-        ids,
+        variantIds,
       );
     }
   }
