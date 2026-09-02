@@ -25,6 +25,7 @@ export const PERMISSIONS = {
   orders: {
     read: 'orders:read',
     create: 'orders:create',
+    update: 'orders:update',
   },
   payments: {
     read: 'payments:read',
@@ -125,6 +126,11 @@ export const PERMISSION_DEFINITIONS = [
   {
     key: PERMISSIONS.orders.create,
     label: 'ایجاد سفارش',
+    group: 'orders',
+  },
+  {
+    key: PERMISSIONS.orders.update,
+    label: 'ویرایش سفارش',
     group: 'orders',
   },
   {

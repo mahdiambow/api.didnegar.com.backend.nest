@@ -23,6 +23,31 @@ export class OrderRepository {
     });
   }
 
+  findPaginated(
+    offset: number,
+    limit: number,
+    filters: { status?: string; userId?: string } = {},
+  ) {
+    const qb = this.repo
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.product', 'product')
+      .leftJoinAndSelect('order.shippingMethod', 'shippingMethod')
+      .leftJoinAndSelect('order.payment', 'payment')
+      .orderBy('order.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit);
+
+    if (filters.status) {
+      qb.andWhere('order.status = :status', { status: filters.status });
+    }
+
+    if (filters.userId) {
+      qb.andWhere('order.userId = :userId', { userId: filters.userId });
+    }
+
+    return qb.getManyAndCount();
+  }
+
   create(data: Partial<Order>) {
     return this.repo.create(data);
   }
