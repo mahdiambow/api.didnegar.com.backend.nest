@@ -14,7 +14,7 @@ export class ProductVariantRepository {
     return this.repo.findOne({
       where: { id },
       relations: {
-        variantAttributes: { attributeValue: true },
+        variantAttributes: { attributeValue: { attribute: true } },
         product: true,
       },
     });
@@ -35,7 +35,7 @@ export class ProductVariantRepository {
   findByProductId(productId: string) {
     return this.repo.find({
       where: { productId },
-      relations: { variantAttributes: { attributeValue: true } },
+      relations: { variantAttributes: { attributeValue: { attribute: true } } },
       order: { createdAt: 'ASC' },
     });
   }
@@ -49,6 +49,7 @@ export class ProductVariantRepository {
       .createQueryBuilder('variant')
       .leftJoinAndSelect('variant.variantAttributes', 'variantAttributes')
       .leftJoinAndSelect('variantAttributes.attributeValue', 'attributeValue')
+      .leftJoinAndSelect('attributeValue.attribute', 'attribute')
       .orderBy('variant.createdAt', 'ASC')
       .skip(offset)
       .take(limit);

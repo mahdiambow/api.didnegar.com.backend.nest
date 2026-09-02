@@ -32,7 +32,7 @@ export class ProductsService {
     stockStatus?: string;
     categoryId?: string;
     subCategoryId?: string;
-    variantId?: string;
+    attributeId?: string;
   }) {
     const { page, limit, offset } = getPaginationParams(query);
     const [items, total] = await this.productRepository.findPaginated(
@@ -46,7 +46,7 @@ export class ProductsService {
         stockStatus: query.stockStatus,
         categoryId: query.categoryId,
         subCategoryId: query.subCategoryId,
-        variantId: query.variantId,
+        attributeId: query.attributeId,
       },
       true,
     );
@@ -77,7 +77,7 @@ export class ProductsService {
       await this.assertBrandExists(dto.brandId);
     }
 
-    const { variants, variantIds, ...productData } = dto;
+    const { attributeIds, ...productData } = dto;
     const legacyId = await this.productRepository.getNextLegacyId();
 
     const product = await this.productRepository.save(
@@ -107,7 +107,7 @@ export class ProductsService {
       }),
     );
 
-    await this.syncProductVariants(product.id, variants, variantIds);
+    await this.syncProductAttributes(product.id, attributeIds);
 
     const loaded = await this.productRepository.findById(product.id, true);
     return toProductResponse(loaded!, true);
@@ -123,7 +123,7 @@ export class ProductsService {
       );
     }
 
-    const { variants, variantIds, ...productData } = dto;
+    const { attributeIds, ...productData } = dto;
 
     if (productData.slug && productData.slug !== product.slug) {
       const slugTaken = await this.productRepository.findBySlug(productData.slug);
@@ -153,7 +153,7 @@ export class ProductsService {
 
     Object.assign(product, productData);
     await this.productRepository.save(product);
-    await this.syncProductVariants(id, variants, variantIds);
+    await this.syncProductAttributes(id, attributeIds);
 
     const loaded = await this.productRepository.findById(id, true);
     return toProductResponse(loaded!, true);
@@ -179,19 +179,11 @@ export class ProductsService {
       .then((brands) => brands.map(toBrandResponse));
   }
 
-  private async syncProductVariants(
-    productId: string,
-    variants?: CreateProductDto['variants'],
-    variantIds?: string[],
-  ) {
-    if (variants?.length) {
-      await this.productVariantsService.createManyForProduct(productId, variants);
-    }
-
-    if (variantIds?.length) {
-      await this.productVariantsService.assignVariantIdsToProduct(
+  private async syncProductAttributes(productId: string, attributeIds?: string[]) {
+    if (attributeIds?.length) {
+      await this.productVariantsService.assignAttributeIdsToProduct(
         productId,
-        variantIds,
+        attributeIds,
       );
     }
   }

@@ -6,16 +6,11 @@ import {
 } from '../common/response/helpers/paginated-response.helper.js';
 import { ProductRepository } from './repositories/product.repository.js';
 import { ProductVariantRepository } from './repositories/product-variant.repository.js';
-import { ProductVariantAttributeRepository } from './repositories/product-variant-attribute.repository.js';
-import { AttributeValueRepository } from './repositories/attribute-value.repository.js';
 import {
-  AssignVariantAttributeDto,
-  CreateProductVariantDto,
-  CreateProductVariantNestedDto,
-  ListProductVariantsQueryDto,
-  UpdateProductVariantDto,
-  toProductVariantAttributeResponse,
-  toProductVariantResponse,
+  CreateProductAttributeDto,
+  ListProductAttributesQueryDto,
+  UpdateProductAttributeDto,
+  toProductAttributeResponse,
 } from './dto/product-variant-response.dto.js';
 
 @Injectable()
@@ -23,11 +18,9 @@ export class ProductVariantsService {
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly productVariantRepository: ProductVariantRepository,
-    private readonly productVariantAttributeRepository: ProductVariantAttributeRepository,
-    private readonly attributeValueRepository: AttributeValueRepository,
   ) {}
 
-  async findAll(query: ListProductVariantsQueryDto) {
+  async findAll(query: ListProductAttributesQueryDto) {
     const { page, limit, offset } = getPaginationParams(query);
     const [items, total] = await this.productVariantRepository.findPaginated(
       offset,
@@ -39,7 +32,7 @@ export class ProductVariantsService {
     );
 
     return paginatedList(
-      items.map((item) => toProductVariantResponse(item, true)),
+      items.map((item) => toProductAttributeResponse(item, true)),
       page,
       limit,
       total,
@@ -50,7 +43,7 @@ export class ProductVariantsService {
     await this.assertProductExists(productId);
     const items =
       await this.productVariantRepository.findByProductId(productId);
-    return items.map((item) => toProductVariantResponse(item, true));
+    return items.map((item) => toProductAttributeResponse(item, true));
   }
 
   async findOne(id: string) {
@@ -63,42 +56,24 @@ export class ProductVariantsService {
       );
     }
 
-    return toProductVariantResponse(variant, true);
+    return toProductAttributeResponse(variant, true);
   }
 
-  async create(dto: CreateProductVariantDto) {
+  async create(dto: CreateProductAttributeDto) {
     await this.assertProductExists(dto.productId);
     const variant = await this.createVariant(dto.productId, dto);
     const saved = await this.productVariantRepository.findById(variant.id);
-    return toProductVariantResponse(saved!, true);
+    return toProductAttributeResponse(saved!, true);
   }
 
-  async createManyForProduct(
-    productId: string,
-    variants: CreateProductVariantNestedDto[],
-  ) {
-    if (!variants.length) {
-      return [];
-    }
-
-    await this.assertProductExists(productId);
-
-    const created = [];
-    for (const variantDto of variants) {
-      created.push(await this.createVariant(productId, variantDto));
-    }
-
-    return created;
-  }
-
-  async assignVariantIdsToProduct(productId: string, variantIds: string[]) {
-    if (!variantIds.length) {
+  async assignAttributeIdsToProduct(productId: string, attributeIds: string[]) {
+    if (!attributeIds.length) {
       return;
     }
 
     await this.assertProductExists(productId);
 
-    const uniqueIds = [...new Set(variantIds)];
+    const uniqueIds = [...new Set(attributeIds)];
     const variants = await this.productVariantRepository.findByIds(uniqueIds);
 
     if (variants.length !== uniqueIds.length) {
@@ -116,7 +91,7 @@ export class ProductVariantsService {
     await this.productVariantRepository.saveMany(variants);
   }
 
-  async update(id: string, dto: UpdateProductVariantDto) {
+  async update(id: string, dto: UpdateProductAttributeDto) {
     const variant = await this.productVariantRepository.findById(id);
     if (!variant) {
       throw new ApiException(
@@ -124,10 +99,6 @@ export class ProductVariantsService {
         'واریانت محصول یافت نشد',
         HttpStatus.NOT_FOUND,
       );
-    }
-
-    if (dto.productId && dto.productId !== variant.productId) {
-      await this.assertProductExists(dto.productId);
     }
 
     if (dto.sku && dto.sku !== variant.sku) {
@@ -142,9 +113,10 @@ export class ProductVariantsService {
     }
 
     Object.assign(variant, dto);
-    const updated = await this.productVariantRepository.save(variant);
-    const saved = await this.productVariantRepository.findById(updated.id);
-    return toProductVariantResponse(saved!, true);
+    await this.productVariantRepository.save(variant);
+
+    const saved = await this.productVariantRepository.findById(id);
+    return toProductAttributeResponse(saved!, true);
   }
 
   async remove(id: string) {
@@ -161,68 +133,9 @@ export class ProductVariantsService {
     return {};
   }
 
-  async assignAttribute(variantId: string, dto: AssignVariantAttributeDto) {
-    const variant = await this.productVariantRepository.findById(variantId);
-    if (!variant) {
-      throw new ApiException(
-        'PRODUCT_VARIANT_NOT_FOUND',
-        'واریانت محصول یافت نشد',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    const attributeValue = await this.attributeValueRepository.findById(
-      dto.attributeValueId,
-    );
-    if (!attributeValue) {
-      throw new ApiException(
-        'ATTRIBUTE_VALUE_NOT_FOUND',
-        'مقدار ویژگی یافت نشد',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    const duplicate =
-      await this.productVariantAttributeRepository.findByVariantAndAttributeValue(
-        variantId,
-        dto.attributeValueId,
-      );
-    if (duplicate) {
-      throw new ApiException(
-        'VARIANT_ATTRIBUTE_EXISTS',
-        'این ویژگی قبلاً به واریانت اختصاص داده شده',
-        HttpStatus.CONFLICT,
-      );
-    }
-
-    const link = await this.productVariantAttributeRepository.save(
-      this.productVariantAttributeRepository.create({
-        variantId,
-        attributeValueId: dto.attributeValueId,
-      }),
-    );
-
-    const saved = await this.productVariantAttributeRepository.findById(link.id);
-    return toProductVariantAttributeResponse(saved!);
-  }
-
-  async removeAttribute(id: string) {
-    const link = await this.productVariantAttributeRepository.findById(id);
-    if (!link) {
-      throw new ApiException(
-        'VARIANT_ATTRIBUTE_NOT_FOUND',
-        'ارتباط واریانت-ویژگی یافت نشد',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    await this.productVariantAttributeRepository.remove(link);
-    return {};
-  }
-
   private async createVariant(
     productId: string,
-    dto: CreateProductVariantNestedDto,
+    dto: Omit<CreateProductAttributeDto, 'productId'>,
   ) {
     if (dto.sku) {
       const skuTaken = await this.productVariantRepository.findBySku(dto.sku);

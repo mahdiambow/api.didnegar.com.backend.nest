@@ -72,6 +72,12 @@ export const PERMISSIONS = {
     update: 'categories:update',
     delete: 'categories:delete',
   },
+  attributes: {
+    read: 'attributes:read',
+    create: 'attributes:create',
+    update: 'attributes:update',
+    delete: 'attributes:delete',
+  },
 } as const;
 
 export const LOCATION_PERMISSIONS = PERMISSIONS.locations;
@@ -312,6 +318,26 @@ export const PERMISSION_DEFINITIONS = [
     label: 'حذف دسته‌بندی',
     group: 'categories',
   },
+  {
+    key: PERMISSIONS.attributes.read,
+    label: 'مشاهده ویژگی‌ها',
+    group: 'attributes',
+  },
+  {
+    key: PERMISSIONS.attributes.create,
+    label: 'ایجاد ویژگی',
+    group: 'attributes',
+  },
+  {
+    key: PERMISSIONS.attributes.update,
+    label: 'ویرایش ویژگی',
+    group: 'attributes',
+  },
+  {
+    key: PERMISSIONS.attributes.delete,
+    label: 'حذف ویژگی',
+    group: 'attributes',
+  },
 ] as const satisfies ReadonlyArray<{
   key: string;
   label: string;
@@ -367,6 +393,7 @@ const SELLER_PERMISSIONS: Permission[] = [
   PERMISSIONS.payments.create,
   PERMISSIONS.shipping.read,
   PERMISSIONS.categories.read,
+  PERMISSIONS.attributes.read,
 ];
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<

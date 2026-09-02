@@ -8,7 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import type { ProductVariant } from './product-variant.entity.js';
-import type { AttributeValue } from './attribute-value.entity.js';
+import type { AttributeValue } from '../../attributes/entities/attribute-value.entity.js';
 
 @Entity('product_variant_attributes')
 @Index(['variantId', 'attributeValueId'], { unique: true })

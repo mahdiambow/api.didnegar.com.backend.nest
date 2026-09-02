@@ -13,12 +13,49 @@ export class ProductVariantAttributeRepository {
   findById(id: string) {
     return this.repo.findOne({
       where: { id },
-      relations: { attributeValue: true, variant: true },
+      relations: { attributeValue: { attribute: true }, variant: true },
+    });
+  }
+
+  findByVariantId(variantId: string) {
+    return this.repo.find({
+      where: { variantId },
+      relations: { attributeValue: { attribute: true } },
+      order: { createdAt: 'ASC' },
     });
   }
 
   findByVariantAndAttributeValue(variantId: string, attributeValueId: string) {
     return this.repo.findOne({ where: { variantId, attributeValueId } });
+  }
+
+  findPaginated(
+    offset: number,
+    limit: number,
+    filters: { variantId?: string; attributeValueId?: string },
+  ) {
+    const qb = this.repo
+      .createQueryBuilder('link')
+      .leftJoinAndSelect('link.attributeValue', 'attributeValue')
+      .leftJoinAndSelect('attributeValue.attribute', 'attribute')
+      .leftJoinAndSelect('link.variant', 'variant')
+      .orderBy('link.createdAt', 'ASC')
+      .skip(offset)
+      .take(limit);
+
+    if (filters.variantId) {
+      qb.andWhere('link.variantId = :variantId', {
+        variantId: filters.variantId,
+      });
+    }
+
+    if (filters.attributeValueId) {
+      qb.andWhere('link.attributeValueId = :attributeValueId', {
+        attributeValueId: filters.attributeValueId,
+      });
+    }
+
+    return qb.getManyAndCount();
   }
 
   create(data: Partial<ProductVariantAttribute>) {

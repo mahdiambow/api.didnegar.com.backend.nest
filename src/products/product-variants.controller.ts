@@ -21,129 +21,97 @@ import { createSuccessResponseDto } from '../common/response/dto/create-success-
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { ProductVariantsService } from './product-variants.service.js';
 import {
-  AssignVariantAttributeDto,
-  CreateProductVariantDto,
-  ListProductVariantsQueryDto,
-  ProductVariantAttributeResponseDto,
-  ProductVariantResponseDto,
-  UpdateProductVariantDto,
+  CreateProductAttributeDto,
+  ListProductAttributesQueryDto,
+  ProductAttributeResponseDto,
+  UpdateProductAttributeDto,
 } from './dto/product-variant-response.dto.js';
 
-const ProductVariantApiResponseDto = createSuccessResponseDto(
-  ProductVariantResponseDto,
+const ProductAttributeApiResponseDto = createSuccessResponseDto(
+  ProductAttributeResponseDto,
   {
-    code: 'PRODUCT_VARIANT_FOUND',
-    message: 'Product variant retrieved successfully',
-    name: 'ProductVariant',
+    code: 'PRODUCT_ATTRIBUTE_FOUND',
+    message: 'Product attribute retrieved successfully',
+    name: 'ProductAttribute',
   },
 );
 
-const ProductVariantsPaginatedApiResponseDto = createPaginatedResponseDto(
-  ProductVariantResponseDto,
+const ProductAttributesPaginatedApiResponseDto = createPaginatedResponseDto(
+  ProductAttributeResponseDto,
   {
-    code: 'PRODUCT_VARIANTS_FOUND',
-    message: 'Product variants retrieved successfully',
-    name: 'ProductVariants',
+    code: 'PRODUCT_ATTRIBUTES_FOUND',
+    message: 'Product attributes retrieved successfully',
+    name: 'ProductAttributes',
   },
 );
 
-const VariantAttributeApiResponseDto = createSuccessResponseDto(
-  ProductVariantAttributeResponseDto,
-  {
-    code: 'VARIANT_ATTRIBUTE_FOUND',
-    message: 'Variant attribute link retrieved successfully',
-    name: 'VariantAttribute',
-  },
-);
-
-@ApiTags('Product Variants')
+@ApiTags('Product Attributes')
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
-@Controller('product-variants')
+@Controller('product-attributes')
 export class ProductVariantsController {
   constructor(private readonly productVariantsService: ProductVariantsService) {}
 
   @Get()
   @ApiResponseMeta({
-    code: 'PRODUCT_VARIANTS_FOUND',
-    message: 'Product variants retrieved successfully',
+    code: 'PRODUCT_ATTRIBUTES_FOUND',
+    message: 'Product attributes retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست واریانت‌های محصول' })
-  @ApiOkResponse({ type: ProductVariantsPaginatedApiResponseDto })
-  findAll(@Query() query: ListProductVariantsQueryDto) {
+  @ApiOperation({ summary: 'لیست attributeهای محصول' })
+  @ApiOkResponse({ type: ProductAttributesPaginatedApiResponseDto })
+  findAll(@Query() query: ListProductAttributesQueryDto) {
     return this.productVariantsService.findAll(query);
   }
 
   @Get('by-product/:productId')
-  @ApiOperation({ summary: 'واریانت‌های یک محصول' })
+  @ApiOperation({ summary: 'attributeهای یک محصول' })
   findByProduct(@Param('productId') productId: string) {
     return this.productVariantsService.findByProductId(productId);
   }
 
   @Get(':id')
   @ApiResponseMeta({
-    code: 'PRODUCT_VARIANT_FOUND',
-    message: 'Product variant retrieved successfully',
+    code: 'PRODUCT_ATTRIBUTE_FOUND',
+    message: 'Product attribute retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت واریانت' })
-  @ApiOkResponse({ type: ProductVariantApiResponseDto })
+  @ApiOperation({ summary: 'دریافت attribute محصول' })
+  @ApiOkResponse({ type: ProductAttributeApiResponseDto })
   findOne(@Param('id') id: string) {
     return this.productVariantsService.findOne(id);
   }
 
   @Post()
   @ApiResponseMeta({
-    code: 'PRODUCT_VARIANT_CREATED',
-    message: 'Product variant created successfully',
+    code: 'PRODUCT_ATTRIBUTE_CREATED',
+    message: 'Product attribute created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد واریانت' })
-  @ApiOkResponse({ type: ProductVariantApiResponseDto })
-  create(@Body() dto: CreateProductVariantDto) {
+  @ApiOperation({
+    summary: 'ایجاد attribute محصول',
+    description: 'productId اجباری — id در response برمی‌گردد',
+  })
+  @ApiOkResponse({ type: ProductAttributeApiResponseDto })
+  create(@Body() dto: CreateProductAttributeDto) {
     return this.productVariantsService.create(dto);
   }
 
   @Patch(':id')
   @ApiResponseMeta({
-    code: 'PRODUCT_VARIANT_UPDATED',
-    message: 'Product variant updated successfully',
+    code: 'PRODUCT_ATTRIBUTE_UPDATED',
+    message: 'Product attribute updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش واریانت' })
-  @ApiOkResponse({ type: ProductVariantApiResponseDto })
-  update(@Param('id') id: string, @Body() dto: UpdateProductVariantDto) {
+  @ApiOperation({ summary: 'ویرایش attribute محصول' })
+  @ApiOkResponse({ type: ProductAttributeApiResponseDto })
+  update(@Param('id') id: string, @Body() dto: UpdateProductAttributeDto) {
     return this.productVariantsService.update(id, dto);
   }
 
   @Delete(':id')
   @ApiResponseMeta({
-    code: 'PRODUCT_VARIANT_DELETED',
-    message: 'Product variant deleted successfully',
+    code: 'PRODUCT_ATTRIBUTE_DELETED',
+    message: 'Product attribute deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف واریانت' })
+  @ApiOperation({ summary: 'حذف attribute محصول' })
   remove(@Param('id') id: string) {
     return this.productVariantsService.remove(id);
-  }
-
-  @Post(':id/attributes')
-  @ApiResponseMeta({
-    code: 'VARIANT_ATTRIBUTE_CREATED',
-    message: 'Variant attribute link created successfully',
-  })
-  @ApiOperation({ summary: 'اختصاص ویژگی به واریانت' })
-  @ApiOkResponse({ type: VariantAttributeApiResponseDto })
-  assignAttribute(
-    @Param('id') id: string,
-    @Body() dto: AssignVariantAttributeDto,
-  ) {
-    return this.productVariantsService.assignAttribute(id, dto);
-  }
-
-  @Delete('attributes/:id')
-  @ApiResponseMeta({
-    code: 'VARIANT_ATTRIBUTE_DELETED',
-    message: 'Variant attribute link deleted successfully',
-  })
-  @ApiOperation({ summary: 'حذف ویژگی از واریانت' })
-  removeAttribute(@Param('id') id: string) {
-    return this.productVariantsService.removeAttribute(id);
   }
 }

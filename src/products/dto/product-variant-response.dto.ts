@@ -10,38 +10,39 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { AttributeValue } from '../entities/attribute-value.entity.js';
 import { ProductVariant } from '../entities/product-variant.entity.js';
 import { ProductVariantAttribute } from '../entities/product-variant-attribute.entity.js';
 import {
-  ASSIGN_VARIANT_ATTRIBUTE_EXAMPLE,
-  ATTRIBUTE_VALUE_RESPONSE_EXAMPLE,
-  CREATE_PRODUCT_VARIANT_EXAMPLE,
-  PRODUCT_VARIANT_RESPONSE_EXAMPLE,
-  VARIANT_EXAMPLES,
+  VariantValueResponseDto,
+  toVariantValueResponse,
+} from '../../attributes/dto/attribute-response.dto.js';
+import {
+  CREATE_PRODUCT_ATTRIBUTE_EXAMPLE,
+  PRODUCT_ATTRIBUTE_EXAMPLES,
+  PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE,
 } from './product-variant.examples.js';
 
-export class CreateProductVariantDto {
+export class CreateProductAttributeDto {
   @ApiProperty({
-    example: VARIANT_EXAMPLES.productId,
+    example: PRODUCT_ATTRIBUTE_EXAMPLES.productId,
     description: 'شناسه محصول والد',
   })
   @IsUUID()
   productId: string;
 
-  @ApiPropertyOptional({ example: CREATE_PRODUCT_VARIANT_EXAMPLE.sku })
+  @ApiPropertyOptional({ example: CREATE_PRODUCT_ATTRIBUTE_EXAMPLE.sku })
   @IsOptional()
   @IsString()
   @MaxLength(100)
   sku?: string;
 
-  @ApiPropertyOptional({ example: CREATE_PRODUCT_VARIANT_EXAMPLE.minPrice })
+  @ApiPropertyOptional({ example: CREATE_PRODUCT_ATTRIBUTE_EXAMPLE.minPrice })
   @IsOptional()
   @IsNumber()
   @Min(0)
   minPrice?: number;
 
-  @ApiPropertyOptional({ example: CREATE_PRODUCT_VARIANT_EXAMPLE.maxPrice })
+  @ApiPropertyOptional({ example: CREATE_PRODUCT_ATTRIBUTE_EXAMPLE.maxPrice })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -122,22 +123,12 @@ export class CreateProductVariantDto {
   isActive?: boolean;
 }
 
-export class CreateProductVariantNestedDto extends OmitType(
-  CreateProductVariantDto,
-  ['productId'] as const,
+export class UpdateProductAttributeDto extends PartialType(
+  OmitType(CreateProductAttributeDto, ['productId'] as const),
 ) {}
 
-export class UpdateProductVariantDto extends PartialType(
-  CreateProductVariantDto,
-) {
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsUUID()
-  productId?: string;
-}
-
-export class ListProductVariantsQueryDto {
-  @ApiPropertyOptional({ example: VARIANT_EXAMPLES.productId })
+export class ListProductAttributesQueryDto {
+  @ApiPropertyOptional({ example: PRODUCT_ATTRIBUTE_EXAMPLES.productId })
   @IsOptional()
   @IsUUID()
   productId?: string;
@@ -159,78 +150,89 @@ export class ListProductVariantsQueryDto {
   limit?: number;
 }
 
-export class AssignVariantAttributeDto {
+export class CreateProductAttributeVariantDto {
   @ApiProperty({
-    example: ASSIGN_VARIANT_ATTRIBUTE_EXAMPLE.attributeValueId,
-    description: 'شناسه مقدار ویژگی (مثلاً 256GB)',
+    example: PRODUCT_ATTRIBUTE_EXAMPLES.attributeId,
+    description: 'شناسه attribute محصول',
   })
   @IsUUID()
-  attributeValueId: string;
+  attributeId: string;
+
+  @ApiProperty({
+    example: PRODUCT_ATTRIBUTE_EXAMPLES.variantValueId,
+    description: 'شناسه variantValue — از POST /variant-values',
+  })
+  @IsUUID()
+  variantValueId: string;
 }
 
-export class AttributeValueResponseDto {
-  @ApiProperty({ example: ATTRIBUTE_VALUE_RESPONSE_EXAMPLE.id })
-  id: string;
+export class ListProductAttributeVariantsQueryDto {
+  @ApiPropertyOptional({ example: PRODUCT_ATTRIBUTE_EXAMPLES.attributeId })
+  @IsOptional()
+  @IsUUID()
+  attributeId?: string;
 
-  @ApiProperty({ example: ATTRIBUTE_VALUE_RESPONSE_EXAMPLE.value })
-  value: string;
+  @ApiPropertyOptional({ example: PRODUCT_ATTRIBUTE_EXAMPLES.variantValueId })
+  @IsOptional()
+  @IsUUID()
+  variantValueId?: string;
 
-  @ApiProperty({ example: ATTRIBUTE_VALUE_RESPONSE_EXAMPLE.slug })
-  slug: string;
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  page?: number;
 
-  @ApiProperty({ example: ATTRIBUTE_VALUE_RESPONSE_EXAMPLE.createdAt })
-  createdAt: Date;
-
-  @ApiProperty({ example: ATTRIBUTE_VALUE_RESPONSE_EXAMPLE.updatedAt })
-  updatedAt: Date;
+  @ApiPropertyOptional({ example: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  limit?: number;
 }
 
-export class ProductVariantAttributeResponseDto {
-  @ApiProperty({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.attributes[0].id })
+export class ProductAttributeVariantResponseDto {
+  @ApiProperty({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.variants[0].id })
   id: string;
 
-  @ApiProperty({ example: VARIANT_EXAMPLES.variantId })
-  variantId: string;
+  @ApiProperty({ example: PRODUCT_ATTRIBUTE_EXAMPLES.attributeId })
+  attributeId: string;
 
-  @ApiProperty({ example: VARIANT_EXAMPLES.attributeValueId })
-  attributeValueId: string;
+  @ApiProperty({ example: PRODUCT_ATTRIBUTE_EXAMPLES.variantValueId })
+  variantValueId: string;
 
   @ApiProperty()
   createdAt: Date;
 
   @ApiPropertyOptional({
-    type: AttributeValueResponseDto,
-    example: ATTRIBUTE_VALUE_RESPONSE_EXAMPLE,
+    type: VariantValueResponseDto,
   })
-  attributeValue?: AttributeValueResponseDto;
+  variantValue?: VariantValueResponseDto;
 }
 
-export class ProductVariantResponseDto {
-  @ApiProperty({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.id })
+export class ProductAttributeResponseDto {
+  @ApiProperty({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.id })
   id: string;
 
-  @ApiProperty({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.productId })
+  @ApiProperty({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.productId })
   productId: string;
 
-  @ApiPropertyOptional({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.sku })
+  @ApiPropertyOptional({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.sku })
   sku: string | null;
 
-  @ApiPropertyOptional({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.minPrice })
+  @ApiPropertyOptional({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.minPrice })
   minPrice: number | null;
 
-  @ApiPropertyOptional({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.maxPrice })
+  @ApiPropertyOptional({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.maxPrice })
   maxPrice: number | null;
 
-  @ApiProperty({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.isVirtual })
+  @ApiProperty({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.isVirtual })
   isVirtual: boolean;
 
-  @ApiProperty({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.isDownloadable })
+  @ApiProperty({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.isDownloadable })
   isDownloadable: boolean;
 
-  @ApiPropertyOptional({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.stockQuantity })
+  @ApiPropertyOptional({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.stockQuantity })
   stockQuantity: number | null;
 
-  @ApiPropertyOptional({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.stockStatus })
+  @ApiPropertyOptional({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.stockStatus })
   stockStatus: string | null;
 
   @ApiPropertyOptional({ nullable: true })
@@ -239,10 +241,10 @@ export class ProductVariantResponseDto {
   @ApiPropertyOptional({ nullable: true })
   taxClass: string | null;
 
-  @ApiPropertyOptional({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.description })
+  @ApiPropertyOptional({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.description })
   description: string | null;
 
-  @ApiProperty({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.status })
+  @ApiProperty({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.status })
   status: string;
 
   @ApiPropertyOptional({ nullable: true })
@@ -257,7 +259,7 @@ export class ProductVariantResponseDto {
   @ApiPropertyOptional({ nullable: true })
   height: number | null;
 
-  @ApiProperty({ example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.isActive })
+  @ApiProperty({ example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.isActive })
   isActive: boolean;
 
   @ApiProperty()
@@ -267,42 +269,45 @@ export class ProductVariantResponseDto {
   updatedAt: Date;
 
   @ApiPropertyOptional({
-    type: [ProductVariantAttributeResponseDto],
-    example: PRODUCT_VARIANT_RESPONSE_EXAMPLE.attributes,
+    type: [ProductAttributeVariantResponseDto],
+    example: PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.variants,
   })
-  attributes?: ProductVariantAttributeResponseDto[];
+  variants?: ProductAttributeVariantResponseDto[];
 }
 
-export function toAttributeValueResponse(
-  attributeValue: AttributeValue,
-): AttributeValueResponseDto {
-  return {
-    id: attributeValue.id,
-    value: attributeValue.value,
-    slug: attributeValue.slug,
-    createdAt: attributeValue.createdAt,
-    updatedAt: attributeValue.updatedAt,
-  };
-}
+/** @deprecated use CreateProductAttributeDto */
+export class CreateProductVariantDto extends CreateProductAttributeDto {}
+/** @deprecated use UpdateProductAttributeDto */
+export class UpdateProductVariantDto extends UpdateProductAttributeDto {}
+/** @deprecated use ListProductAttributesQueryDto */
+export class ListProductVariantsQueryDto extends ListProductAttributesQueryDto {}
+/** @deprecated use CreateProductAttributeVariantDto */
+export class CreateProductVariantAttributeDto extends CreateProductAttributeVariantDto {}
+/** @deprecated use ListProductAttributeVariantsQueryDto */
+export class ListProductVariantAttributesQueryDto extends ListProductAttributeVariantsQueryDto {}
+/** @deprecated use ProductAttributeVariantResponseDto */
+export class ProductVariantAttributeResponseDto extends ProductAttributeVariantResponseDto {}
+/** @deprecated use ProductAttributeResponseDto */
+export class ProductVariantResponseDto extends ProductAttributeResponseDto {}
 
-export function toProductVariantAttributeResponse(
+export function toProductAttributeVariantResponse(
   link: ProductVariantAttribute,
-): ProductVariantAttributeResponseDto {
+): ProductAttributeVariantResponseDto {
   return {
     id: link.id,
-    variantId: link.variantId,
-    attributeValueId: link.attributeValueId,
+    attributeId: link.variantId,
+    variantValueId: link.attributeValueId,
     createdAt: link.createdAt,
-    attributeValue: link.attributeValue
-      ? toAttributeValueResponse(link.attributeValue)
+    variantValue: link.attributeValue
+      ? toVariantValueResponse(link.attributeValue, true)
       : undefined,
   };
 }
 
-export function toProductVariantResponse(
+export function toProductAttributeResponse(
   variant: ProductVariant,
-  includeAttributes = false,
-): ProductVariantResponseDto {
+  includeVariants = false,
+): ProductAttributeResponseDto {
   return {
     id: variant.id,
     productId: variant.productId,
@@ -324,9 +329,14 @@ export function toProductVariantResponse(
     isActive: variant.isActive,
     createdAt: variant.createdAt,
     updatedAt: variant.updatedAt,
-    attributes:
-      includeAttributes && variant.variantAttributes
-        ? variant.variantAttributes.map(toProductVariantAttributeResponse)
+    variants:
+      includeVariants && variant.variantAttributes
+        ? variant.variantAttributes.map(toProductAttributeVariantResponse)
         : undefined,
   };
 }
+
+/** @deprecated use toProductAttributeVariantResponse */
+export const toProductVariantAttributeResponse = toProductAttributeVariantResponse;
+/** @deprecated use toProductAttributeResponse */
+export const toProductVariantResponse = toProductAttributeResponse;

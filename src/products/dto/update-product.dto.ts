@@ -10,11 +10,8 @@ import {
   Matches,
   MaxLength,
   Min,
-  ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { CreateProductVariantNestedDto } from './product-variant-response.dto.js';
-import { VARIANT_EXAMPLES } from './product-variant.examples.js';
+import { PRODUCT_ATTRIBUTE_EXAMPLES } from './product-variant.examples.js';
 
 export class UpdateProductDto {
   @ApiPropertyOptional()
@@ -135,22 +132,12 @@ export class UpdateProductDto {
   height?: number;
 
   @ApiPropertyOptional({
-    type: [CreateProductVariantNestedDto],
-    description: 'ساخت واریانت جدید برای محصول',
-  })
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateProductVariantNestedDto)
-  variants?: CreateProductVariantNestedDto[];
-
-  @ApiPropertyOptional({
     type: [String],
-    example: [VARIANT_EXAMPLES.variantId],
-    description: 'اتصال واریانت‌های موجود به محصول',
+    example: [PRODUCT_ATTRIBUTE_EXAMPLES.attributeId],
+    description: 'اتصال attributeهای موجود',
   })
   @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
-  variantIds?: string[];
+  attributeIds?: string[];
 }

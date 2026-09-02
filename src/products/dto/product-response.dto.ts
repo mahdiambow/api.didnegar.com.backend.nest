@@ -3,10 +3,10 @@ import { ProductCategoryResponseDto } from '../../categories/dto/category-respon
 import { toProductCategoryResponse } from '../../categories/dto/category-response.dto.js';
 import { PRODUCT_CATEGORY_RESPONSE_EXAMPLE } from '../../categories/dto/category.examples.js';
 import {
-  ProductVariantResponseDto,
-  toProductVariantResponse,
+  ProductAttributeResponseDto,
+  toProductAttributeResponse,
 } from './product-variant-response.dto.js';
-import { PRODUCT_VARIANT_RESPONSE_EXAMPLE } from './product-variant.examples.js';
+import { PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE } from './product-variant.examples.js';
 import { Brand } from '../entities/brand.entity.js';
 import { Product } from '../entities/product.entity.js';
 
@@ -113,17 +113,17 @@ export class ProductResponseDto {
   categories?: ProductCategoryResponseDto[];
 
   @ApiPropertyOptional({
-    type: [ProductVariantResponseDto],
-    example: [PRODUCT_VARIANT_RESPONSE_EXAMPLE],
+    type: [ProductAttributeResponseDto],
+    example: [PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE],
   })
-  variants?: ProductVariantResponseDto[];
+  attributes?: ProductAttributeResponseDto[];
 
   @ApiPropertyOptional({
     type: [String],
-    example: [PRODUCT_VARIANT_RESPONSE_EXAMPLE.id],
-    description: 'شناسه واریانت‌ها',
+    example: [PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.id],
+    description: 'شناسه attributeهای محصول',
   })
-  variantIds?: string[];
+  attributeIds?: string[];
 }
 
 export function toBrandResponse(brand: Brand): BrandResponseDto {
@@ -174,13 +174,13 @@ export function toProductResponse(
       includeRelations && product.productCategories
         ? product.productCategories.map(toProductCategoryResponse)
         : undefined,
-    variants:
+    attributes:
       includeRelations && product.variants
-        ? product.variants.map((variant) => toProductVariantResponse(variant, true))
+        ? product.variants.map((item) => toProductAttributeResponse(item, true))
         : undefined,
-    variantIds:
+    attributeIds:
       includeRelations && product.variants
-        ? product.variants.map((variant) => variant.id)
+        ? product.variants.map((item) => item.id)
         : undefined,
   };
 }

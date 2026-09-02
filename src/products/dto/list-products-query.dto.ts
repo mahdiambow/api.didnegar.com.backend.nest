@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
-import { VARIANT_EXAMPLES } from './product-variant.examples.js';
+import { PRODUCT_ATTRIBUTE_EXAMPLES } from './product-variant.examples.js';
 
 export class ListProductsQueryDto {
   @ApiProperty({ example: 1, required: false })
@@ -53,10 +53,10 @@ export class ListProductsQueryDto {
   subCategoryId?: string;
 
   @ApiPropertyOptional({
-    example: VARIANT_EXAMPLES.variantId,
-    description: 'فیلتر بر اساس واریانت',
+    example: PRODUCT_ATTRIBUTE_EXAMPLES.attributeId,
+    description: 'فیلتر بر اساس attribute محصول',
   })
   @IsOptional()
   @IsUUID()
-  variantId?: string;
+  attributeId?: string;
 }

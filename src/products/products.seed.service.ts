@@ -3,7 +3,8 @@ import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
 import { ProductVariantRepository } from './repositories/product-variant.repository.js';
 import { ProductVariantAttributeRepository } from './repositories/product-variant-attribute.repository.js';
-import { AttributeValueRepository } from './repositories/attribute-value.repository.js';
+import { AttributeValueRepository } from '../attributes/repositories/attribute-value.repository.js';
+import { AttributeRepository } from '../attributes/repositories/attribute.repository.js';
 
 const FAKE_BRANDS = [
   { slug: 'samsung', name: 'سامسونگ', legacyId: 1 },
@@ -89,11 +90,11 @@ const FAKE_PRODUCTS = [
   },
 ] as const;
 
-const SEED_ATTRIBUTE_VALUES = [
-  { slug: '256gb', value: '256GB', legacyId: 1 },
-  { slug: '512gb', value: '512GB', legacyId: 2 },
-  { slug: 'black', value: 'مشکی', legacyId: 3 },
-  { slug: 'titanium', value: 'تیتانیوم', legacyId: 4 },
+const SEED_VARIANT_ATTRIBUTE_LINKS = [
+  { attributeName: 'storage', valueSlug: '256gb' },
+  { attributeName: 'storage', valueSlug: '512gb' },
+  { attributeName: 'color', valueSlug: 'black' },
+  { attributeName: 'color', valueSlug: 'titanium' },
 ] as const;
 
 const SEED_VARIANTS = [
@@ -134,6 +135,7 @@ export class ProductsSeedService implements OnModuleInit {
     private readonly productVariantRepository: ProductVariantRepository,
     private readonly productVariantAttributeRepository: ProductVariantAttributeRepository,
     private readonly attributeValueRepository: AttributeValueRepository,
+    private readonly attributeRepository: AttributeRepository,
   ) {}
 
   async onModuleInit() {
@@ -186,21 +188,23 @@ export class ProductsSeedService implements OnModuleInit {
     }
 
     const attributeMap = new Map<string, string>();
-    for (const attribute of SEED_ATTRIBUTE_VALUES) {
-      let attributeValue = await this.attributeValueRepository.findBySlug(
-        attribute.slug,
+    for (const link of SEED_VARIANT_ATTRIBUTE_LINKS) {
+      const key = `${link.attributeName}:${link.valueSlug}`;
+      if (attributeMap.has(key)) continue;
+
+      const attribute = await this.attributeRepository.findByName(
+        link.attributeName,
       );
-      if (!attributeValue) {
-        attributeValue = await this.attributeValueRepository.save(
-          this.attributeValueRepository.create({
-            slug: attribute.slug,
-            value: attribute.value,
-            legacyId: attribute.legacyId,
-            legacyTable: 'attribute_values',
-          }),
+      if (!attribute) continue;
+
+      const attributeValue =
+        await this.attributeValueRepository.findByAttributeAndSlug(
+          attribute.id,
+          link.valueSlug,
         );
-      }
-      attributeMap.set(attribute.slug, attributeValue.id);
+      if (!attributeValue) continue;
+
+      attributeMap.set(link.valueSlug, attributeValue.id);
     }
 
     let variantLegacyId = await this.productVariantRepository.getNextLegacyId();

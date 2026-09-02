@@ -10,6 +10,7 @@ import { OrdersModule } from './orders/orders.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
 import { ShippingModule } from './shipping/shipping.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
+import { AttributesModule } from './attributes/attributes.module.js';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { CategoriesModule } from './categories/categories.module.js';
       autoLoadEntities: true,
       migrations: ['dist/database/migrations/*.js'],
       migrationsRun: true,
-      synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: false,
     }),
     AuthModule,
     RolesModule,
@@ -35,6 +36,7 @@ import { CategoriesModule } from './categories/categories.module.js';
     PaymentsModule,
     ShippingModule,
     CategoriesModule,
+    AttributesModule,
   ],
 })
 export class AppModule {}

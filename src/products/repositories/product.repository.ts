@@ -11,7 +11,7 @@ export interface ProductFilters {
   stockStatus?: string;
   categoryId?: string;
   subCategoryId?: string;
-  variantId?: string;
+  attributeId?: string;
 }
 
 @Injectable()
@@ -30,7 +30,7 @@ export class ProductRepository {
               category: true,
               subCategory: { category: true },
             },
-            variants: { variantAttributes: { attributeValue: true } },
+            variants: { variantAttributes: { attributeValue: { attribute: true } } },
           }
         : undefined,
     });
@@ -110,7 +110,8 @@ export class ProductRepository {
         .leftJoinAndSelect('subCategory.category', 'subCategoryCategory')
         .leftJoinAndSelect('product.variants', 'variants')
         .leftJoinAndSelect('variants.variantAttributes', 'variantAttributes')
-        .leftJoinAndSelect('variantAttributes.attributeValue', 'attributeValue');
+        .leftJoinAndSelect('variantAttributes.attributeValue', 'attributeValue')
+        .leftJoinAndSelect('attributeValue.attribute', 'attribute');
     }
 
     if (filters.categoryId) {
@@ -131,12 +132,12 @@ export class ProductRepository {
       );
     }
 
-    if (filters.variantId) {
+    if (filters.attributeId) {
       qb.innerJoin(
         'product.variants',
         'pcVariant',
-        'pcVariant.id = :variantId',
-        { variantId: filters.variantId },
+        'pcVariant.id = :attributeId',
+        { attributeId: filters.attributeId },
       );
     }
 
