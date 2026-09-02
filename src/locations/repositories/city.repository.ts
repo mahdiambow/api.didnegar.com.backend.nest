@@ -16,6 +16,10 @@ export class CityRepository {
     });
   }
 
+  findByStateAndName(stateId: string, name: string) {
+    return this.repo.findOne({ where: { stateId, name } });
+  }
+
   findPaginated(
     offset: number,
     limit: number,

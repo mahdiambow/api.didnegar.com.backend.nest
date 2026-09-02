@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ShippingMethodRepository } from './repositories/shipping-method.repository.js';
 
 const DEFAULT_SHIPPING_METHODS = [
@@ -47,12 +47,12 @@ const DEFAULT_SHIPPING_METHODS = [
 ] as const;
 
 @Injectable()
-export class ShippingSeedService implements OnModuleInit {
+export class ShippingSeedService {
   constructor(
     private readonly shippingMethodRepository: ShippingMethodRepository,
   ) {}
 
-  async onModuleInit() {
+  async seed() {
     for (const method of DEFAULT_SHIPPING_METHODS) {
       const existing = await this.shippingMethodRepository.findBySlug(
         method.slug,

@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
 import { ProductVariantRepository } from './repositories/product-variant.repository.js';
@@ -7,9 +7,24 @@ import { AttributeValueRepository } from '../attributes/repositories/attribute-v
 import { AttributeRepository } from '../attributes/repositories/attribute.repository.js';
 
 const FAKE_BRANDS = [
-  { slug: 'samsung', name: 'سامسونگ', legacyId: 1 },
-  { slug: 'apple', name: 'اپل', legacyId: 2 },
-  { slug: 'xiaomi', name: 'شیائومی', legacyId: 3 },
+  {
+    slug: 'samsung',
+    name: 'سامسونگ',
+    legacyId: 1,
+    description: 'برند کره‌ای لوازم الکترونیک',
+  },
+  {
+    slug: 'apple',
+    name: 'اپل',
+    legacyId: 2,
+    description: 'برند آمریکایی محصولات دیجیتال',
+  },
+  {
+    slug: 'xiaomi',
+    name: 'شیائومی',
+    legacyId: 3,
+    description: 'برند چینی گجت و موبایل',
+  },
 ] as const;
 
 const FAKE_PRODUCTS = [
@@ -128,7 +143,7 @@ const SEED_VARIANTS = [
 ] as const;
 
 @Injectable()
-export class ProductsSeedService implements OnModuleInit {
+export class ProductsSeedService {
   constructor(
     private readonly brandRepository: BrandRepository,
     private readonly productRepository: ProductRepository,
@@ -138,7 +153,7 @@ export class ProductsSeedService implements OnModuleInit {
     private readonly attributeRepository: AttributeRepository,
   ) {}
 
-  async onModuleInit() {
+  async seed() {
     const brandMap = new Map<string, string>();
 
     for (const brand of FAKE_BRANDS) {
@@ -154,7 +169,7 @@ export class ProductsSeedService implements OnModuleInit {
           name: brand.name,
           legacyId: brand.legacyId,
           legacyTable: 'brands',
-          description: null,
+          description: brand.description,
           isActive: true,
         }),
       );

@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   DEFAULT_ROLE_PERMISSIONS,
   DEFAULT_ROLE_SLUGS,
@@ -14,10 +14,10 @@ const SYSTEM_ROLE_NAMES: Record<DefaultRoleSlug, string> = {
 };
 
 @Injectable()
-export class RolesSeedService implements OnModuleInit {
+export class RolesSeedService {
   constructor(private readonly roleRepository: RoleRepository) {}
 
-  async onModuleInit() {
+  async seed() {
     for (const slug of Object.values(DEFAULT_ROLE_SLUGS)) {
       await this.seedSystemRole(slug);
     }

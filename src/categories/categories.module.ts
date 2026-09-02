@@ -34,6 +34,6 @@ import { AuthModule } from '../auth/auth.module.js';
     SubCategoryRepository,
     ProductCategoryRepository,
   ],
-  exports: [CategoriesService, ProductCategoryRepository],
+  exports: [CategoriesService, CategoriesSeedService, ProductCategoryRepository],
 })
 export class CategoriesModule {}

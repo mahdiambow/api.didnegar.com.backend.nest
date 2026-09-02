@@ -16,6 +16,6 @@ import { AuthModule } from '../auth/auth.module.js';
   ],
   controllers: [ShippingController],
   providers: [ShippingService, ShippingSeedService, ShippingMethodRepository],
-  exports: [ShippingService, ShippingMethodRepository],
+  exports: [ShippingService, ShippingSeedService, ShippingMethodRepository],
 })
 export class ShippingModule {}

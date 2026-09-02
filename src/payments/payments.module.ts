@@ -22,6 +22,6 @@ import { AuthModule } from '../auth/auth.module.js';
     ZibalMockService,
     PaymentRepository,
   ],
-  exports: [PaymentsService],
+  exports: [PaymentsService, PaymentRepository],
 })
 export class PaymentsModule {}

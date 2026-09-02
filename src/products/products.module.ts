@@ -52,6 +52,7 @@ import { CategoriesModule } from '../categories/categories.module.js';
   ],
   exports: [
     ProductsService,
+    ProductsSeedService,
     ProductRepository,
     ProductVariantRepository,
     ProductVariantsService,

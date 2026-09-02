@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CategoryRepository } from './repositories/category.repository.js';
 import { SubCategoryRepository } from './repositories/sub-category.repository.js';
 import { ProductCategoryRepository } from './repositories/product-category.repository.js';
@@ -8,17 +8,19 @@ const SEED_CATEGORIES = [
   {
     slug: 'mobile',
     name: 'موبایل',
+    legacyId: 1,
     subCategories: [
-      { slug: 'phones', name: 'گوشی' },
-      { slug: 'tablets', name: 'تبلت' },
+      { slug: 'phones', name: 'گوشی', legacyId: 1 },
+      { slug: 'tablets', name: 'تبلت', legacyId: 2 },
     ],
   },
   {
     slug: 'accessories',
     name: 'لوازم جانبی',
+    legacyId: 2,
     subCategories: [
-      { slug: 'earbuds', name: 'هندزفری' },
-      { slug: 'chargers', name: 'شارژر' },
+      { slug: 'earbuds', name: 'هندزفری', legacyId: 3 },
+      { slug: 'chargers', name: 'شارژر', legacyId: 4 },
     ],
   },
 ] as const;
@@ -33,7 +35,10 @@ const PRODUCT_CATEGORY_MAP: Record<string, { category: string; sub: string }> =
   };
 
 @Injectable()
-export class CategoriesSeedService implements OnModuleInit {
+export class CategoriesSeedService {
+  private categoryMap = new Map<string, string>();
+  private subCategoryMap = new Map<string, string>();
+
   constructor(
     private readonly categoryRepository: CategoryRepository,
     private readonly subCategoryRepository: SubCategoryRepository,
@@ -41,9 +46,9 @@ export class CategoriesSeedService implements OnModuleInit {
     private readonly productRepository: ProductRepository,
   ) {}
 
-  async onModuleInit() {
-    const categoryMap = new Map<string, string>();
-    const subCategoryMap = new Map<string, string>();
+  async seedCatalog() {
+    this.categoryMap.clear();
+    this.subCategoryMap.clear();
 
     for (const category of SEED_CATEGORIES) {
       let categoryEntity = await this.categoryRepository.findBySlug(category.slug);
@@ -52,11 +57,12 @@ export class CategoriesSeedService implements OnModuleInit {
           this.categoryRepository.create({
             slug: category.slug,
             name: category.name,
+            legacyId: category.legacyId,
             legacyTable: 'categories',
           }),
         );
       }
-      categoryMap.set(category.slug, categoryEntity.id);
+      this.categoryMap.set(category.slug, categoryEntity.id);
 
       for (const sub of category.subCategories) {
         const key = `${category.slug}:${sub.slug}`;
@@ -70,20 +76,27 @@ export class CategoriesSeedService implements OnModuleInit {
               categoryId: categoryEntity.id,
               slug: sub.slug,
               name: sub.name,
+              legacyId: sub.legacyId,
               legacyTable: 'sub_categories',
             }),
           );
         }
-        subCategoryMap.set(key, subEntity.id);
+        this.subCategoryMap.set(key, subEntity.id);
       }
+    }
+  }
+
+  async seedProductLinks() {
+    if (!this.categoryMap.size) {
+      await this.seedCatalog();
     }
 
     for (const [productSlug, mapping] of Object.entries(PRODUCT_CATEGORY_MAP)) {
       const product = await this.productRepository.findBySlug(productSlug);
       if (!product) continue;
 
-      const categoryId = categoryMap.get(mapping.category);
-      const subCategoryId = subCategoryMap.get(
+      const categoryId = this.categoryMap.get(mapping.category);
+      const subCategoryId = this.subCategoryMap.get(
         `${mapping.category}:${mapping.sub}`,
       );
       if (!categoryId || !subCategoryId) continue;

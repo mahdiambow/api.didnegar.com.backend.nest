@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { AttributeRepository } from './repositories/attribute.repository.js';
 import { AttributeValueRepository } from './repositories/attribute-value.repository.js';
 
@@ -26,13 +26,13 @@ const SEED_ATTRIBUTES = [
 ] as const;
 
 @Injectable()
-export class AttributesSeedService implements OnModuleInit {
+export class AttributesSeedService {
   constructor(
     private readonly attributeRepository: AttributeRepository,
     private readonly attributeValueRepository: AttributeValueRepository,
   ) {}
 
-  async onModuleInit() {
+  async seed() {
     for (const attributeSeed of SEED_ATTRIBUTES) {
       let attribute = await this.attributeRepository.findByName(
         attributeSeed.name,
