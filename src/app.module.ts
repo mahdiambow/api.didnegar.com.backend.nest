@@ -5,6 +5,13 @@ import { RolesModule } from './roles/roles.module.js';
 import { UsersModule } from './users/users.module.js';
 import { SellersModule } from './sellers/sellers.module.js';
 import { LocationsModule } from './locations/locations.module.js';
+import { ProductsModule } from './products/products.module.js';
+import { OrdersModule } from './orders/orders.module.js';
+import { PaymentsModule } from './payments/payments.module.js';
+import { ShippingModule } from './shipping/shipping.module.js';
+import { CategoriesModule } from './categories/categories.module.js';
+import { AttributesModule } from './attributes/attributes.module.js';
+import { DatabaseSeedModule } from './database/database.seed.module.js';
 
 @Module({
   imports: [
@@ -18,13 +25,20 @@ import { LocationsModule } from './locations/locations.module.js';
       autoLoadEntities: true,
       migrations: ['dist/database/migrations/*.js'],
       migrationsRun: true,
-      synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: false,
     }),
     AuthModule,
     RolesModule,
     UsersModule,
     SellersModule,
     LocationsModule,
+    ProductsModule,
+    OrdersModule,
+    PaymentsModule,
+    ShippingModule,
+    CategoriesModule,
+    AttributesModule,
+    DatabaseSeedModule,
   ],
 })
 export class AppModule {}

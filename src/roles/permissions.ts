@@ -48,6 +48,36 @@ export const PERMISSIONS = {
   auth: {
     manage: 'auth:manage',
   },
+  products: {
+    read: 'products:read',
+    create: 'products:create',
+    update: 'products:update',
+    delete: 'products:delete',
+    adjustPrices: 'products:adjust-prices',
+    importPrices: 'products:import-prices',
+  },
+  payments: {
+    read: 'payments:read',
+    create: 'payments:create',
+  },
+  shipping: {
+    read: 'shipping:read',
+    create: 'shipping:create',
+    update: 'shipping:update',
+    delete: 'shipping:delete',
+  },
+  categories: {
+    read: 'categories:read',
+    create: 'categories:create',
+    update: 'categories:update',
+    delete: 'categories:delete',
+  },
+  attributes: {
+    read: 'attributes:read',
+    create: 'attributes:create',
+    update: 'attributes:update',
+    delete: 'attributes:delete',
+  },
 } as const;
 
 export const LOCATION_PERMISSIONS = PERMISSIONS.locations;
@@ -208,6 +238,106 @@ export const PERMISSION_DEFINITIONS = [
     label: 'مدیریت احراز هویت',
     group: 'auth',
   },
+  {
+    key: PERMISSIONS.products.read,
+    label: 'مشاهده محصولات',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.products.create,
+    label: 'ایجاد محصول',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.products.update,
+    label: 'ویرایش محصول',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.products.delete,
+    label: 'حذف محصول',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.products.adjustPrices,
+    label: 'تغییر گروهی قیمت محصولات',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.products.importPrices,
+    label: 'ایمپورت قیمت از اکسل',
+    group: 'products',
+  },
+  {
+    key: PERMISSIONS.payments.read,
+    label: 'مشاهده پرداخت‌ها',
+    group: 'payments',
+  },
+  {
+    key: PERMISSIONS.payments.create,
+    label: 'ایجاد پرداخت',
+    group: 'payments',
+  },
+  {
+    key: PERMISSIONS.shipping.read,
+    label: 'مشاهده روش‌های ارسال',
+    group: 'shipping',
+  },
+  {
+    key: PERMISSIONS.shipping.create,
+    label: 'ایجاد روش ارسال',
+    group: 'shipping',
+  },
+  {
+    key: PERMISSIONS.shipping.update,
+    label: 'ویرایش روش ارسال',
+    group: 'shipping',
+  },
+  {
+    key: PERMISSIONS.shipping.delete,
+    label: 'حذف روش ارسال',
+    group: 'shipping',
+  },
+  {
+    key: PERMISSIONS.categories.read,
+    label: 'مشاهده دسته‌بندی‌ها',
+    group: 'categories',
+  },
+  {
+    key: PERMISSIONS.categories.create,
+    label: 'ایجاد دسته‌بندی',
+    group: 'categories',
+  },
+  {
+    key: PERMISSIONS.categories.update,
+    label: 'ویرایش دسته‌بندی',
+    group: 'categories',
+  },
+  {
+    key: PERMISSIONS.categories.delete,
+    label: 'حذف دسته‌بندی',
+    group: 'categories',
+  },
+  {
+    key: PERMISSIONS.attributes.read,
+    label: 'مشاهده ویژگی‌ها',
+    group: 'attributes',
+  },
+  {
+    key: PERMISSIONS.attributes.create,
+    label: 'ایجاد ویژگی',
+    group: 'attributes',
+  },
+  {
+    key: PERMISSIONS.attributes.update,
+    label: 'ویرایش ویژگی',
+    group: 'attributes',
+  },
+  {
+    key: PERMISSIONS.attributes.delete,
+    label: 'حذف ویژگی',
+    group: 'attributes',
+  },
 ] as const satisfies ReadonlyArray<{
   key: string;
   label: string;
@@ -255,6 +385,15 @@ const SELLER_PERMISSIONS: Permission[] = [
   PERMISSIONS.contracts.update,
   PERMISSIONS.contracts.delete,
   PERMISSIONS.locations.read,
+  PERMISSIONS.products.read,
+  PERMISSIONS.products.create,
+  PERMISSIONS.products.update,
+  PERMISSIONS.products.delete,
+  PERMISSIONS.payments.read,
+  PERMISSIONS.payments.create,
+  PERMISSIONS.shipping.read,
+  PERMISSIONS.categories.read,
+  PERMISSIONS.attributes.read,
 ];
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<
