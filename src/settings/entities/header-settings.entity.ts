@@ -16,6 +16,9 @@ export class HeaderSettings {
   @Column({ type: 'text' })
   text: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  phoneNumber: string | null;
+
   @Column({ type: 'varchar', length: 2048, nullable: true })
   instagram: string | null;
 

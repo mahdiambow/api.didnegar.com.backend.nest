@@ -8,7 +8,7 @@ import { FooterSettings } from './entities/footer-settings.entity.js';
 import { HeaderSettings } from './entities/header-settings.entity.js';
 import { CreateHeaderDto, UpdateHeaderDto } from './dto/header.dto.js';
 
-const input = { text: 'ارسال رایگان' };
+const input = { text: 'ارسال رایگان', phoneNumber: '02112345678' };
 
 function setup() {
   let row: Record<string, unknown> | null = null;
@@ -48,6 +48,9 @@ describe('header settings', () => {
       ...input,
       instagram: null,
     });
+    expect(
+      await service.updateHeader({ phoneNumber: '02187654321' }),
+    ).toMatchObject({ phoneNumber: '02187654321', text: input.text });
     await service.removeHeader();
     await expect(service.getHeader()).rejects.toMatchObject({ status: 404 });
     await expect(service.createHeader(input)).resolves.toMatchObject(input);
@@ -75,6 +78,9 @@ describe('header settings', () => {
     { text: 123 },
     { text: '' },
     { text: null },
+    { phoneNumber: 2112345678 },
+    { phoneNumber: '' },
+    { phoneNumber: '1'.repeat(51) },
     { instagram: 'javascript:alert(1)' },
     { telegram: 'not-a-url' },
   ])('rejects invalid create input %j', async (patch) => {

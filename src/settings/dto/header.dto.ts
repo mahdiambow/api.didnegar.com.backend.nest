@@ -20,6 +20,18 @@ export class CreateHeaderDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
+    example: '02112345678',
+    maxLength: 50,
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  phoneNumber?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
     example: 'https://example.com/instagram',
   })
   @IsOptional()
