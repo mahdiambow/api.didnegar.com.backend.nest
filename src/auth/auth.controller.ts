@@ -50,7 +50,7 @@ export class AuthController {
   }
 
   @Post('verify-otp')
- //@OtpVerifyThrottle()
+  @OtpVerifyThrottle()
   @ApiResponseMeta({
     code: 'OTP_VERIFIED',
     message: 'OTP verified successfully',
