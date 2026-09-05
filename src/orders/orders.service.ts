@@ -7,7 +7,7 @@ import {
 import { ProductRepository } from '../products/repositories/product.repository.js';
 import { ShippingService } from '../shipping/shipping.service.js';
 import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
-import { CreateOrderDto } from './dto/create-order.dto.js';
+import { CreateOrderDto, OrderProductDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { toOrderResponse } from './dto/order-response.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
@@ -36,45 +36,21 @@ export class OrdersService {
       },
     );
 
-    return paginatedList(
-      items.map(toOrderResponse),
-      page,
-      limit,
-      total,
-    );
+    return paginatedList(items.map(toOrderResponse), page, limit, total);
   }
 
   async create(userId: string, dto: CreateOrderDto) {
-    const product = await this.productRepository.findById(dto.productId);
-    if (!product) {
-      throw new ApiException(
-        'PRODUCT_NOT_FOUND',
-        'محصول یافت نشد',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    if (product.status !== 'publish') {
-      throw new ApiException(
-        'PRODUCT_NOT_AVAILABLE',
-        'محصول برای خرید در دسترس نیست',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
+    const items = await this.resolveProducts(dto.products);
     const shippingMethod = await this.shippingService.resolveShippingMethod(
       dto.shippingMethodId,
     );
-
-    const quantity = dto.quantity ?? 1;
-    const amounts = this.calculateAmounts(product, shippingMethod, quantity);
+    const amounts = this.calculateAmounts(items, shippingMethod);
 
     const order = await this.orderRepository.save(
       this.orderRepository.create({
         userId,
-        productId: product.id,
+        items,
         shippingMethodId: shippingMethod.id,
-        quantity,
         subtotal: amounts.subtotal,
         shippingAmount: amounts.shippingAmount,
         amount: amounts.payableAmount,
@@ -121,9 +97,7 @@ export class OrdersService {
     }
 
     const shouldRecalculate =
-      dto.productId !== undefined ||
-      dto.shippingMethodId !== undefined ||
-      dto.quantity !== undefined;
+      dto.products !== undefined || dto.shippingMethodId !== undefined;
 
     const hasManualAmounts =
       dto.subtotal !== undefined &&
@@ -131,16 +105,10 @@ export class OrdersService {
       dto.amount !== undefined;
 
     if (shouldRecalculate) {
-      const product = await this.productRepository.findById(
-        dto.productId ?? order.productId,
-      );
-      if (!product) {
-        throw new ApiException(
-          'PRODUCT_NOT_FOUND',
-          'محصول یافت نشد',
-          HttpStatus.NOT_FOUND,
-        );
-      }
+      const items =
+        dto.products !== undefined
+          ? await this.resolveProducts(dto.products)
+          : order.items;
 
       const shippingMethodId =
         dto.shippingMethodId !== undefined
@@ -163,12 +131,10 @@ export class OrdersService {
         );
       }
 
-      const quantity = dto.quantity ?? order.quantity;
-      const amounts = this.calculateAmounts(product, shippingMethod, quantity);
+      const amounts = this.calculateAmounts(items, shippingMethod);
 
-      order.productId = product.id;
+      order.items = this.orderRepository.create({ items }).items;
       order.shippingMethodId = shippingMethod.id;
-      order.quantity = quantity;
 
       if (!hasManualAmounts) {
         order.subtotal = amounts.subtotal;
@@ -198,24 +164,52 @@ export class OrdersService {
     return toOrderResponse(saved!);
   }
 
+  private async resolveProducts(products: OrderProductDto[]) {
+    return Promise.all(
+      products.map(async (item) => {
+        const product = await this.productRepository.findById(item.productId);
+        if (!product) {
+          throw new ApiException(
+            'PRODUCT_NOT_FOUND',
+            'محصول یافت نشد',
+            HttpStatus.NOT_FOUND,
+          );
+        }
+        if (product.status !== 'publish') {
+          throw new ApiException(
+            'PRODUCT_NOT_AVAILABLE',
+            'محصول برای خرید در دسترس نیست',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        const unitPrice = Number(product.minPrice ?? product.maxPrice ?? 0);
+        if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+          throw new ApiException(
+            'PRODUCT_PRICE_INVALID',
+            'قیمت محصول تعریف نشده است',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        return {
+          productId: product.id,
+          quantity: item.quantity ?? 1,
+          unitPrice,
+        };
+      }),
+    );
+  }
+
   private calculateAmounts(
-    product: { minPrice: number | null; maxPrice: number | null },
+    items: { unitPrice: number; quantity: number }[],
     shippingMethod: { price: number; isCod: boolean },
-    quantity: number,
   ) {
-    const unitPrice = Number(product.minPrice ?? product.maxPrice ?? 0);
-
-    if (unitPrice <= 0) {
-      throw new ApiException(
-        'PRODUCT_PRICE_INVALID',
-        'قیمت محصول تعریف نشده است',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
+    const subtotal = items.reduce(
+      (sum, item) => sum + Number(item.unitPrice) * item.quantity,
+      0,
+    );
     return calculateOrderAmounts(
-      unitPrice,
-      quantity,
+      subtotal,
+      1,
       Number(shippingMethod.price),
       shippingMethod.isCod,
     );
