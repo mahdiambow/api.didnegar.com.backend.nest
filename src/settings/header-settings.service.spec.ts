@@ -4,16 +4,11 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { Repository } from 'typeorm';
 import { SettingsService } from './settings.service.js';
-import { HeaderSettings } from './entities/header-settings.entity.js';
 import { FooterSettings } from './entities/footer-settings.entity.js';
-import { CreateFooterDto, UpdateFooterDto } from './dto/footer.dto.js';
+import { HeaderSettings } from './entities/header-settings.entity.js';
+import { CreateHeaderDto, UpdateHeaderDto } from './dto/header.dto.js';
 
-const input = {
-  address: 'تهران',
-  phoneNumber: '02112345678',
-  email: 'info@example.com',
-  workingHours: '۹ تا ۱۸',
-};
+const input = { text: 'ارسال رایگان' };
 
 function setup() {
   let row: Record<string, unknown> | null = null;
@@ -35,72 +30,71 @@ function setup() {
   return {
     repository,
     service: new SettingsService(
-      repository as unknown as Repository<FooterSettings>,
-      {} as Repository<HeaderSettings>,
+      {} as Repository<FooterSettings>,
+      repository as unknown as Repository<HeaderSettings>,
     ),
   };
 }
 
-describe('footer settings', () => {
+describe('header settings', () => {
   it('creates, reads, partially updates, clears social links, deletes and recreates', async () => {
     const { service } = setup();
-    await service.createFooter({
+    await service.createHeader({
       ...input,
       instagram: 'https://instagram.com/example',
     });
-    expect(await service.getFooter()).toMatchObject({ ...input, id: 1 });
-    expect(await service.updateFooter({ instagram: null })).toMatchObject({
+    expect(await service.getHeader()).toMatchObject({ ...input, id: 1 });
+    expect(await service.updateHeader({ instagram: null })).toMatchObject({
       ...input,
       instagram: null,
     });
-    await service.removeFooter();
-    await expect(service.getFooter()).rejects.toMatchObject({ status: 404 });
-    await expect(service.createFooter(input)).resolves.toMatchObject(input);
+    await service.removeHeader();
+    await expect(service.getHeader()).rejects.toMatchObject({ status: 404 });
+    await expect(service.createHeader(input)).resolves.toMatchObject(input);
   });
 
   it('rejects duplicate creation without overwriting existing settings', async () => {
     const { service } = setup();
-    await service.createFooter(input);
+    await service.createHeader(input);
     await expect(
-      service.createFooter({ ...input, address: 'other' }),
+      service.createHeader({ ...input, text: 'other' }),
     ).rejects.toMatchObject({ status: 409 });
-    expect((await service.getFooter()).address).toBe(input.address);
+    expect((await service.getHeader()).text).toBe(input.text);
   });
 
   it('returns 404 for update and delete when unconfigured', async () => {
     const { service, repository } = setup();
-    await expect(
-      service.updateFooter({ address: 'other' }),
-    ).rejects.toMatchObject({ status: 404 });
+    await expect(service.updateHeader({ text: 'other' })).rejects.toMatchObject(
+      { status: 404 },
+    );
     expect(repository.update).not.toHaveBeenCalled();
-    await expect(service.removeFooter()).rejects.toMatchObject({ status: 404 });
+    await expect(service.removeHeader()).rejects.toMatchObject({ status: 404 });
   });
 
   it.each([
-    { email: 'invalid' },
-    { address: '' },
-    { phoneNumber: null },
+    { text: 123 },
+    { text: '' },
+    { text: null },
     { instagram: 'javascript:alert(1)' },
     { telegram: 'not-a-url' },
   ])('rejects invalid create input %j', async (patch) => {
     expect(
-      (await validate(plainToInstance(CreateFooterDto, { ...input, ...patch })))
+      (await validate(plainToInstance(CreateHeaderDto, { ...input, ...patch })))
         .length,
     ).toBeGreaterThan(0);
   });
 
-  it('requires contact fields on creation and rejects null contact fields on update', async () => {
+  it('requires text on creation and rejects null text on update', async () => {
     expect(
-      (await validate(plainToInstance(CreateFooterDto, {}))).length,
+      (await validate(plainToInstance(CreateHeaderDto, {}))).length,
     ).toBeGreaterThan(0);
     expect(
-      (await validate(plainToInstance(UpdateFooterDto, { email: null })))
-        .length,
+      (await validate(plainToInstance(UpdateHeaderDto, { text: null }))).length,
     ).toBeGreaterThan(0);
     expect(
-      await validate(plainToInstance(UpdateFooterDto, { instagram: null })),
+      await validate(plainToInstance(UpdateHeaderDto, { instagram: null })),
     ).toEqual([]);
-    expect(await validate(plainToInstance(UpdateFooterDto, {}))).toEqual([]);
-    expect(await validate(plainToInstance(CreateFooterDto, input))).toEqual([]);
+    expect(await validate(plainToInstance(UpdateHeaderDto, {}))).toEqual([]);
+    expect(await validate(plainToInstance(CreateHeaderDto, input))).toEqual([]);
   });
 });
