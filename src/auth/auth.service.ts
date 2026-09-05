@@ -145,9 +145,7 @@ export class AuthService {
     );
 
     return {
-      userId: user.id,
-      role: user.role.slug,
-      sellerId: user.sellerId,
+      user: toUserResponse(user),
       hasPassword: !!user.password,
       ...tokens,
     };

@@ -10,7 +10,10 @@ export class UserRepository {
   ) {}
 
   findById(id: string) {
-    return this.repo.findOne({ where: { id } });
+    return this.repo.findOne({
+      where: { id },
+      relations: { role: true, seller: true, profile: true, addresses: true },
+    });
   }
 
   findByIdOrFail(id: string) {
@@ -30,6 +33,8 @@ export class UserRepository {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('user.seller', 'seller')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('user.addresses', 'addresses')
       .orderBy('user.createdAt', 'DESC')
       .skip(offset)
       .take(limit);
@@ -46,6 +51,8 @@ export class UserRepository {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('user.seller', 'seller')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('user.addresses', 'addresses')
       .addSelect('user.password')
       .where('user.username = :username', { username })
       .getOne();
@@ -56,6 +63,8 @@ export class UserRepository {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('user.seller', 'seller')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('user.addresses', 'addresses')
       .addSelect(['user.otpCode', 'user.otpExpiresAt', 'user.password'])
       .where('user.username = :username', { username })
       .getOne();

@@ -1,12 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { createSuccessResponseDto } from '../../common/response/dto/create-success-response.dto.js';
+import { UserResponseDto } from './user-response.dto.js';
 
 export class VerifyOtpDataDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
-  userId: string;
-
-  @ApiProperty({ example: 'user' })
-  role: string;
+  @ApiProperty({ type: UserResponseDto })
+  user: UserResponseDto;
 
   @ApiProperty({ example: false })
   hasPassword: boolean;

@@ -16,15 +16,22 @@ export class OrdersSeedService {
   ) {}
 
   async seed() {
-    const userId = await this.usersSeedService.findUserIdByUsername('09333333333');
+    const userId =
+      await this.usersSeedService.findUserIdByUsername('09333333333');
     const product = await this.productRepository.findBySlug('galaxy-s24-ultra');
-    const shipping = await this.shippingMethodRepository.findBySlug('mahex-cod');
+    const shipping =
+      await this.shippingMethodRepository.findBySlug('mahex-cod');
 
     if (!userId || !product || !shipping) {
       return;
     }
 
-    await this.seedPendingOrder(userId, product.id, shipping.id, product.minPrice);
+    await this.seedPendingOrder(
+      userId,
+      product.id,
+      shipping.id,
+      product.minPrice,
+    );
     await this.seedPaidOrder(userId, product.id, shipping.id, product.minPrice);
   }
 
@@ -48,9 +55,8 @@ export class OrdersSeedService {
     await this.orderRepository.save(
       this.orderRepository.create({
         userId,
-        productId,
+        items: [{ productId, quantity: 1, unitPrice: subtotal }],
         shippingMethodId,
-        quantity: 1,
         subtotal,
         shippingAmount,
         amount: subtotal + shippingAmount,
@@ -69,9 +75,8 @@ export class OrdersSeedService {
     const shippingAmount = 85000;
     const amount = subtotal + shippingAmount;
 
-    const existingPayment = await this.paymentRepository.findByAuthority(
-      'SEED-AUTH-0001',
-    );
+    const existingPayment =
+      await this.paymentRepository.findByAuthority('SEED-AUTH-0001');
     if (existingPayment) {
       return;
     }
@@ -79,9 +84,8 @@ export class OrdersSeedService {
     const order = await this.orderRepository.save(
       this.orderRepository.create({
         userId,
-        productId,
+        items: [{ productId, quantity: 1, unitPrice: subtotal }],
         shippingMethodId,
-        quantity: 1,
         subtotal,
         shippingAmount,
         amount,

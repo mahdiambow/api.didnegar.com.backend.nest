@@ -68,7 +68,9 @@ export class PaymentsService {
       );
     }
 
-    const existingPayment = await this.paymentRepository.findByOrderId(order.id);
+    const existingPayment = await this.paymentRepository.findByOrderId(
+      order.id,
+    );
 
     if (existingPayment?.status === 'success') {
       throw new ApiException(
@@ -101,7 +103,11 @@ export class PaymentsService {
     }
 
     const amount = Number(order.amount);
-    const productName = order.product?.name ?? 'سفارش';
+    const productName =
+      order.items
+        ?.map((item) => item.product?.name)
+        .filter(Boolean)
+        .join('، ') || 'سفارش';
 
     const gatewayResult = adapter.requestPayment(amount, productName, order.id);
 
@@ -181,7 +187,10 @@ export class PaymentsService {
         status: 'success',
         amount: Number(payment.amount),
         ...orderBreakdown,
-        productName: payment.order?.product?.name,
+        productName: payment.order?.items
+          ?.map((item) => item.product?.name)
+          .filter(Boolean)
+          .join('، '),
         gatewayMessage: 'این تراکنش قبلاً تأیید شده است',
       });
     }
@@ -224,7 +233,10 @@ export class PaymentsService {
       status: 'success',
       amount: Number(payment.amount),
       ...orderBreakdown,
-      productName: payment.order?.product?.name,
+      productName: payment.order?.items
+        ?.map((item) => item.product?.name)
+        .filter(Boolean)
+        .join('، '),
       gatewayMessage: verifyResult.message,
     });
   }

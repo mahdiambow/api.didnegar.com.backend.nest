@@ -7,9 +7,10 @@ import {
   ManyToOne,
   JoinColumn,
   OneToOne,
+  OneToMany,
 } from 'typeorm';
 import type { User } from '../../auth/entities/user.entity.js';
-import type { Product } from '../../products/entities/product.entity.js';
+import type { OrderItem } from '../../orders/entities/order-item.entity.js';
 import type { Payment } from './payment.entity.js';
 import type { ShippingMethod } from '../../shipping/entities/shipping-method.entity.js';
 
@@ -23,14 +24,8 @@ export class Order {
   @Column({ type: 'uuid' })
   userId: string;
 
-  @Column({ type: 'uuid' })
-  productId: string;
-
   @Column({ type: 'uuid', nullable: true })
   shippingMethodId: string | null;
-
-  @Column({ type: 'int', default: 1 })
-  quantity: number;
 
   @Column({ type: 'decimal', precision: 19, scale: 4 })
   subtotal: number;
@@ -54,9 +49,8 @@ export class Order {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @ManyToOne('Product', { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'productId' })
-  product: Product;
+  @OneToMany('OrderItem', 'order', { cascade: ['insert', 'update'] })
+  items: OrderItem[];
 
   @ManyToOne('ShippingMethod', { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'shippingMethodId' })

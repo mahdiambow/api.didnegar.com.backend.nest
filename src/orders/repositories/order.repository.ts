@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { type DeepPartial, Repository } from 'typeorm';
 import { Order } from '../../payments/entities/order.entity.js';
 
 @Injectable()
@@ -12,14 +12,22 @@ export class OrderRepository {
   findById(id: string) {
     return this.repo.findOne({
       where: { id },
-      relations: { product: true, payment: true, shippingMethod: true },
+      relations: {
+        items: { product: true },
+        payment: true,
+        shippingMethod: true,
+      },
     });
   }
 
   findByIdForUser(id: string, userId: string) {
     return this.repo.findOne({
       where: { id, userId },
-      relations: { product: true, payment: true, shippingMethod: true },
+      relations: {
+        items: { product: true },
+        payment: true,
+        shippingMethod: true,
+      },
     });
   }
 
@@ -30,7 +38,8 @@ export class OrderRepository {
   ) {
     const qb = this.repo
       .createQueryBuilder('order')
-      .leftJoinAndSelect('order.product', 'product')
+      .leftJoinAndSelect('order.items', 'item')
+      .leftJoinAndSelect('item.product', 'product')
       .leftJoinAndSelect('order.shippingMethod', 'shippingMethod')
       .leftJoinAndSelect('order.payment', 'payment')
       .orderBy('order.createdAt', 'DESC')
@@ -48,7 +57,7 @@ export class OrderRepository {
     return qb.getManyAndCount();
   }
 
-  create(data: Partial<Order>) {
+  create(data: DeepPartial<Order>) {
     return this.repo.create(data);
   }
 

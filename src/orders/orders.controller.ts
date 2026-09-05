@@ -70,10 +70,7 @@ export class OrdersController {
   })
   @ApiOperation({ summary: 'ایجاد سفارش' })
   @ApiOkResponse({ type: OrderApiResponseDto })
-  create(
-    @Req() req: { user: { sub: string } },
-    @Body() dto: CreateOrderDto,
-  ) {
+  create(@Req() req: { user: { sub: string } }, @Body() dto: CreateOrderDto) {
     return this.ordersService.create(req.user.sub, dto);
   }
 

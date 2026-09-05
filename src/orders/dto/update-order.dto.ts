@@ -1,12 +1,19 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsIn,
-  IsInt,
+  IsArray,
+  ArrayMinSize,
+  ArrayUnique,
+  ValidateNested,
+  ValidateIf,
   IsNumber,
   IsOptional,
   IsUUID,
   Min,
 } from 'class-validator';
+
+import { Type } from 'class-transformer';
+import { OrderProductDto } from './create-order.dto.js';
 
 const ORDER_STATUSES = ['pending', 'paid', 'failed', 'cancelled'] as const;
 
@@ -16,16 +23,14 @@ export class UpdateOrderDto {
   @IsIn(ORDER_STATUSES)
   status?: (typeof ORDER_STATUSES)[number];
 
-  @ApiPropertyOptional({ example: 2 })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  quantity?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsUUID()
-  productId?: string;
+  @ApiPropertyOptional({ type: [OrderProductDto], minItems: 1 })
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayUnique((item: OrderProductDto) => item?.productId)
+  @ValidateNested({ each: true })
+  @Type(() => OrderProductDto)
+  products?: OrderProductDto[];
 
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()

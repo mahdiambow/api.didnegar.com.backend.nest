@@ -13,7 +13,7 @@ export class PaymentRepository {
     return this.repo.findOne({
       where: { authority },
       relations: {
-        order: { product: true, shippingMethod: true },
+        order: { items: { product: true }, shippingMethod: true },
       },
     });
   }
