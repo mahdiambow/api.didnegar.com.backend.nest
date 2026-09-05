@@ -1,3 +1,7 @@
+import { Category } from '../categories/entities/category.entity.js';
+import { Banner } from './entities/banner.entity.js';
+import { BannersController } from './banners.controller.js';
+import { BannersService } from './banners.service.js';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module.js';
@@ -11,10 +15,19 @@ import { HeaderSettingsController } from './header-settings.controller.js';
 @Module({
   imports: [
     AuthModule,
-    TypeOrmModule.forFeature([FooterSettings, HeaderSettings]),
+    TypeOrmModule.forFeature([
+      FooterSettings,
+      HeaderSettings,
+      Banner,
+      Category,
+    ]),
   ],
-  controllers: [SettingsController, HeaderSettingsController],
-  providers: [SettingsService],
+  controllers: [
+    SettingsController,
+    HeaderSettingsController,
+    BannersController,
+  ],
+  providers: [SettingsService, BannersService],
   exports: [SettingsService],
 })
 export class SettingsModule {}
