@@ -1,3 +1,4 @@
+import { OffersModule } from './offers/offers.module.js';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module.js';
@@ -34,6 +35,7 @@ import { DatabaseSeedModule } from './database/database.seed.module.js';
     SellersModule,
     LocationsModule,
     ProductsModule,
+    OffersModule,
     OrdersModule,
     PaymentsModule,
     ShippingModule,

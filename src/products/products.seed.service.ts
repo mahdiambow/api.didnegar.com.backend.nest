@@ -1,8 +1,10 @@
+import { DataSource } from 'typeorm';
+import { SellerOffer } from '../offers/entities/seller-offer.entity.js';
+import { Seller } from '../sellers/entities/seller.entity.js';
+import { ProductVariantsService } from './product-variants.service.js';
 import { Injectable } from '@nestjs/common';
 import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
-import { ProductVariantRepository } from './repositories/product-variant.repository.js';
-import { ProductVariantAttributeRepository } from './repositories/product-variant-attribute.repository.js';
 import { AttributeValueRepository } from '../attributes/repositories/attribute-value.repository.js';
 import { AttributeRepository } from '../attributes/repositories/attribute.repository.js';
 
@@ -145,10 +147,10 @@ const SEED_VARIANTS = [
 @Injectable()
 export class ProductsSeedService {
   constructor(
+    private readonly dataSource: DataSource,
+    private readonly variantsService: ProductVariantsService,
     private readonly brandRepository: BrandRepository,
     private readonly productRepository: ProductRepository,
-    private readonly productVariantRepository: ProductVariantRepository,
-    private readonly productVariantAttributeRepository: ProductVariantAttributeRepository,
     private readonly attributeValueRepository: AttributeValueRepository,
     private readonly attributeRepository: AttributeRepository,
   ) {}
@@ -190,13 +192,7 @@ export class ProductsSeedService {
           slug: product.slug,
           shortDescription: product.shortDescription,
           status: 'publish',
-          sku: product.sku,
           brandId: brandMap.get(product.brandSlug) ?? null,
-          minPrice: product.minPrice,
-          maxPrice: product.maxPrice,
-          stockQuantity: product.stockQuantity,
-          stockStatus: product.stockStatus,
-          isOnSale: product.isOnSale,
           averageRating: product.averageRating,
           ratingCount: product.ratingCount,
           totalSales: product.totalSales,
@@ -224,52 +220,45 @@ export class ProductsSeedService {
       attributeMap.set(link.valueSlug, attributeValue.id);
     }
 
-    let variantLegacyId = await this.productVariantRepository.getNextLegacyId();
-
-    for (const variantSeed of SEED_VARIANTS) {
-      const product = await this.productRepository.findBySlug(
-        variantSeed.productSlug,
-      );
-      if (!product) continue;
-
-      const existing = await this.productVariantRepository.findBySku(
-        variantSeed.sku,
-      );
-      if (existing) continue;
-
-      const variant = await this.productVariantRepository.save(
-        this.productVariantRepository.create({
-          legacyId: variantLegacyId++,
-          legacyTable: 'product_variants',
+    const seller = await this.dataSource
+      .getRepository(Seller)
+      .findOneBy({ slug: 'didnegar-shop' });
+    for (const seed of SEED_VARIANTS) {
+      const product = await this.productRepository.findBySlug(seed.productSlug);
+      const ids = seed.attributes.map((slug) => attributeMap.get(slug));
+      if (!product || ids.some((id) => !id)) continue;
+      const attributeValueIds = ids as string[];
+      const key = [...attributeValueIds].sort().join(',');
+      const existing = (
+        await this.variantsService.findByProductId(product.id)
+      ).find((v) => v.attributeValueIds.join(',') === key);
+      const variant =
+        existing ??
+        (await this.variantsService.create({
           productId: product.id,
-          sku: variantSeed.sku,
-          minPrice: variantSeed.minPrice,
-          maxPrice: variantSeed.maxPrice,
-          stockQuantity: variantSeed.stockQuantity,
-          stockStatus: 'instock',
-          description: variantSeed.description,
-          status: 'publish',
-          isActive: true,
-        }),
-      );
-
-      for (const attributeSlug of variantSeed.attributes) {
-        const attributeValueId = attributeMap.get(attributeSlug);
-        if (!attributeValueId) continue;
-
-        const linkExists =
-          await this.productVariantAttributeRepository.findByVariantAndAttributeValue(
-            variant.id,
-            attributeValueId,
-          );
-        if (linkExists) continue;
-
-        await this.productVariantAttributeRepository.save(
-          this.productVariantAttributeRepository.create({
+          attributeValueIds,
+        }));
+      if (seller) {
+        const offers = this.dataSource.getRepository(SellerOffer);
+        if (
+          !(await offers.existsBy({
+            sellerId: seller.id,
             variantId: variant.id,
-            attributeValueId,
-          }),
-        );
+          }))
+        ) {
+          await offers.save(
+            offers.create({
+              sellerId: seller.id,
+              variantId: variant.id,
+              sku: seed.sku,
+              price: seed.minPrice,
+              stockQuantity: seed.stockQuantity,
+              stockStatus: 'instock',
+              isActive: true,
+              isOnSale: false,
+            }),
+          );
+        }
       }
     }
   }

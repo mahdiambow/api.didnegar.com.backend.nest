@@ -1,3 +1,4 @@
+import { OffersModule } from '../offers/offers.module.js';
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ShippingMethod } from './entities/shipping-method.entity.js';
@@ -12,6 +13,7 @@ import { AuthModule } from '../auth/auth.module.js';
   imports: [
     TypeOrmModule.forFeature([ShippingMethod]),
     ProductsModule,
+    OffersModule,
     forwardRef(() => AuthModule),
   ],
   controllers: [ShippingController],

@@ -5,10 +5,10 @@ import { validate } from 'class-validator';
 import { OrdersService } from './orders.service.js';
 import { CreateOrderDto } from './dto/create-order.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
-import { ProductRepository } from '../products/repositories/product.repository.js';
+import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
 
-const productId = '550e8400-e29b-41d4-a716-446655440000';
+const offerId = '550e8400-e29b-41d4-a716-446655440000';
 const secondId = '550e8400-e29b-41d4-a716-446655440002';
 const shippingMethodId = '550e8400-e29b-41d4-a716-446655440001';
 
@@ -20,10 +20,14 @@ function setup(isCod = false) {
     findById: vi.fn(async () => saved),
   };
   const products = {
-    findById: vi.fn(async (id) => ({
-      id,
-      status: 'publish',
-      minPrice: id === productId ? 100 : 250,
+    resolvePurchasable: vi.fn(async (id, quantity) => ({
+      offerId: id,
+      productId: 'same-product',
+      variantId: 'same-variant',
+      sellerId: id,
+      sku: 'SKU',
+      quantity,
+      unitPrice: id === offerId ? 100 : 250,
     })),
   };
   const shipping = {
@@ -35,7 +39,7 @@ function setup(isCod = false) {
   };
   const service = new OrdersService(
     repository as unknown as OrderRepository,
-    products as unknown as ProductRepository,
+    products as unknown as OffersService,
     shipping as unknown as ShippingService,
   );
   return { service, repository, products };
@@ -45,10 +49,15 @@ describe('multi-product orders', () => {
   it.each([false, true])('charges shipping once, COD=%s', async (isCod) => {
     const { service, repository } = setup(isCod);
     const result = await service.create('user', {
-      products: [{ productId, quantity: 2 }, { productId: secondId }],
+      products: [{ offerId, quantity: 2 }, { offerId: secondId }],
       shippingMethodId,
     });
     expect(result.products).toHaveLength(2);
+    expect(result.products.map((item) => item.offerId)).toEqual([
+      offerId,
+      secondId,
+    ]);
+    expect(result.products[0].sellerId).not.toBe(result.products[1].sellerId);
     expect(result.products[1].quantity).toBe(1);
     expect(result.subtotal).toBe(450);
     expect(result.shippingAmount).toBe(50);
@@ -57,22 +66,14 @@ describe('multi-product orders', () => {
     expect(repository.save).toHaveBeenCalledTimes(1);
   });
 
-  it.each([
-    null,
-    { status: 'draft', minPrice: 100 },
-    { status: 'publish', minPrice: 0 },
-  ])('does not save if any product is invalid: %j', async (invalid) => {
+  it('does not save when any selected offer is unavailable', async () => {
     const { service, repository, products } = setup();
-    products.findById
-      .mockResolvedValueOnce({
-        id: productId,
-        status: 'publish',
-        minPrice: 100,
-      })
-      .mockResolvedValueOnce(invalid as any);
+    products.resolvePurchasable.mockRejectedValueOnce(
+      new Error('Offer unavailable'),
+    );
     await expect(
       service.create('user', {
-        products: [{ productId }, { productId: secondId }],
+        products: [{ offerId }, { offerId: secondId }],
         shippingMethodId,
       }),
     ).rejects.toThrow();
@@ -82,17 +83,17 @@ describe('multi-product orders', () => {
   it('recalculates shipping using saved item prices and replaces products on update', async () => {
     const { service, products } = setup();
     await service.create('user', {
-      products: [{ productId, quantity: 2 }, { productId: secondId }],
+      products: [{ offerId, quantity: 2 }, { offerId: secondId }],
       shippingMethodId,
     });
-    products.findById.mockClear();
+    products.resolvePurchasable.mockClear();
     const shippingUpdate = await service.updateAdmin('order', {
       shippingMethodId,
     });
     expect(shippingUpdate.amount).toBe(500);
-    expect(products.findById).not.toHaveBeenCalled();
+    expect(products.resolvePurchasable).not.toHaveBeenCalled();
     const result = await service.updateAdmin('order', {
-      products: [{ productId: secondId, quantity: 3 }],
+      products: [{ offerId: secondId, quantity: 3 }],
     });
     expect(result.products).toHaveLength(1);
     expect(result.amount).toBe(800);
@@ -101,10 +102,10 @@ describe('multi-product orders', () => {
   it.each([
     undefined,
     [],
-    [{ productId: 'bad' }],
-    [{ productId, quantity: 0 }],
-    [{ productId, quantity: 1.5 }],
-    [{ productId }, { productId }],
+    [{ offerId: 'bad' }],
+    [{ offerId, quantity: 0 }],
+    [{ offerId, quantity: 1.5 }],
+    [{ offerId }, { offerId }],
     [null],
   ])('rejects malformed products: %j', async (products) => {
     const errors = await validate(
@@ -117,7 +118,7 @@ describe('multi-product orders', () => {
     expect(
       await validate(
         plainToInstance(CreateOrderDto, {
-          products: [{ productId }],
+          products: [{ offerId }],
           shippingMethodId,
         }),
       ),

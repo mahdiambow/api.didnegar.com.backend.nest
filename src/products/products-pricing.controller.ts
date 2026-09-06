@@ -1,5 +1,9 @@
+import type { AuthUser } from '../auth/types/auth-user.type.js';
+import { RoleGuard } from '../auth/guards/role.guard.js';
+import { RequireRole } from '../auth/decorators/require-role.decorator.js';
 import {
   Body,
+  Req,
   Controller,
   Get,
   Post,
@@ -48,10 +52,11 @@ const ImportPricesApiResponseDto = createSuccessResponseDto(
   },
 );
 
-@ApiTags('Products')
+@ApiTags('Seller Offers')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtAuthGuard)
-@Controller('products/prices')
+@UseGuards(JwtAuthGuard, RoleGuard)
+@RequireRole('seller', 'admin', 'super-admin')
+@Controller('seller-offers/prices')
 export class ProductsPricingController {
   constructor(private readonly productPricingService: ProductPricingService) {}
 
@@ -64,17 +69,23 @@ export class ProductsPricingController {
     summary: 'تغییر قیمت تکی یا گروهی (درصدی / مبلغ ثابت)',
   })
   @ApiOkResponse({ type: AdjustPricesApiResponseDto })
-  adjustPrices(@Body() dto: AdjustProductPricesDto) {
-    return this.productPricingService.adjustPrices(dto);
+  adjustPrices(
+    @Req() req: { user: AuthUser },
+    @Body() dto: AdjustProductPricesDto,
+  ) {
+    return this.productPricingService.adjustPrices(req.user, dto);
   }
 
   @Get('export')
-  @ApiOperation({ summary: 'دانلود اکسل قیمت محصولات' })
+  @ApiOperation({ summary: 'دانلود اکسل قیمت پیشنهادهای فروش' })
   @ApiProduces(
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   )
-  async exportPrices(@Res() res: Response) {
-    const buffer = await this.productPricingService.buildExportWorkbook(false);
+  async exportPrices(@Req() req: { user: AuthUser }, @Res() res: Response) {
+    const buffer = await this.productPricingService.buildExportWorkbook(
+      req.user,
+      false,
+    );
 
     res.setHeader(
       'Content-Type',
@@ -92,8 +103,11 @@ export class ProductsPricingController {
   @ApiProduces(
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   )
-  async downloadTemplate(@Res() res: Response) {
-    const buffer = await this.productPricingService.buildExportWorkbook(true);
+  async downloadTemplate(@Req() req: { user: AuthUser }, @Res() res: Response) {
+    const buffer = await this.productPricingService.buildExportWorkbook(
+      req.user,
+      true,
+    );
 
     res.setHeader(
       'Content-Type',
@@ -124,7 +138,7 @@ export class ProductsPricingController {
     code: 'PRODUCT_PRICES_IMPORTED',
     message: 'Product prices imported successfully',
   })
-  @ApiOperation({ summary: 'آپلود اکسل و اعمال قیمت‌ها بر اساس SKU' })
+  @ApiOperation({ summary: 'آپلود اکسل و اعمال قیمت‌ها بر اساس offerId' })
   @ApiOkResponse({ type: ImportPricesApiResponseDto })
   @UseInterceptors(
     FileInterceptor('file', {
@@ -132,7 +146,10 @@ export class ProductsPricingController {
       limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
-  importPrices(@UploadedFile() file: Express.Multer.File) {
-    return this.productPricingService.importFromExcel(file);
+  importPrices(
+    @Req() req: { user: AuthUser },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.productPricingService.importFromExcel(req.user, file);
   }
 }

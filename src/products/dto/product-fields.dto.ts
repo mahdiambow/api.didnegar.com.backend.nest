@@ -1,12 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
-  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  IsUUID,
   Matches,
   MaxLength,
   Min,
@@ -45,24 +43,6 @@ export class ProductWritableFieldsDto {
   @MaxLength(50)
   status?: string;
 
-  @ApiPropertyOptional({ example: 'SKU-001' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  sku?: string;
-
-  @ApiPropertyOptional({ example: 25_000_000 })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  minPrice?: number;
-
-  @ApiPropertyOptional({ example: 28_000_000 })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  maxPrice?: number;
-
   @ApiPropertyOptional({ default: false })
   @IsOptional()
   @IsBoolean()
@@ -72,23 +52,6 @@ export class ProductWritableFieldsDto {
   @IsOptional()
   @IsBoolean()
   isDownloadable?: boolean;
-
-  @ApiPropertyOptional({ example: 50 })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  stockQuantity?: number;
-
-  @ApiPropertyOptional({ example: 'instock' })
-  @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  stockStatus?: string;
-
-  @ApiPropertyOptional({ default: false })
-  @IsOptional()
-  @IsBoolean()
-  isOnSale?: boolean;
 
   @ApiPropertyOptional({ example: 'taxable' })
   @IsOptional()
@@ -148,15 +111,9 @@ export function toProductEntityData(
     description: dto.description ?? null,
     shortDescription: dto.shortDescription ?? null,
     status: dto.status ?? 'publish',
-    sku: dto.sku ?? null,
     brandId: dto.brandId ?? null,
-    minPrice: dto.minPrice ?? null,
-    maxPrice: dto.maxPrice ?? null,
     isVirtual: dto.isVirtual ?? false,
     isDownloadable: dto.isDownloadable ?? false,
-    stockQuantity: dto.stockQuantity ?? null,
-    stockStatus: dto.stockStatus ?? null,
-    isOnSale: dto.isOnSale ?? false,
     taxStatus: dto.taxStatus ?? null,
     taxClass: dto.taxClass ?? null,
     weight: dto.weight ?? null,

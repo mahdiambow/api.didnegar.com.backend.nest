@@ -1,14 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Product } from '../entities/product.entity.js';
 
 export interface ProductFilters {
   status?: string;
   brandId?: string;
   name?: string;
-  isOnSale?: boolean;
-  stockStatus?: string;
   categoryId?: string;
   subCategoryId?: string;
   attributeId?: string;
@@ -30,7 +28,9 @@ export class ProductRepository {
               category: true,
               subCategory: { category: true },
             },
-            variants: { variantAttributes: { attributeValue: { attribute: true } } },
+            variants: {
+              variantAttributes: { attributeValue: { attribute: true } },
+            },
           }
         : undefined,
     });
@@ -38,18 +38,6 @@ export class ProductRepository {
 
   findBySlug(slug: string) {
     return this.repo.findOne({ where: { slug } });
-  }
-
-  findBySku(sku: string) {
-    return this.repo.findOne({ where: { sku } });
-  }
-
-  findBySkus(skus: string[]) {
-    if (!skus.length) {
-      return Promise.resolve([]);
-    }
-
-    return this.repo.find({ where: { sku: In(skus) } });
   }
 
   findByFilters(filters: ProductFilters = {}) {
@@ -67,18 +55,6 @@ export class ProductRepository {
 
     if (filters.name) {
       qb.andWhere('product.name ILIKE :name', { name: `%${filters.name}%` });
-    }
-
-    if (filters.isOnSale !== undefined) {
-      qb.andWhere('product.isOnSale = :isOnSale', {
-        isOnSale: filters.isOnSale,
-      });
-    }
-
-    if (filters.stockStatus) {
-      qb.andWhere('product.stockStatus = :stockStatus', {
-        stockStatus: filters.stockStatus,
-      });
     }
 
     return qb.getMany();
@@ -151,18 +127,6 @@ export class ProductRepository {
 
     if (filters.name) {
       qb.andWhere('product.name ILIKE :name', { name: `%${filters.name}%` });
-    }
-
-    if (filters.isOnSale !== undefined) {
-      qb.andWhere('product.isOnSale = :isOnSale', {
-        isOnSale: filters.isOnSale,
-      });
-    }
-
-    if (filters.stockStatus) {
-      qb.andWhere('product.stockStatus = :stockStatus', {
-        stockStatus: filters.stockStatus,
-      });
     }
 
     return qb.getManyAndCount();

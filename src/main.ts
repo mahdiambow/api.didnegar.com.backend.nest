@@ -23,7 +23,19 @@ async function bootstrap() {
 
   app.use(
     helmet({
-      contentSecurityPolicy: isProduction ? undefined : false,
+      contentSecurityPolicy: isProduction
+        ? {
+            directives: {
+              defaultSrc: [`'self'`],
+              styleSrc: [`'self'`, `'unsafe-inline'`],
+              scriptSrc: [`'self'`],
+              imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
+              connectSrc: [`'self'`],
+              // Support direct HTTP access; HTTPS is configured at the proxy.
+              upgradeInsecureRequests: null,
+            },
+          }
+        : false,
       crossOriginEmbedderPolicy: isProduction,
     }),
   );

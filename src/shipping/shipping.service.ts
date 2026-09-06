@@ -4,7 +4,7 @@ import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
-import { ProductRepository } from '../products/repositories/product.repository.js';
+import { OffersService } from '../offers/offers.service.js';
 import { ShippingMethodRepository } from './repositories/shipping-method.repository.js';
 import { CreateShippingMethodDto } from './dto/create-shipping-method.dto.js';
 import { UpdateShippingMethodDto } from './dto/update-shipping-method.dto.js';
@@ -18,7 +18,7 @@ import {
 export class ShippingService {
   constructor(
     private readonly shippingMethodRepository: ShippingMethodRepository,
-    private readonly productRepository: ProductRepository,
+    private readonly offersService: OffersService,
   ) {}
 
   async findAll(query: {
@@ -89,7 +89,9 @@ export class ShippingService {
     }
 
     if (dto.slug && dto.slug !== method.slug) {
-      const slugTaken = await this.shippingMethodRepository.findBySlug(dto.slug);
+      const slugTaken = await this.shippingMethodRepository.findBySlug(
+        dto.slug,
+      );
       if (slugTaken) {
         throw new ApiException(
           'SHIPPING_METHOD_SLUG_EXISTS',
@@ -130,19 +132,15 @@ export class ShippingService {
   }
 
   async getQuote(input: {
-    productId: string;
+    offerId: string;
     quantity?: number;
     shippingMethodId: string;
   }): Promise<ShippingQuoteResponseDto> {
-    const product = await this.productRepository.findById(input.productId);
-    if (!product) {
-      throw new ApiException(
-        'PRODUCT_NOT_FOUND',
-        'محصول یافت نشد',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
+    const quantity = input.quantity ?? 1;
+    const item = await this.offersService.resolvePurchasable(
+      input.offerId,
+      quantity,
+    );
     const shippingMethod = await this.shippingMethodRepository.findById(
       input.shippingMethodId,
     );
@@ -154,26 +152,16 @@ export class ShippingService {
       );
     }
 
-    const quantity = input.quantity ?? 1;
-    const unitPrice = Number(product.minPrice ?? product.maxPrice ?? 0);
-
-    if (unitPrice <= 0) {
-      throw new ApiException(
-        'PRODUCT_PRICE_INVALID',
-        'قیمت محصول تعریف نشده است',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
     const amounts = calculateOrderAmounts(
-      unitPrice,
+      item.unitPrice,
       quantity,
       Number(shippingMethod.price),
       shippingMethod.isCod,
     );
 
     return {
-      productId: product.id,
+      productId: item.productId,
+      offerId: item.offerId,
       quantity,
       shippingMethod: toShippingMethodResponse(shippingMethod),
       ...amounts,
