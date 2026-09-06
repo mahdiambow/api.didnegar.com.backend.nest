@@ -11,6 +11,7 @@ import { PaymentsModule } from './payments/payments.module.js';
 import { ShippingModule } from './shipping/shipping.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { AttributesModule } from './attributes/attributes.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 import { DatabaseSeedModule } from './database/database.seed.module.js';
 
 @Module({
@@ -38,6 +39,7 @@ import { DatabaseSeedModule } from './database/database.seed.module.js';
     ShippingModule,
     CategoriesModule,
     AttributesModule,
+    SettingsModule,
     DatabaseSeedModule,
   ],
 })
