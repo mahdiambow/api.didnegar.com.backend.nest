@@ -202,11 +202,11 @@ try {
     3,
   );
   assert.equal(
-    (await offers.resolvePurchasable(created[1].id, 1)).unitPrice,
+    (await offers.resolvePurchasable(created[1].offerId, 1)).unitPrice,
     70000000,
   );
   await assert.rejects(
-    offers.resolvePurchasable(created[2].id, 1),
+    offers.resolvePurchasable(created[2].offerId, 1),
     (e) => e.getStatus() === 400,
   );
   await assert.rejects(
@@ -233,21 +233,21 @@ try {
   const owner = { sub: 'test', role: 'seller', sellerId: sellers[0].id };
   await assert.rejects(
     pricing.adjustPrices(owner, {
-      offerIds: [created[0].id, created[1].id],
+      offerIds: [created[0].offerId, created[1].offerId],
       adjustmentType: 'fixed',
       direction: 'increase',
       value: 10,
     }),
     (e) => e.getStatus() === 403,
   );
-  assert.equal((await offers.findOne(created[0].id)).price, 68000000);
+  assert.equal((await offers.findOne(created[0].offerId)).price, 68000000);
   await pricing.adjustPrices(owner, {
-    offerIds: [created[0].id],
+    offerIds: [created[0].offerId],
     adjustmentType: 'fixed',
     direction: 'increase',
     value: 10,
   });
-  assert.equal((await offers.findOne(created[0].id)).price, 68000010);
+  assert.equal((await offers.findOne(created[0].offerId)).price, 68000010);
   const buffer = await pricing.buildExportWorkbook(owner, false);
   assert.equal(
     (await pricing.importFromExcel(owner, { buffer: Buffer.from(buffer) }))
@@ -297,8 +297,8 @@ try {
     shippingService = ref.get(ShippingService);
   const order = await orderService.create(customer.id, {
     products: [
-      { offerId: created[0].id, quantity: 2 },
-      { offerId: created[1].id, quantity: 1 },
+      { offerId: created[0].offerId, quantity: 2 },
+      { offerId: created[1].offerId, quantity: 1 },
     ],
     shippingMethodId: shipping.id,
   });
@@ -308,7 +308,7 @@ try {
   assert.equal(
     (
       await shippingService.getQuote({
-        offerId: created[1].id,
+        offerId: created[1].offerId,
         quantity: 2,
         shippingMethodId: shipping.id,
       })
@@ -316,7 +316,7 @@ try {
     140000050,
   );
   await pricing.adjustPrices(owner, {
-    offerIds: [created[0].id],
+    offerIds: [created[0].offerId],
     adjustmentType: 'fixed',
     direction: 'increase',
     value: 100,
@@ -326,7 +326,7 @@ try {
   });
   assert.equal(updated.subtotal, order.subtotal);
   await assert.rejects(
-    offers.remove(owner, created[0].id),
+    offers.remove(owner, created[0].offerId),
     (e) => e.getStatus() === 409,
   );
   const app = ref.createNestApplication();

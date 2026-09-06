@@ -29,7 +29,7 @@ export function assertOfferAccess(user: AuthUser, sellerId: string) {
     );
 }
 export const toOfferResponse = (offer: SellerOffer) => ({
-  id: offer.id,
+  offerId: offer.id,
   sellerId: offer.sellerId,
   variantId: offer.variantId,
   sku: offer.sku,

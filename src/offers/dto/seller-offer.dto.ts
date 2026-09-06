@@ -89,7 +89,8 @@ export class ListSellerOffersDto {
   limit?: number;
 }
 export class SellerOfferResponseDto extends CreateSellerOfferDto {
-  @ApiProperty() id: string;
+  @ApiProperty({ format: 'uuid', description: 'شناسه پیشنهاد فروش' })
+  offerId: string;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
 }
