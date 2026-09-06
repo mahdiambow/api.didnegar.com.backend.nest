@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { OffersService, assertOfferAccess } from './offers.service.js';
+import { OffersService, assertOfferAccess, isImmediateOfferUpdate } from './offers.service.js';
 import { SellerOffer } from './entities/seller-offer.entity.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
 import { Product } from '../products/entities/product.entity.js';
@@ -28,8 +28,13 @@ function setup(patch = {}) {
     ...input,
     id: 'offer',
     isActive: true,
+    approvalStatus: 'approved',
     seller: { status: 'active' },
-    product: { status: 'publish' },
+    product: {
+      status: 'publish',
+      approvalStatus: 'approved',
+      attributes: { color: ['red'], storage: ['128GB'] },
+    },
     ...patch,
   };
   const repo = {
@@ -38,14 +43,21 @@ function setup(patch = {}) {
     save: vi.fn(async (data) => data),
     delete: vi.fn(),
   };
+  const products = {
+    existsBy: vi.fn(async () => true),
+    findOneBy: vi.fn(async () => ({
+      id: productId,
+      status: 'publish',
+      approvalStatus: 'approved',
+      attributes: { color: ['red'], storage: ['128GB'] },
+    })),
+  };
   const service = new OffersService(
     repo as unknown as Repository<SellerOffer>,
     { existsBy: vi.fn(async () => true) } as unknown as Repository<Seller>,
-    {
-      existsBy: vi.fn(async () => true),
-    } as unknown as Repository<Product>,
+    products as unknown as Repository<Product>,
   );
-  return { service, repo };
+  return { service, repo, products };
 }
 describe('seller offers', () => {
   it('allows only the owner and super-admin to mutate offers', () => {
@@ -90,13 +102,39 @@ describe('seller offers', () => {
     { stockQuantity: 0 },
     { stockStatus: 'outofstock' },
     { seller: { status: 'suspended' } },
-    { product: { status: 'draft' } },
+    { product: { status: 'draft', approvalStatus: 'approved' } },
+    { product: { status: 'publish', approvalStatus: 'pending' } },
+    { product: { status: 'publish', approvalStatus: 'rejected' } },
+    { approvalStatus: 'pending' },
+    { approvalStatus: 'rejected' },
     { price: 0 },
     { price: NaN },
   ])('rejects unpurchasable offers %j', async (patch) => {
     await expect(
       setup(patch).service.resolvePurchasable('offer', 1),
     ).rejects.toThrow();
+  });
+  it('applies price-only updates immediately without pending', async () => {
+    expect(isImmediateOfferUpdate({ price: 70000000 })).toBe(true);
+    expect(
+      isImmediateOfferUpdate({ price: 1, stockQuantity: 2, isActive: true }),
+    ).toBe(true);
+    expect(isImmediateOfferUpdate({ attributes: { color: 'red' } })).toBe(
+      false,
+    );
+    expect(isImmediateOfferUpdate({ price: 1, sku: 'X' })).toBe(false);
+
+    const { service } = setup();
+    const result = await service.update(user, 'offer', { price: 70000000 });
+    expect(result.approvalStatus).toBe('approved');
+    expect(result.price).toBe(70000000);
+  });
+  it('sends attribute changes to pending approval', async () => {
+    const { service } = setup();
+    const result = await service.update(user, 'offer', {
+      attributes: { color: 'red', storage: '128GB' },
+    });
+    expect(result.approvalStatus).toBe('pending');
   });
   it('rejects insufficient stock and malformed quantities', async () => {
     for (const quantity of [11, 0, -1, 1.5])
@@ -142,6 +180,16 @@ describe('seller offers', () => {
     expect(await validate(dto, { whitelist: true })).toEqual([]);
     expect(dto).not.toHaveProperty('sellerId');
     expect(dto).not.toHaveProperty('productId');
+  });
+  it('rejects attributes that are not defined on the product', async () => {
+    const { service, products } = setup();
+    products.findOneBy.mockResolvedValueOnce({
+      id: productId,
+      attributes: { color: ['blue'] },
+    });
+    await expect(service.create(user, input)).rejects.toMatchObject({
+      response: { code: 'OFFER_ATTRIBUTES_INVALID' },
+    });
   });
 });
 

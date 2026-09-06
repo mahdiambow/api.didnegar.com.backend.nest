@@ -33,6 +33,15 @@ export class SellerOffer {
   @Column({ type: 'varchar', length: 100, nullable: true }) taxClass:
     string | null;
   @Column({ type: 'boolean', default: true }) isActive: boolean;
+
+  /** تغییر قیمت فوری تأیید می‌شود؛ تغییر ویژگی/SKU نیاز به تأیید دارد */
+  @Index()
+  @Column({ type: 'varchar', length: 20, default: 'approved' })
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+
+  @Column({ type: 'text', nullable: true })
+  rejectionReason: string | null;
+
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
   @ManyToOne('Seller', { onDelete: 'RESTRICT' })

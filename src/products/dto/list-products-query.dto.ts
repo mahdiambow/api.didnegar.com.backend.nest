@@ -19,6 +19,15 @@ export class ListProductsQueryDto {
   @IsString()
   status?: string;
 
+  @ApiPropertyOptional({
+    enum: ['pending', 'approved', 'rejected'],
+    example: 'pending',
+    description: 'فیلتر وضعیت تأیید',
+  })
+  @IsOptional()
+  @IsString()
+  approvalStatus?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()

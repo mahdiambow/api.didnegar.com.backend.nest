@@ -25,6 +25,8 @@ export class CreateSellerOfferDto {
   @ApiProperty() @IsUUID() productId: string;
   @ApiProperty({
     example: { color: 'red', storage: '128GB' },
+    description:
+      'باید دقیقاً از ویژگی‌های تعریف‌شده روی محصول باشد (کلیدها و مقادیر مجاز)',
     additionalProperties: { type: 'string' },
   })
   @ValidateBy({
@@ -102,6 +104,10 @@ export class ListSellerOffersDto {
   )
   @IsBoolean()
   isActive?: boolean;
+  @ApiPropertyOptional({ enum: ['pending', 'approved', 'rejected'] })
+  @IsOptional()
+  @IsIn(['pending', 'approved', 'rejected'])
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -119,6 +125,10 @@ export class ListSellerOffersDto {
 export class SellerOfferResponseDto extends CreateSellerOfferDto {
   @ApiProperty({ format: 'uuid', description: 'شناسه پیشنهاد فروش' })
   offerId: string;
+  @ApiProperty({ enum: ['pending', 'approved', 'rejected'] })
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  @ApiPropertyOptional({ nullable: true })
+  rejectionReason: string | null;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
 }

@@ -29,6 +29,7 @@ import {
   UpdateSellerOfferDto,
   SellerOfferResponseDto,
 } from './dto/seller-offer.dto.js';
+import { ReviewSellerOfferDto } from './dto/review-seller-offer.dto.js';
 import type { AuthUser } from '../auth/types/auth-user.type.js';
 import { OffersService } from './offers.service.js';
 import { ListSellerOffersDto } from './dto/seller-offer.dto.js';
@@ -104,7 +105,11 @@ export class OffersController {
     DEFAULT_ROLE_SLUGS.ADMIN,
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
-  @ApiOperation({ summary: 'ویرایش پیشنهاد فروش' })
+  @ApiOperation({
+    summary: 'ویرایش پیشنهاد فروش',
+    description:
+      'تغییر قیمت/موجودی فوری اعمال می‌شود. تغییر ویژگی یا SKU نیاز به تأیید ادمین دارد.',
+  })
   @ApiResponseMeta({
     code: 'OFFER_UPDATED',
     message: 'Seller offer updated successfully',
@@ -116,6 +121,24 @@ export class OffersController {
     @Body() dto: UpdateSellerOfferDto,
   ) {
     return this.offersService.update(req.user, id, dto);
+  }
+
+  @Patch(':id/approval')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
+  @ApiOperation({ summary: 'تأیید / رد پیشنهاد فروش (فقط ادمین)' })
+  @ApiResponseMeta({
+    code: 'OFFER_REVIEWED',
+    message: 'Seller offer approval status updated',
+  })
+  @ApiOkResponse({ type: OfferApiResponseDto })
+  review(
+    @Req() req: { user: AuthUser },
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReviewSellerOfferDto,
+  ) {
+    return this.offersService.review(req.user, id, dto);
   }
 
   @Delete(':id')

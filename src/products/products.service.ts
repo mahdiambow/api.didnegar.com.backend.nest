@@ -8,6 +8,7 @@ import { CategoriesService } from '../categories/categories.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { toProductEntityData } from './dto/product-fields.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
+import { ReviewProductDto } from './dto/review-product.dto.js';
 import {
   toBrandResponse,
   toProductResponse,
@@ -28,6 +29,7 @@ export class ProductsService {
     page?: string | number;
     limit?: string | number;
     status?: string;
+    approvalStatus?: string;
     brandId?: string;
     name?: string;
     categoryId?: string;
@@ -39,6 +41,7 @@ export class ProductsService {
       limit,
       {
         status: query.status,
+        approvalStatus: query.approvalStatus,
         brandId: query.brandId,
         name: query.name,
         categoryId: query.categoryId,
@@ -119,11 +122,53 @@ export class ProductsService {
     }
 
     Object.assign(product, productData);
+
+    // هر تغییر روی محصول (غیر از قیمت که روی آفر است) → منتظر تأیید مجدد
+    product.approvalStatus = 'pending';
+    product.rejectionReason = null;
+
     await this.productRepository.save(product);
     if (categoryIds !== undefined) {
       await this.categoriesService.assignCategoryIdsToProduct(id, categoryIds);
     }
 
+    const loaded = await this.productRepository.findById(id, true);
+    return toProductResponse(loaded!, true);
+  }
+
+  async review(id: string, dto: ReviewProductDto) {
+    const product = await this.productRepository.findById(id);
+    if (!product) {
+      throw new ApiException(
+        'PRODUCT_NOT_FOUND',
+        'محصول یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (dto.approvalStatus === 'rejected') {
+      const reason = dto.rejectionReason?.trim();
+      if (!reason) {
+        throw new ApiException(
+          'REJECTION_REASON_REQUIRED',
+          'برای رد محصول باید دلیل وارد شود',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      product.approvalStatus = 'rejected';
+      product.rejectionReason = reason;
+    } else if (dto.approvalStatus === 'approved') {
+      product.approvalStatus = 'approved';
+      product.rejectionReason = null;
+      if (product.status !== 'publish') {
+        product.status = 'publish';
+      }
+    } else {
+      product.approvalStatus = 'pending';
+      product.rejectionReason = null;
+    }
+
+    await this.productRepository.save(product);
     const loaded = await this.productRepository.findById(id, true);
     return toProductResponse(loaded!, true);
   }

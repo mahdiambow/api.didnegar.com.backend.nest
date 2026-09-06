@@ -15,6 +15,11 @@ import {
   ListSellerOffersDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
+import {
+  OFFER_IMMEDIATE_FIELDS,
+  ReviewSellerOfferDto,
+} from './dto/review-seller-offer.dto.js';
+
 export function assertOfferAccess(user: AuthUser, sellerId: string) {
   if (user.role === 'super-admin') return;
   if (
@@ -28,6 +33,59 @@ export function assertOfferAccess(user: AuthUser, sellerId: string) {
       HttpStatus.FORBIDDEN,
     );
 }
+
+/** ویژگی‌های آفر باید دقیقاً از گزینه‌های تعریف‌شده روی محصول باشند */
+export function assertOfferAttributesMatchProduct(
+  productAttributes: Record<string, string[]> | null | undefined,
+  offerAttributes: Record<string, string>,
+) {
+  const schema = productAttributes ?? {};
+  const schemaKeys = Object.keys(schema).sort();
+  const offerKeys = Object.keys(offerAttributes).sort();
+
+  if (schemaKeys.length === 0) {
+    if (offerKeys.length > 0) {
+      throw new ApiException(
+        'OFFER_ATTRIBUTES_INVALID',
+        'این محصول ویژگی ندارد؛ attributes باید خالی باشد',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return;
+  }
+
+  if (
+    schemaKeys.length !== offerKeys.length ||
+    schemaKeys.some((key, index) => key !== offerKeys[index])
+  ) {
+    throw new ApiException(
+      'OFFER_ATTRIBUTES_INVALID',
+      `ویژگی‌های آفر باید دقیقاً شامل این کلیدها باشد: ${schemaKeys.join(', ')}`,
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+
+  for (const key of schemaKeys) {
+    const allowed = schema[key] ?? [];
+    const value = offerAttributes[key];
+    if (!allowed.includes(value)) {
+      throw new ApiException(
+        'OFFER_ATTRIBUTES_INVALID',
+        `مقدار «${value}» برای ویژگی «${key}» مجاز نیست. مقادیر مجاز: ${allowed.join(', ')}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+}
+
+/** فقط تغییر قیمت/موجودی فوری است؛ بقیه فیلدها نیاز به تأیید دارند */
+export function isImmediateOfferUpdate(dto: UpdateSellerOfferDto): boolean {
+  const keys = Object.keys(dto).filter(
+    (key) => (dto as Record<string, unknown>)[key] !== undefined,
+  );
+  return keys.length > 0 && keys.every((key) => OFFER_IMMEDIATE_FIELDS.has(key));
+}
+
 export const toOfferResponse = (offer: SellerOffer) => ({
   offerId: offer.id,
   sellerId: offer.sellerId,
@@ -41,9 +99,12 @@ export const toOfferResponse = (offer: SellerOffer) => ({
   taxStatus: offer.taxStatus,
   taxClass: offer.taxClass,
   isActive: offer.isActive,
+  approvalStatus: offer.approvalStatus ?? 'approved',
+  rejectionReason: offer.rejectionReason ?? null,
   createdAt: offer.createdAt,
   updatedAt: offer.updatedAt,
 });
+
 @Injectable()
 export class OffersService {
   constructor(
@@ -53,10 +114,16 @@ export class OffersService {
     @InjectRepository(Product)
     private readonly products: Repository<Product>,
   ) {}
+
   async findAll(query: ListSellerOffersDto) {
     const { page, limit, offset } = getPaginationParams(query);
     const qb = this.offers.createQueryBuilder('offer');
-    for (const field of ['sellerId', 'productId', 'isActive'] as const)
+    for (const field of [
+      'sellerId',
+      'productId',
+      'isActive',
+      'approvalStatus',
+    ] as const)
       if (query[field] !== undefined)
         qb.andWhere(`offer.${field} = :${field}`, { [field]: query[field] });
     const [items, total] = await qb
@@ -67,6 +134,7 @@ export class OffersService {
       .getManyAndCount();
     return paginatedList(items.map(toOfferResponse), page, limit, total);
   }
+
   async getEntity(id: string) {
     const offer = await this.offers.findOne({
       where: { id },
@@ -80,9 +148,11 @@ export class OffersService {
       );
     return offer;
   }
+
   async findOne(id: string) {
     return toOfferResponse(await this.getEntity(id));
   }
+
   async create(user: AuthUser, dto: CreateSellerOfferDto) {
     assertOfferAccess(user, dto.sellerId);
     if (!(await this.sellers.existsBy({ id: dto.sellerId })))
@@ -91,26 +161,93 @@ export class OffersService {
         'فروشنده یافت نشد',
         HttpStatus.NOT_FOUND,
       );
-    if (!(await this.products.existsBy({ id: dto.productId })))
+    const product = await this.products.findOneBy({ id: dto.productId });
+    if (!product)
       throw new ApiException(
         'PRODUCT_NOT_FOUND',
         'محصول یافت نشد',
         HttpStatus.NOT_FOUND,
       );
+    assertOfferAttributesMatchProduct(product.attributes, dto.attributes);
+
+    // قیمت‌گذاری روی محصول تأییدشده فوری است
+    const approvalStatus =
+      product.approvalStatus === 'approved' ? 'approved' : 'pending';
+
     return this.save(
       this.offers.create({
         ...dto,
         isOnSale: dto.isOnSale ?? false,
         isActive: dto.isActive ?? true,
+        approvalStatus,
+        rejectionReason: null,
       }),
     );
   }
+
   async update(user: AuthUser, id: string, dto: UpdateSellerOfferDto) {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
+
+    if (dto.attributes !== undefined) {
+      const product =
+        offer.product ??
+        (await this.products.findOneBy({ id: offer.productId }));
+      if (!product)
+        throw new ApiException(
+          'PRODUCT_NOT_FOUND',
+          'محصول یافت نشد',
+          HttpStatus.NOT_FOUND,
+        );
+      assertOfferAttributesMatchProduct(product.attributes, dto.attributes);
+    }
+
+    const immediate = isImmediateOfferUpdate(dto);
     Object.assign(offer, dto);
+
+    if (!immediate) {
+      // تغییر ویژگی/SKU/... → منتظر تأیید
+      offer.approvalStatus = 'pending';
+      offer.rejectionReason = null;
+    }
+    // تغییر فقط قیمت/موجودی → همان لحظه تأیید می‌ماند
+
     return this.save(offer);
   }
+
+  async review(user: AuthUser, id: string, dto: ReviewSellerOfferDto) {
+    const offer = await this.getEntity(id);
+    // فقط ادمین از controller می‌آید؛ مالک فروشنده نباید بتواند خودتأیید کند
+    if (!['admin', 'super-admin'].includes(user.role)) {
+      throw new ApiException(
+        'FORBIDDEN',
+        'فقط ادمین می‌تواند پیشنهاد را تأیید کند',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    if (dto.approvalStatus === 'rejected') {
+      const reason = dto.rejectionReason?.trim();
+      if (!reason) {
+        throw new ApiException(
+          'REJECTION_REASON_REQUIRED',
+          'برای رد پیشنهاد باید دلیل وارد شود',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      offer.approvalStatus = 'rejected';
+      offer.rejectionReason = reason;
+    } else if (dto.approvalStatus === 'approved') {
+      offer.approvalStatus = 'approved';
+      offer.rejectionReason = null;
+    } else {
+      offer.approvalStatus = 'pending';
+      offer.rejectionReason = null;
+    }
+
+    return this.save(offer);
+  }
+
   async remove(user: AuthUser, id: string) {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
@@ -127,6 +264,7 @@ export class OffersService {
     }
     return {};
   }
+
   private async save(offer: SellerOffer) {
     try {
       return toOfferResponse(await this.offers.save(offer));
@@ -140,14 +278,17 @@ export class OffersService {
       throw error;
     }
   }
+
   async resolvePurchasable(id: string, quantity: number) {
     const offer = await this.getEntity(id);
     if (
       !Number.isInteger(quantity) ||
       quantity < 1 ||
       !offer.isActive ||
+      offer.approvalStatus !== 'approved' ||
       offer.seller.status !== 'active' ||
       offer.product.status !== 'publish' ||
+      offer.product.approvalStatus !== 'approved' ||
       offer.stockStatus !== 'instock' ||
       offer.stockQuantity < quantity
     )

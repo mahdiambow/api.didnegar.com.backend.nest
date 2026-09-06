@@ -43,6 +43,14 @@ export class Product {
   @Column({ type: 'varchar', length: 50, default: 'publish' })
   status: string;
 
+  /** وضعیت تأیید محصول توسط ادمین */
+  @Index()
+  @Column({ type: 'varchar', length: 20, default: 'pending' })
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+
+  @Column({ type: 'text', nullable: true })
+  rejectionReason: string | null;
+
   @Index()
   @Column({ type: 'uuid', nullable: true })
   brandId: string | null;
@@ -82,6 +90,10 @@ export class Product {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   height: number | null;
+
+  /** ویژگی‌های مجاز محصول؛ مثال: { color: ['قرمز','مشکی'], storage: ['256GB'] } */
+  @Column({ type: 'jsonb', default: {} })
+  attributes: Record<string, string[]>;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -19,9 +20,13 @@ import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js'
 import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { RoleGuard } from '../auth/guards/role.guard.js';
+import { RequireRole } from '../auth/decorators/require-role.decorator.js';
+import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
+import { ReviewProductDto } from './dto/review-product.dto.js';
 import {
   BrandResponseDto,
   ProductResponseDto,
@@ -43,14 +48,11 @@ const ProductsPaginatedApiResponseDto = createPaginatedResponseDto(
   },
 );
 
-const BrandsListApiResponseDto = createSuccessResponseDto(
-  BrandResponseDto,
-  {
-    code: 'BRANDS_FOUND',
-    message: 'Brands retrieved successfully',
-    name: 'BrandsList',
-  },
-);
+const BrandsListApiResponseDto = createSuccessResponseDto(BrandResponseDto, {
+  code: 'BRANDS_FOUND',
+  message: 'Brands retrieved successfully',
+  name: 'BrandsList',
+});
 
 @ApiTags('Products')
 @ApiBearerAuth('access-token')
@@ -88,7 +90,7 @@ export class ProductsController {
   })
   @ApiOperation({ summary: 'دریافت یک محصول' })
   @ApiOkResponse({ type: ProductApiResponseDto })
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.findOne(id);
   }
 
@@ -97,10 +99,32 @@ export class ProductsController {
     code: 'PRODUCT_CREATED',
     message: 'Product created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد محصول جدید' })
+  @ApiOperation({
+    summary: 'ایجاد محصول جدید',
+    description:
+      'محصول با approvalStatus=pending ساخته می‌شود تا ادمین تأیید کند',
+  })
   @ApiOkResponse({ type: ProductApiResponseDto })
   create(@Body() dto: CreateProductDto) {
     return this.productsService.create(dto);
+  }
+
+  @Patch(':id/approval')
+  @UseGuards(RoleGuard)
+  @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
+  @ApiResponseMeta({
+    code: 'PRODUCT_REVIEWED',
+    message: 'Product approval status updated',
+  })
+  @ApiOperation({
+    summary: 'تأیید / رد / بازگرداندن به انتظار محصول (فقط ادمین)',
+  })
+  @ApiOkResponse({ type: ProductApiResponseDto })
+  review(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReviewProductDto,
+  ) {
+    return this.productsService.review(id, dto);
   }
 
   @Patch(':id')
@@ -108,9 +132,16 @@ export class ProductsController {
     code: 'PRODUCT_UPDATED',
     message: 'Product updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش محصول' })
+  @ApiOperation({
+    summary: 'ویرایش محصول',
+    description:
+      'هر تغییر روی محصول وضعیت را به pending برمی‌گرداند تا ادمین دوباره تأیید کند. تغییر قیمت از طریق seller-offers است و فوری اعمال می‌شود.',
+  })
   @ApiOkResponse({ type: ProductApiResponseDto })
-  update(@Param('id') id: string, @Body() dto: UpdateProductDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateProductDto,
+  ) {
     return this.productsService.update(id, dto);
   }
 
@@ -120,7 +151,7 @@ export class ProductsController {
     message: 'Product deleted successfully',
   })
   @ApiOperation({ summary: 'حذف محصول' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.remove(id);
   }
 }
