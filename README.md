@@ -27,6 +27,48 @@
 
 ## Project setup
 
+### Docker
+
+The Dockerfile builds the API with Node.js 22 and runs it as a non-root user.
+Compose includes PostgreSQL 16 with persistent storage. Existing `.env` files
+are never copied into the image.
+
+If you do not already have a `.env`, copy `.env.example` to `.env` and replace
+the database password and JWT secret before starting.
+
+**Database prerequisite:** the current migrations assume existing base tables
+such as `users`; they do not initialize a completely empty database. Restore
+your existing database into the Compose PostgreSQL service before starting
+the API. For a plain SQL dump compatible with PostgreSQL 16:
+
+```bash
+docker compose up -d postgres
+docker compose exec -T postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < backup.sql
+docker compose up -d --build
+```
+
+Once the database is initialized, `docker compose up -d --build` is sufficient.
+Swagger is available at `http://localhost:3000/api` (or the `PORT` in `.env`).
+Migrations run automatically on API startup; automatic sample-data seeding is
+disabled. Compose sets the internal database host to `postgres` and port to
+`5432`. PostgreSQL is only accessible inside the Compose network.
+
+Build and export the image to transfer it to another machine:
+
+```bash
+docker build -t didnegar-api:latest .
+docker save -o didnegar-api.tar didnegar-api:latest
+# On the destination, alongside docker-compose.yml and a configured .env:
+docker load -i didnegar-api.tar
+docker compose up -d --no-build
+```
+
+The image must match the destination CPU architecture. When building on an
+ARM machine for an x86 server, use
+`docker build --platform linux/amd64 -t didnegar-api:latest .` before exporting.
+The destination database must also be initialized as described above.
+`docker compose down` retains database data; `docker compose down -v` deletes it.
+
 ```bash
 $ npm install
 ```
