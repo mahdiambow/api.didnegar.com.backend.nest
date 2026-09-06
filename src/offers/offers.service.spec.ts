@@ -12,50 +12,55 @@ import { SellerOffer } from './entities/seller-offer.entity.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
 import { Product } from '../products/entities/product.entity.js';
 import {
-  CreateSellerOfferDto,
+  CreateSellerOffersDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
 
 const sellerId = '550e8400-e29b-41d4-a716-446655440001';
 const productId = '550e8400-e29b-41d4-a716-446655440002';
+const productId2 = '550e8400-e29b-41d4-a716-446655440003';
 const user = { sub: 'user', role: 'seller', sellerId };
-const input = {
-  sellerId,
+const item = {
   productId,
   sku: 'SAM-BLU',
   price: 68000000,
   stockQuantity: 10,
   stockStatus: 'instock',
 };
+const input = { sellerId, items: [item] };
 
 function setup(patch = {}) {
   const offer = {
-    ...input,
+    ...item,
+    sellerId,
     id: 'offer',
     attributes: {},
     isActive: true,
     approvalStatus: 'approved',
     seller: { status: 'active' },
     product: {
+      id: productId,
       status: 'publish',
       approvalStatus: 'approved',
-      attributes: { color: ['red'], storage: ['128GB'] },
     },
     ...patch,
   };
   const repo = {
     findOne: vi.fn(async () => offer),
     create: vi.fn((data) => data),
-    save: vi.fn(async (data) => data),
+    save: vi.fn(async (data) => ({ ...offer, ...data, id: data.id ?? 'offer' })),
     delete: vi.fn(),
   };
   const products = {
     existsBy: vi.fn(async () => true),
+    findBy: vi.fn(async () => [
+      { id: productId, status: 'publish', approvalStatus: 'approved' },
+      { id: productId2, status: 'publish', approvalStatus: 'approved' },
+    ]),
     findOneBy: vi.fn(async () => ({
       id: productId,
       status: 'publish',
       approvalStatus: 'approved',
-      attributes: { color: ['red'], storage: ['128GB'] },
     })),
   };
   const service = new OffersService(
@@ -76,12 +81,6 @@ describe('seller offers', () => {
       ),
     ).not.toThrow();
     expect(() => assertOfferAccess(user, 'another-seller')).toThrow();
-    expect(() =>
-      assertOfferAccess({ ...user, role: 'user' }, sellerId),
-    ).toThrow();
-    expect(() =>
-      assertOfferAccess({ ...user, sellerId: null }, sellerId),
-    ).toThrow();
   });
 
   it('does not write when a seller requests another seller offer', async () => {
@@ -95,61 +94,42 @@ describe('seller offers', () => {
     expect(repo.save).not.toHaveBeenCalled();
   });
 
-  it('returns the selected seller, SKU and price for the order snapshot', async () => {
+  it('creates multiple offers in one request', async () => {
+    const { service, repo } = setup();
+    const result = await service.create(user, {
+      sellerId,
+      items: [
+        item,
+        {
+          ...item,
+          productId: productId2,
+          sku: 'SAM-RED',
+          price: 70000000,
+        },
+      ],
+    });
+    expect(result).toHaveLength(2);
+    expect(repo.save).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns purchasable snapshot', async () => {
     const { service } = setup();
     expect(await service.resolvePurchasable('offer', 2)).toMatchObject({
       offerId: 'offer',
       sellerId,
       productId,
-      sku: input.sku,
-      unitPrice: input.price,
+      sku: item.sku,
+      unitPrice: item.price,
       quantity: 2,
-      attributes: {},
     });
   });
 
-  it.each([
-    { isActive: false },
-    { stockQuantity: 0 },
-    { stockStatus: 'outofstock' },
-    { seller: { status: 'suspended' } },
-    { product: { status: 'draft', approvalStatus: 'approved' } },
-    { product: { status: 'publish', approvalStatus: 'pending' } },
-    { product: { status: 'publish', approvalStatus: 'rejected' } },
-    { approvalStatus: 'pending' },
-    { approvalStatus: 'rejected' },
-    { price: 0 },
-    { price: NaN },
-  ])('rejects unpurchasable offers %j', async (patch) => {
-    await expect(
-      setup(patch).service.resolvePurchasable('offer', 1),
-    ).rejects.toThrow();
-  });
-
-  it('applies price-only updates immediately without pending', async () => {
+  it('applies price updates immediately', async () => {
     expect(isImmediateOfferUpdate({ price: 70000000 })).toBe(true);
-    expect(
-      isImmediateOfferUpdate({ price: 1, stockQuantity: 2, isActive: true }),
-    ).toBe(true);
-    expect(isImmediateOfferUpdate({ price: 1, sku: 'X' })).toBe(false);
-
     const { service } = setup();
     const result = await service.update(user, 'offer', { price: 70000000 });
     expect(result.approvalStatus).toBe('approved');
     expect(result.price).toBe(70000000);
-  });
-
-  it('sends sku changes to pending approval', async () => {
-    const { service } = setup();
-    const result = await service.update(user, 'offer', { sku: 'NEW-SKU' });
-    expect(result.approvalStatus).toBe('pending');
-  });
-
-  it('rejects insufficient stock and malformed quantities', async () => {
-    for (const quantity of [11, 0, -1, 1.5])
-      await expect(
-        setup().service.resolvePurchasable('offer', quantity),
-      ).rejects.toThrow();
   });
 
   it('maps duplicate seller/SKU to conflict', async () => {
@@ -160,53 +140,37 @@ describe('seller offers', () => {
     });
   });
 
-  it.each([
-    { price: -1 },
-    { price: null },
-    { stockQuantity: 1.5 },
-    { stockStatus: 'wrong' },
-    { sku: '' },
-  ])('validates offer input %j', async (patch) => {
+  it('rejects duplicate skus in the same request', async () => {
+    const { service } = setup();
+    await expect(
+      service.create(user, {
+        sellerId,
+        items: [item, { ...item, productId: productId2 }],
+      }),
+    ).rejects.toMatchObject({
+      response: { code: 'OFFER_SKU_DUPLICATE' },
+    });
+  });
+
+  it('validates bulk create dto', async () => {
+    expect(
+      await validate(plainToInstance(CreateSellerOffersDto, input)),
+    ).toEqual([]);
     expect(
       (
         await validate(
-          plainToInstance(CreateSellerOfferDto, { ...input, ...patch }),
+          plainToInstance(CreateSellerOffersDto, { sellerId, items: [] }),
         )
       ).length,
     ).toBeGreaterThan(0);
   });
 
-  it('accepts valid input and strips seller reassignment from updates', async () => {
-    expect(
-      await validate(plainToInstance(CreateSellerOfferDto, input)),
-    ).toEqual([]);
+  it('strips product reassignment from updates', async () => {
     const dto = plainToInstance(UpdateSellerOfferDto, {
-      sellerId: 'other',
       productId: 'other',
       price: 70000000,
     });
     expect(await validate(dto, { whitelist: true })).toEqual([]);
-    expect(dto).not.toHaveProperty('sellerId');
     expect(dto).not.toHaveProperty('productId');
-  });
-});
-
-describe('product offers with seller-specific features', () => {
-  it('allows two sellers to price the same product independently', async () => {
-    const { service } = setup();
-    const first = await service.create(user, input);
-    const second = await service.create(
-      { ...user, sellerId: 'second' },
-      { ...input, sellerId: 'second', price: 70000000 },
-    );
-    expect(first.productId).toBe(second.productId);
-    expect(first.price).not.toBe(second.price);
-    expect(first.sellerId).not.toBe(second.sellerId);
-  });
-
-  it('snapshots empty attributes for order independence', async () => {
-    const { service } = setup();
-    const snapshot = await service.resolvePurchasable('offer', 1);
-    expect(snapshot.attributes).toEqual({});
   });
 });

@@ -6,7 +6,9 @@ import {
 } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
-  ValidateIf,
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsInt,
@@ -18,11 +20,15 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 
-export class CreateSellerOfferDto {
-  @ApiProperty() @IsUUID() sellerId: string;
-  @ApiProperty() @IsUUID() productId: string;
+/** یک آیتم پیشنهاد برای یک محصول */
+export class SellerOfferItemDto {
+  @ApiProperty()
+  @IsUUID()
+  productId: string;
 
   @ApiProperty({ example: 'SAM-S24U-256-BLU' })
   @IsString()
@@ -69,8 +75,26 @@ export class CreateSellerOfferDto {
   isActive?: boolean;
 }
 
+/** ثبت یک یا چند پیشنهاد فروش برای یک فروشنده */
+export class CreateSellerOffersDto {
+  @ApiProperty()
+  @IsUUID()
+  sellerId: string;
+
+  @ApiProperty({
+    type: [SellerOfferItemDto],
+    description: 'آرایه پیشنهادها برای محصولات مختلف',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
+  @Type(() => SellerOfferItemDto)
+  items: SellerOfferItemDto[];
+}
+
 export class UpdateSellerOfferDto extends PartialType(
-  OmitType(CreateSellerOfferDto, ['sellerId', 'productId'] as const),
+  OmitType(SellerOfferItemDto, ['productId'] as const),
   { skipNullProperties: false },
 ) {}
 
@@ -103,9 +127,11 @@ export class ListSellerOffersDto {
   limit?: number;
 }
 
-export class SellerOfferResponseDto extends CreateSellerOfferDto {
-  @ApiProperty({ format: 'uuid', description: 'شناسه پیشنهاد فروش' })
+export class SellerOfferResponseDto extends SellerOfferItemDto {
+  @ApiProperty({ format: 'uuid' })
   offerId: string;
+  @ApiProperty()
+  sellerId: string;
   @ApiProperty({ enum: ['pending', 'approved', 'rejected'] })
   approvalStatus: 'pending' | 'approved' | 'rejected';
   @ApiPropertyOptional({ nullable: true })
@@ -113,3 +139,12 @@ export class SellerOfferResponseDto extends CreateSellerOfferDto {
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
 }
+
+/** فیلدهایی که تغییرشان فوری اعمال می‌شود */
+export const OFFER_IMMEDIATE_FIELDS = new Set([
+  'price',
+  'stockQuantity',
+  'stockStatus',
+  'isOnSale',
+  'isActive',
+]);
