@@ -1,7 +1,6 @@
 import { DataSource } from 'typeorm';
 import { SellerOffer } from '../offers/entities/seller-offer.entity.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
-import { ProductVariantsService } from './product-variants.service.js';
 import { Injectable } from '@nestjs/common';
 import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
@@ -148,7 +147,6 @@ const SEED_VARIANTS = [
 export class ProductsSeedService {
   constructor(
     private readonly dataSource: DataSource,
-    private readonly variantsService: ProductVariantsService,
     private readonly brandRepository: BrandRepository,
     private readonly productRepository: ProductRepository,
     private readonly attributeValueRepository: AttributeValueRepository,
@@ -227,29 +225,27 @@ export class ProductsSeedService {
       const product = await this.productRepository.findBySlug(seed.productSlug);
       const ids = seed.attributes.map((slug) => attributeMap.get(slug));
       if (!product || ids.some((id) => !id)) continue;
-      const attributeValueIds = ids as string[];
-      const key = [...attributeValueIds].sort().join(',');
-      const existing = (
-        await this.variantsService.findByProductId(product.id)
-      ).find((v) => v.attributeValueIds.join(',') === key);
-      const variant =
-        existing ??
-        (await this.variantsService.create({
-          productId: product.id,
-          attributeValueIds,
-        }));
+      const attributes = Object.fromEntries(
+        seed.attributes.map((slug) => {
+          const link = SEED_VARIANT_ATTRIBUTE_LINKS.find(
+            (item) => item.valueSlug === slug,
+          )!;
+          return [link.attributeName, slug];
+        }),
+      );
       if (seller) {
         const offers = this.dataSource.getRepository(SellerOffer);
         if (
           !(await offers.existsBy({
             sellerId: seller.id,
-            variantId: variant.id,
+            sku: seed.sku,
           }))
         ) {
           await offers.save(
             offers.create({
               sellerId: seller.id,
-              variantId: variant.id,
+              productId: product.id,
+              attributes,
               sku: seed.sku,
               price: seed.minPrice,
               stockQuantity: seed.stockQuantity,

@@ -8,15 +8,10 @@ import { ProductVariantAttribute } from './entities/product-variant-attribute.en
 import { ProductsService } from './products.service.js';
 import { ProductsController } from './products.controller.js';
 import { ProductsPricingController } from './products-pricing.controller.js';
-import { ProductVariantsController } from './product-variants.controller.js';
 import { ProductsSeedService } from './products.seed.service.js';
 import { ProductPricingService } from './product-pricing.service.js';
-import { ProductVariantsService } from './product-variants.service.js';
-import { ProductVariantAttributesService } from './product-variant-attributes.service.js';
 import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
-import { ProductVariantRepository } from './repositories/product-variant.repository.js';
-import { ProductVariantAttributeRepository } from './repositories/product-variant-attribute.repository.js';
 import { AttributesModule } from '../attributes/attributes.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { CategoriesModule } from '../categories/categories.module.js';
@@ -34,28 +29,18 @@ import { CategoriesModule } from '../categories/categories.module.js';
     AttributesModule,
     OffersModule,
   ],
-  controllers: [
-    ProductsController,
-    ProductsPricingController,
-    ProductVariantsController,
-  ],
+  controllers: [ProductsController, ProductsPricingController],
   providers: [
     ProductsService,
     ProductPricingService,
-    ProductVariantsService,
-    ProductVariantAttributesService,
     ProductsSeedService,
     BrandRepository,
     ProductRepository,
-    ProductVariantRepository,
-    ProductVariantAttributeRepository,
   ],
   exports: [
     ProductsService,
     ProductsSeedService,
     ProductRepository,
-    ProductVariantRepository,
-    ProductVariantsService,
     BrandRepository,
   ],
 })

@@ -7,6 +7,7 @@ import {
 import { Transform, Type } from 'class-transformer';
 import {
   ValidateIf,
+  ValidateBy,
   IsBoolean,
   IsIn,
   IsInt,
@@ -21,7 +22,35 @@ import {
 } from 'class-validator';
 export class CreateSellerOfferDto {
   @ApiProperty() @IsUUID() sellerId: string;
-  @ApiProperty() @IsUUID() variantId: string;
+  @ApiProperty() @IsUUID() productId: string;
+  @ApiProperty({
+    example: { color: 'red', storage: '128GB' },
+    additionalProperties: { type: 'string' },
+  })
+  @ValidateBy({
+    name: 'offerAttributes',
+    validator: {
+      validate: (value: unknown) =>
+        value !== null &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        Object.keys(value).length <= 20 &&
+        Object.entries(value).every(
+          ([key, item]) =>
+            key.trim() === key &&
+            key.length > 0 &&
+            key.length <= 100 &&
+            !['__proto__', 'constructor', 'prototype'].includes(key) &&
+            typeof item === 'string' &&
+            item.trim() === item &&
+            item.length > 0 &&
+            item.length <= 200,
+        ),
+      defaultMessage: () =>
+        'attributes must contain up to 20 non-empty string properties without surrounding whitespace',
+    },
+  })
+  attributes: Record<string, string>;
   @ApiProperty({ example: 'SAM-S24U-256-BLU' })
   @IsString()
   @IsNotEmpty()
@@ -60,12 +89,11 @@ export class CreateSellerOfferDto {
   isActive?: boolean;
 }
 export class UpdateSellerOfferDto extends PartialType(
-  OmitType(CreateSellerOfferDto, ['sellerId', 'variantId'] as const),
+  OmitType(CreateSellerOfferDto, ['sellerId', 'productId'] as const),
   { skipNullProperties: false },
 ) {}
 export class ListSellerOffersDto {
   @ApiPropertyOptional() @IsOptional() @IsUUID() sellerId?: string;
-  @ApiPropertyOptional() @IsOptional() @IsUUID() variantId?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() productId?: string;
   @ApiPropertyOptional()
   @IsOptional()

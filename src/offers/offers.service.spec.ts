@@ -6,17 +6,18 @@ import { validate } from 'class-validator';
 import { OffersService, assertOfferAccess } from './offers.service.js';
 import { SellerOffer } from './entities/seller-offer.entity.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
-import { ProductVariant } from '../products/entities/product-variant.entity.js';
+import { Product } from '../products/entities/product.entity.js';
 import {
   CreateSellerOfferDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
 const sellerId = '550e8400-e29b-41d4-a716-446655440001';
-const variantId = '550e8400-e29b-41d4-a716-446655440002';
+const productId = '550e8400-e29b-41d4-a716-446655440002';
 const user = { sub: 'user', role: 'seller', sellerId };
 const input = {
   sellerId,
-  variantId,
+  productId,
+  attributes: { color: 'red', storage: '128GB' },
   sku: 'SAM-BLU',
   price: 68000000,
   stockQuantity: 10,
@@ -28,7 +29,7 @@ function setup(patch = {}) {
     id: 'offer',
     isActive: true,
     seller: { status: 'active' },
-    variant: { productId: 'product', product: { status: 'publish' } },
+    product: { status: 'publish' },
     ...patch,
   };
   const repo = {
@@ -42,7 +43,7 @@ function setup(patch = {}) {
     { existsBy: vi.fn(async () => true) } as unknown as Repository<Seller>,
     {
       existsBy: vi.fn(async () => true),
-    } as unknown as Repository<ProductVariant>,
+    } as unknown as Repository<Product>,
   );
   return { service, repo };
 }
@@ -73,13 +74,12 @@ describe('seller offers', () => {
     ).rejects.toMatchObject({ status: 403 });
     expect(repo.save).not.toHaveBeenCalled();
   });
-  it('returns the selected seller, SKU, variant and price for the order snapshot', async () => {
+  it('returns the selected seller, SKU, attributes and price for the order snapshot', async () => {
     const { service } = setup();
     expect(await service.resolvePurchasable('offer', 2)).toMatchObject({
       offerId: 'offer',
       sellerId,
-      variantId,
-      productId: 'product',
+      productId,
       sku: input.sku,
       unitPrice: input.price,
       quantity: 2,
@@ -90,7 +90,7 @@ describe('seller offers', () => {
     { stockQuantity: 0 },
     { stockStatus: 'outofstock' },
     { seller: { status: 'suspended' } },
-    { variant: { product: { status: 'draft' } } },
+    { product: { status: 'draft' } },
     { price: 0 },
     { price: NaN },
   ])('rejects unpurchasable offers %j', async (patch) => {
@@ -104,7 +104,7 @@ describe('seller offers', () => {
         setup().service.resolvePurchasable('offer', quantity),
       ).rejects.toThrow();
   });
-  it('maps duplicate seller/variant or seller/SKU to conflict', async () => {
+  it('maps duplicate seller/SKU to conflict', async () => {
     const { service, repo } = setup();
     repo.save.mockRejectedValueOnce({ code: '23505' });
     await expect(service.create(user, input)).rejects.toMatchObject({
@@ -117,6 +117,10 @@ describe('seller offers', () => {
     { stockQuantity: 1.5 },
     { stockStatus: 'wrong' },
     { sku: '' },
+    { attributes: null },
+    { attributes: [] },
+    { attributes: { color: 1 } },
+    { attributes: { color: '' } },
   ])('validates offer input %j', async (patch) => {
     expect(
       (
@@ -132,11 +136,32 @@ describe('seller offers', () => {
     ).toEqual([]);
     const dto = plainToInstance(UpdateSellerOfferDto, {
       sellerId: 'other',
-      variantId: 'other',
+      productId: 'other',
       price: 70000000,
     });
     expect(await validate(dto, { whitelist: true })).toEqual([]);
     expect(dto).not.toHaveProperty('sellerId');
-    expect(dto).not.toHaveProperty('variantId');
+    expect(dto).not.toHaveProperty('productId');
+  });
+});
+
+describe('product offers with seller-specific features', () => {
+  it('allows two sellers to price the same red product independently', async () => {
+    const { service } = setup();
+    const first = await service.create(user, input);
+    const second = await service.create(
+      { ...user, sellerId: 'second' },
+      { ...input, sellerId: 'second', price: 70000000 },
+    );
+    expect(first.productId).toBe(second.productId);
+    expect(first.attributes).toEqual(second.attributes);
+    expect(first.price).not.toBe(second.price);
+    expect(first.sellerId).not.toBe(second.sellerId);
+  });
+  it('snapshots attributes so subsequent edits cannot change the order', async () => {
+    const { service } = setup();
+    const snapshot = await service.resolvePurchasable('offer', 1);
+    expect(snapshot.attributes).toEqual(input.attributes);
+    expect(snapshot.attributes).not.toBe(input.attributes);
   });
 });

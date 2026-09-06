@@ -29,11 +29,9 @@ export class OrdersSeedService {
       return;
     }
 
-    const offer = await this.dataSource
-      .getRepository(SellerOffer)
-      .findOne({
-        where: { sku: 'SAM-S24U-256-BLK', seller: { slug: 'didnegar-shop' } },
-      });
+    const offer = await this.dataSource.getRepository(SellerOffer).findOne({
+      where: { sku: 'SAM-S24U-256-BLK', seller: { slug: 'didnegar-shop' } },
+    });
     if (!offer) return;
     await this.seedPendingOrder(userId, product.id, shipping.id, offer);
     await this.seedPaidOrder(userId, product.id, shipping.id, offer);
@@ -63,7 +61,7 @@ export class OrdersSeedService {
           {
             productId,
             offerId: offer.id,
-            variantId: offer.variantId,
+            attributes: { ...offer.attributes },
             sellerId: offer.sellerId,
             sku: offer.sku,
             quantity: 1,
@@ -102,7 +100,7 @@ export class OrdersSeedService {
           {
             productId,
             offerId: offer.id,
-            variantId: offer.variantId,
+            attributes: { ...offer.attributes },
             sellerId: offer.sellerId,
             sku: offer.sku,
             quantity: 1,

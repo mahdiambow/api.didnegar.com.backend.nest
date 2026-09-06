@@ -8,7 +8,7 @@ import {
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
-import { ProductVariant } from '../products/entities/product-variant.entity.js';
+import { Product } from '../products/entities/product.entity.js';
 import { SellerOffer } from './entities/seller-offer.entity.js';
 import {
   CreateSellerOfferDto,
@@ -31,7 +31,8 @@ export function assertOfferAccess(user: AuthUser, sellerId: string) {
 export const toOfferResponse = (offer: SellerOffer) => ({
   offerId: offer.id,
   sellerId: offer.sellerId,
-  variantId: offer.variantId,
+  productId: offer.productId,
+  attributes: offer.attributes,
   sku: offer.sku,
   price: Number(offer.price),
   stockQuantity: offer.stockQuantity,
@@ -49,21 +50,15 @@ export class OffersService {
     @InjectRepository(SellerOffer)
     private readonly offers: Repository<SellerOffer>,
     @InjectRepository(Seller) private readonly sellers: Repository<Seller>,
-    @InjectRepository(ProductVariant)
-    private readonly variants: Repository<ProductVariant>,
+    @InjectRepository(Product)
+    private readonly products: Repository<Product>,
   ) {}
   async findAll(query: ListSellerOffersDto) {
     const { page, limit, offset } = getPaginationParams(query);
-    const qb = this.offers
-      .createQueryBuilder('offer')
-      .innerJoin('offer.variant', 'variant');
-    for (const field of ['sellerId', 'variantId', 'isActive'] as const)
+    const qb = this.offers.createQueryBuilder('offer');
+    for (const field of ['sellerId', 'productId', 'isActive'] as const)
       if (query[field] !== undefined)
         qb.andWhere(`offer.${field} = :${field}`, { [field]: query[field] });
-    if (query.productId)
-      qb.andWhere('variant.productId = :productId', {
-        productId: query.productId,
-      });
     const [items, total] = await qb
       .orderBy('offer.price', 'ASC')
       .addOrderBy('offer.id', 'ASC')
@@ -75,7 +70,7 @@ export class OffersService {
   async getEntity(id: string) {
     const offer = await this.offers.findOne({
       where: { id },
-      relations: { seller: true, variant: { product: true } },
+      relations: { seller: true, product: true },
     });
     if (!offer)
       throw new ApiException(
@@ -96,10 +91,10 @@ export class OffersService {
         'فروشنده یافت نشد',
         HttpStatus.NOT_FOUND,
       );
-    if (!(await this.variants.existsBy({ id: dto.variantId })))
+    if (!(await this.products.existsBy({ id: dto.productId })))
       throw new ApiException(
-        'PRODUCT_VARIANT_NOT_FOUND',
-        'تنوع محصول یافت نشد',
+        'PRODUCT_NOT_FOUND',
+        'محصول یافت نشد',
         HttpStatus.NOT_FOUND,
       );
     return this.save(
@@ -139,7 +134,7 @@ export class OffersService {
       if ((error as { code?: string }).code === '23505')
         throw new ApiException(
           'OFFER_EXISTS',
-          'پیشنهاد این تنوع یا SKU برای فروشنده تکراری است',
+          'SKU برای این فروشنده تکراری است',
           HttpStatus.CONFLICT,
         );
       throw error;
@@ -152,7 +147,7 @@ export class OffersService {
       quantity < 1 ||
       !offer.isActive ||
       offer.seller.status !== 'active' ||
-      offer.variant.product.status !== 'publish' ||
+      offer.product.status !== 'publish' ||
       offer.stockStatus !== 'instock' ||
       offer.stockQuantity < quantity
     )
@@ -170,8 +165,8 @@ export class OffersService {
       );
     return {
       offerId: offer.id,
-      productId: offer.variant.productId,
-      variantId: offer.variantId,
+      productId: offer.productId,
+      attributes: { ...offer.attributes },
       sellerId: offer.sellerId,
       sku: offer.sku,
       quantity,

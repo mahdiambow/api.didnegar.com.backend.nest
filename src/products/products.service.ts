@@ -32,7 +32,6 @@ export class ProductsService {
     name?: string;
     categoryId?: string;
     subCategoryId?: string;
-    attributeId?: string;
   }) {
     const { page, limit, offset } = getPaginationParams(query);
     const [items, total] = await this.productRepository.findPaginated(
@@ -44,7 +43,6 @@ export class ProductsService {
         name: query.name,
         categoryId: query.categoryId,
         subCategoryId: query.subCategoryId,
-        attributeId: query.attributeId,
       },
       true,
     );

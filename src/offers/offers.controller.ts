@@ -56,7 +56,7 @@ export class OffersController {
 
   @Get()
   @ApiOperation({
-    summary: 'لیست پیشنهادهای فروش با فیلتر محصول، تنوع و فروشنده',
+    summary: 'لیست پیشنهادهای فروش با فیلتر محصول و فروشنده',
   })
   @ApiResponseMeta({
     code: 'OFFERS_FOUND',
