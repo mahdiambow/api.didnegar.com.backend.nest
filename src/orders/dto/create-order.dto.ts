@@ -14,7 +14,7 @@ import {
 export class OrderProductDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   @IsUUID()
-  productId: string;
+  offerId: string;
 
   @ApiPropertyOptional({ example: 1, default: 1 })
   @IsOptional()
@@ -27,7 +27,7 @@ export class CreateOrderDto {
   @ApiProperty({ type: [OrderProductDto], minItems: 1 })
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayUnique((item: OrderProductDto) => item?.productId)
+  @ArrayUnique((item: OrderProductDto) => item?.offerId)
   @ValidateNested({ each: true })
   @Type(() => OrderProductDto)
   products: OrderProductDto[];

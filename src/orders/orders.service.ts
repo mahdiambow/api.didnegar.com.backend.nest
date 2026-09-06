@@ -4,7 +4,7 @@ import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
-import { ProductRepository } from '../products/repositories/product.repository.js';
+import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
 import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
 import { CreateOrderDto, OrderProductDto } from './dto/create-order.dto.js';
@@ -16,7 +16,7 @@ import { OrderRepository } from './repositories/order.repository.js';
 export class OrdersService {
   constructor(
     private readonly orderRepository: OrderRepository,
-    private readonly productRepository: ProductRepository,
+    private readonly offersService: OffersService,
     private readonly shippingService: ShippingService,
   ) {}
 
@@ -166,36 +166,9 @@ export class OrdersService {
 
   private async resolveProducts(products: OrderProductDto[]) {
     return Promise.all(
-      products.map(async (item) => {
-        const product = await this.productRepository.findById(item.productId);
-        if (!product) {
-          throw new ApiException(
-            'PRODUCT_NOT_FOUND',
-            'محصول یافت نشد',
-            HttpStatus.NOT_FOUND,
-          );
-        }
-        if (product.status !== 'publish') {
-          throw new ApiException(
-            'PRODUCT_NOT_AVAILABLE',
-            'محصول برای خرید در دسترس نیست',
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-        const unitPrice = Number(product.minPrice ?? product.maxPrice ?? 0);
-        if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
-          throw new ApiException(
-            'PRODUCT_PRICE_INVALID',
-            'قیمت محصول تعریف نشده است',
-            HttpStatus.BAD_REQUEST,
-          );
-        }
-        return {
-          productId: product.id,
-          quantity: item.quantity ?? 1,
-          unitPrice,
-        };
-      }),
+      products.map((item) =>
+        this.offersService.resolvePurchasable(item.offerId, item.quantity ?? 1),
+      ),
     );
   }
 

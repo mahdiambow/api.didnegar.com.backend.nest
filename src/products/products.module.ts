@@ -1,3 +1,4 @@
+import { OffersModule } from '../offers/offers.module.js';
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Brand } from './entities/brand.entity.js';
@@ -8,7 +9,6 @@ import { ProductsService } from './products.service.js';
 import { ProductsController } from './products.controller.js';
 import { ProductsPricingController } from './products-pricing.controller.js';
 import { ProductVariantsController } from './product-variants.controller.js';
-import { ProductVariantAttributesController } from './product-variant-attributes.controller.js';
 import { ProductsSeedService } from './products.seed.service.js';
 import { ProductPricingService } from './product-pricing.service.js';
 import { ProductVariantsService } from './product-variants.service.js';
@@ -32,12 +32,12 @@ import { CategoriesModule } from '../categories/categories.module.js';
     forwardRef(() => AuthModule),
     forwardRef(() => CategoriesModule),
     AttributesModule,
+    OffersModule,
   ],
   controllers: [
     ProductsController,
     ProductsPricingController,
     ProductVariantsController,
-    ProductVariantAttributesController,
   ],
   providers: [
     ProductsService,

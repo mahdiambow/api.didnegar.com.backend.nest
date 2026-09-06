@@ -1,3 +1,4 @@
+import { OffersModule } from '../offers/offers.module.js';
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Order } from '../payments/entities/order.entity.js';
@@ -14,6 +15,7 @@ import { RolesModule } from '../roles/roles.module.js';
   imports: [
     TypeOrmModule.forFeature([Order, OrderItem]),
     ProductsModule,
+    OffersModule,
     ShippingModule,
     forwardRef(() => AuthModule),
     forwardRef(() => RolesModule),

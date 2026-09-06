@@ -27,7 +27,7 @@ export class UpdateOrderDto {
   @ValidateIf((_object, value) => value !== undefined)
   @IsArray()
   @ArrayMinSize(1)
-  @ArrayUnique((item: OrderProductDto) => item?.productId)
+  @ArrayUnique((item: OrderProductDto) => item?.offerId)
   @ValidateNested({ each: true })
   @Type(() => OrderProductDto)
   products?: OrderProductDto[];

@@ -53,32 +53,14 @@ export class ProductResponseDto {
   @ApiProperty()
   status: string;
 
-  @ApiPropertyOptional({ nullable: true })
-  sku: string | null;
-
   @ApiPropertyOptional({ nullable: true, example: BRAND_EXAMPLES.brandId })
   brandId: string | null;
-
-  @ApiPropertyOptional({ nullable: true })
-  minPrice: number | null;
-
-  @ApiPropertyOptional({ nullable: true })
-  maxPrice: number | null;
 
   @ApiProperty()
   isVirtual: boolean;
 
   @ApiProperty()
   isDownloadable: boolean;
-
-  @ApiPropertyOptional({ nullable: true })
-  stockQuantity: number | null;
-
-  @ApiPropertyOptional({ nullable: true })
-  stockStatus: string | null;
-
-  @ApiProperty()
-  isOnSale: boolean;
 
   @ApiProperty()
   ratingCount: number;
@@ -113,7 +95,11 @@ export class ProductResponseDto {
   @ApiProperty()
   updatedAt: Date;
 
-  @ApiPropertyOptional({ type: BrandResponseDto, nullable: true, example: BRAND_RESPONSE_EXAMPLE })
+  @ApiPropertyOptional({
+    type: BrandResponseDto,
+    nullable: true,
+    example: BRAND_RESPONSE_EXAMPLE,
+  })
   brand?: BrandResponseDto | null;
 
   @ApiPropertyOptional({
@@ -129,13 +115,6 @@ export class ProductResponseDto {
     description: 'دسته‌های populate‌شده — شامل subCategory و category',
   })
   categories?: ProductCategoryResponseDto[];
-
-  @ApiPropertyOptional({
-    type: [String],
-    example: [PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE.id],
-    description: 'شناسه product-attributeهای محصول',
-  })
-  variantIds?: string[];
 
   @ApiPropertyOptional({
     type: [ProductAttributeResponseDto],
@@ -168,15 +147,9 @@ export function toProductResponse(
     description: product.description,
     shortDescription: product.shortDescription,
     status: product.status,
-    sku: product.sku,
     brandId: product.brandId,
-    minPrice: product.minPrice !== null ? Number(product.minPrice) : null,
-    maxPrice: product.maxPrice !== null ? Number(product.maxPrice) : null,
     isVirtual: product.isVirtual,
     isDownloadable: product.isDownloadable,
-    stockQuantity: product.stockQuantity,
-    stockStatus: product.stockStatus,
-    isOnSale: product.isOnSale,
     ratingCount: product.ratingCount,
     averageRating: Number(product.averageRating),
     totalSales: product.totalSales,
@@ -201,10 +174,6 @@ export function toProductResponse(
         ? product.productCategories.map(
             (item) => item.subCategoryId ?? item.categoryId!,
           )
-        : undefined,
-    variantIds:
-      includeRelations && product.variants
-        ? product.variants.map((item) => item.id)
         : undefined,
     variants:
       includeRelations && product.variants

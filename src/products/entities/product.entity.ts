@@ -43,36 +43,15 @@ export class Product {
   @Column({ type: 'varchar', length: 50, default: 'publish' })
   status: string;
 
-  @Index({ unique: true })
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  sku: string | null;
-
   @Index()
   @Column({ type: 'uuid', nullable: true })
   brandId: string | null;
-
-  @Column({ type: 'decimal', precision: 19, scale: 4, nullable: true })
-  minPrice: number | null;
-
-  @Column({ type: 'decimal', precision: 19, scale: 4, nullable: true })
-  maxPrice: number | null;
 
   @Column({ type: 'boolean', default: false })
   isVirtual: boolean;
 
   @Column({ type: 'boolean', default: false })
   isDownloadable: boolean;
-
-  @Column({ type: 'int', nullable: true })
-  stockQuantity: number | null;
-
-  @Index()
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  stockStatus: string | null;
-
-  @Index()
-  @Column({ type: 'boolean', default: false })
-  isOnSale: boolean;
 
   @Column({ type: 'int', default: 0 })
   ratingCount: number;

@@ -1,3 +1,5 @@
+import { DataSource } from 'typeorm';
+import { SellerOffer } from '../../offers/entities/seller-offer.entity.js';
 import { Injectable } from '@nestjs/common';
 import { OrderRepository } from '../../orders/repositories/order.repository.js';
 import { PaymentRepository } from '../../payments/repositories/payment.repository.js';
@@ -8,6 +10,7 @@ import { UsersSeedService } from './users.seed.service.js';
 @Injectable()
 export class OrdersSeedService {
   constructor(
+    private readonly dataSource: DataSource,
     private readonly orderRepository: OrderRepository,
     private readonly paymentRepository: PaymentRepository,
     private readonly productRepository: ProductRepository,
@@ -26,22 +29,23 @@ export class OrdersSeedService {
       return;
     }
 
-    await this.seedPendingOrder(
-      userId,
-      product.id,
-      shipping.id,
-      product.minPrice,
-    );
-    await this.seedPaidOrder(userId, product.id, shipping.id, product.minPrice);
+    const offer = await this.dataSource
+      .getRepository(SellerOffer)
+      .findOne({
+        where: { sku: 'SAM-S24U-256-BLK', seller: { slug: 'didnegar-shop' } },
+      });
+    if (!offer) return;
+    await this.seedPendingOrder(userId, product.id, shipping.id, offer);
+    await this.seedPaidOrder(userId, product.id, shipping.id, offer);
   }
 
   private async seedPendingOrder(
     userId: string,
     productId: string,
     shippingMethodId: string,
-    price: number | null,
+    offer: SellerOffer,
   ) {
-    const subtotal = Number(price ?? 65000000);
+    const subtotal = Number(offer.price);
     const shippingAmount = 85000;
 
     const existing = await this.orderRepository.findPaginated(0, 1, {
@@ -55,7 +59,17 @@ export class OrdersSeedService {
     await this.orderRepository.save(
       this.orderRepository.create({
         userId,
-        items: [{ productId, quantity: 1, unitPrice: subtotal }],
+        items: [
+          {
+            productId,
+            offerId: offer.id,
+            variantId: offer.variantId,
+            sellerId: offer.sellerId,
+            sku: offer.sku,
+            quantity: 1,
+            unitPrice: subtotal,
+          },
+        ],
         shippingMethodId,
         subtotal,
         shippingAmount,
@@ -69,9 +83,9 @@ export class OrdersSeedService {
     userId: string,
     productId: string,
     shippingMethodId: string,
-    price: number | null,
+    offer: SellerOffer,
   ) {
-    const subtotal = Number(price ?? 65000000);
+    const subtotal = Number(offer.price);
     const shippingAmount = 85000;
     const amount = subtotal + shippingAmount;
 
@@ -84,7 +98,17 @@ export class OrdersSeedService {
     const order = await this.orderRepository.save(
       this.orderRepository.create({
         userId,
-        items: [{ productId, quantity: 1, unitPrice: subtotal }],
+        items: [
+          {
+            productId,
+            offerId: offer.id,
+            variantId: offer.variantId,
+            sellerId: offer.sellerId,
+            sku: offer.sku,
+            quantity: 1,
+            unitPrice: subtotal,
+          },
+        ],
         shippingMethodId,
         subtotal,
         shippingAmount,

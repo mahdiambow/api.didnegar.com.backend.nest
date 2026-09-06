@@ -20,10 +20,6 @@ export class ProductVariantRepository {
     });
   }
 
-  findBySku(sku: string) {
-    return this.repo.findOne({ where: { sku } });
-  }
-
   findByIds(ids: string[]) {
     if (!ids.length) {
       return Promise.resolve([]);
@@ -36,21 +32,21 @@ export class ProductVariantRepository {
     return this.repo.find({
       where: { productId },
       relations: { variantAttributes: { attributeValue: { attribute: true } } },
-      order: { createdAt: 'ASC' },
+      order: { id: 'ASC' },
     });
   }
 
   findPaginated(
     offset: number,
     limit: number,
-    filters: { productId?: string; isActive?: boolean },
+    filters: { productId?: string },
   ) {
     const qb = this.repo
       .createQueryBuilder('variant')
       .leftJoinAndSelect('variant.variantAttributes', 'variantAttributes')
       .leftJoinAndSelect('variantAttributes.attributeValue', 'attributeValue')
       .leftJoinAndSelect('attributeValue.attribute', 'attribute')
-      .orderBy('variant.createdAt', 'ASC')
+      .orderBy('variant.id', 'ASC')
       .skip(offset)
       .take(limit);
 
@@ -60,23 +56,7 @@ export class ProductVariantRepository {
       });
     }
 
-    if (filters.isActive !== undefined) {
-      qb.andWhere('variant.isActive = :isActive', {
-        isActive: filters.isActive,
-      });
-    }
-
     return qb.getManyAndCount();
-  }
-
-  getNextLegacyId() {
-    return this.repo.manager
-      .createQueryBuilder()
-      .select('COALESCE(MAX(variant.legacyId), 0) + 1', 'next')
-      .from(ProductVariant, 'variant')
-      .where('variant.legacyTable = :table', { table: 'product_variants' })
-      .getRawOne<{ next: string }>()
-      .then((row) => Number(row?.next ?? 1));
   }
 
   create(data: Partial<ProductVariant>) {

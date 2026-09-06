@@ -1,0 +1,140 @@
+import {
+  Body,
+  Req,
+  Param,
+  ParseUUIDPipe,
+  Query,
+  Controller,
+  Delete,
+  Get,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { RoleGuard } from '../auth/guards/role.guard.js';
+import { RequireRole } from '../auth/decorators/require-role.decorator.js';
+import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
+import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
+import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
+import {
+  CreateSellerOfferDto,
+  UpdateSellerOfferDto,
+  SellerOfferResponseDto,
+} from './dto/seller-offer.dto.js';
+import type { AuthUser } from '../auth/types/auth-user.type.js';
+import { OffersService } from './offers.service.js';
+import { ListSellerOffersDto } from './dto/seller-offer.dto.js';
+import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
+
+const OfferApiResponseDto = createSuccessResponseDto(SellerOfferResponseDto, {
+  code: 'OFFER_FOUND',
+  message: 'Seller offer retrieved successfully',
+  name: 'Offer',
+});
+
+const OffersApiResponseDto = createPaginatedResponseDto(
+  SellerOfferResponseDto,
+  {
+    code: 'OFFERS_FOUND',
+    message: 'Offers retrieved successfully',
+    name: 'Offers',
+  },
+);
+
+@ApiTags('Seller Offers')
+@Controller('seller-offers')
+export class OffersController {
+  constructor(private readonly offersService: OffersService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'لیست پیشنهادهای فروش با فیلتر محصول، تنوع و فروشنده',
+  })
+  @ApiResponseMeta({
+    code: 'OFFERS_FOUND',
+    message: 'Offers retrieved successfully',
+  })
+  @ApiOkResponse({ type: OffersApiResponseDto })
+  findAll(@Query() query: ListSellerOffersDto) {
+    return this.offersService.findAll(query);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'دریافت پیشنهاد فروش' })
+  @ApiResponseMeta({
+    code: 'OFFER_FOUND',
+    message: 'Seller offer found successfully',
+  })
+  @ApiOkResponse({ type: OfferApiResponseDto })
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.offersService.findOne(id);
+  }
+
+  @Post()
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @RequireRole(
+    DEFAULT_ROLE_SLUGS.SELLER,
+    DEFAULT_ROLE_SLUGS.ADMIN,
+    DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+  )
+  @ApiOperation({ summary: 'ایجاد پیشنهاد فروش' })
+  @ApiResponseMeta({
+    code: 'OFFER_CREATED',
+    message: 'Seller offer created successfully',
+  })
+  @ApiCreatedResponse({ type: OfferApiResponseDto })
+  create(@Req() req: { user: AuthUser }, @Body() dto: CreateSellerOfferDto) {
+    return this.offersService.create(req.user, dto);
+  }
+
+  @Patch(':id')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @RequireRole(
+    DEFAULT_ROLE_SLUGS.SELLER,
+    DEFAULT_ROLE_SLUGS.ADMIN,
+    DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+  )
+  @ApiOperation({ summary: 'ویرایش پیشنهاد فروش' })
+  @ApiResponseMeta({
+    code: 'OFFER_UPDATED',
+    message: 'Seller offer updated successfully',
+  })
+  @ApiOkResponse({ type: OfferApiResponseDto })
+  update(
+    @Req() req: { user: AuthUser },
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateSellerOfferDto,
+  ) {
+    return this.offersService.update(req.user, id, dto);
+  }
+
+  @Delete(':id')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @RequireRole(
+    DEFAULT_ROLE_SLUGS.SELLER,
+    DEFAULT_ROLE_SLUGS.ADMIN,
+    DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+  )
+  @ApiOperation({ summary: 'حذف پیشنهاد فروش' })
+  @ApiResponseMeta({
+    code: 'OFFER_DELETED',
+    message: 'Seller offer deleted successfully',
+  })
+  remove(
+    @Req() req: { user: AuthUser },
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.offersService.remove(req.user, id);
+  }
+}

@@ -4,6 +4,11 @@ import { ShippingMethodResponseDto } from '../../shipping/dto/shipping.dto.js';
 import { toShippingMethodResponse } from '../../shipping/dto/shipping.dto.js';
 
 export class OrderProductResponseDto {
+  @ApiPropertyOptional({ nullable: true }) offerId: string | null;
+  @ApiPropertyOptional({ nullable: true }) variantId: string | null;
+  @ApiPropertyOptional({ nullable: true }) sellerId: string | null;
+  @ApiPropertyOptional({ nullable: true }) sku: string | null;
+
   @ApiProperty()
   productId: string;
 
@@ -67,6 +72,10 @@ export function toOrderResponse(order: Order): OrderResponseDto {
     userId: order.userId,
     products: order.items.map((item) => ({
       productId: item.productId,
+      offerId: item.offerId ?? null,
+      variantId: item.variantId ?? null,
+      sellerId: item.sellerId ?? null,
+      sku: item.sku ?? null,
       productName: item.product?.name,
       quantity: item.quantity,
       unitPrice: Number(item.unitPrice),

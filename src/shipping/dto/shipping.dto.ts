@@ -6,7 +6,7 @@ import { ShippingMethod } from '../entities/shipping-method.entity.js';
 export class ShippingQuoteQueryDto {
   @ApiProperty()
   @IsUUID()
-  productId: string;
+  offerId: string;
 
   @ApiProperty()
   @IsUUID()
@@ -52,6 +52,9 @@ export class ShippingMethodResponseDto {
 }
 
 export class ShippingQuoteResponseDto {
+  @ApiProperty()
+  offerId: string;
+
   @ApiProperty()
   productId: string;
 
