@@ -15,6 +15,7 @@ import { ProductRepository } from './repositories/product.repository.js';
 import { AttributesModule } from '../attributes/attributes.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { CategoriesModule } from '../categories/categories.module.js';
+import { SellersModule } from '../sellers/sellers.module.js';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { CategoriesModule } from '../categories/categories.module.js';
     forwardRef(() => CategoriesModule),
     AttributesModule,
     OffersModule,
+    SellersModule,
   ],
   controllers: [ProductsController, ProductsPricingController],
   providers: [

@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { AuthUser } from '../auth/types/auth-user.type.js';
 import {
@@ -11,10 +11,13 @@ import { Seller } from '../sellers/entities/seller.entity.js';
 import { Product } from '../products/entities/product.entity.js';
 import { SellerOffer } from './entities/seller-offer.entity.js';
 import {
-  CreateSellerOfferDto,
+  CreateSellerOffersDto,
   ListSellerOffersDto,
+  OFFER_IMMEDIATE_FIELDS,
+  SellerOfferItemDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
+
 export function assertOfferAccess(user: AuthUser, sellerId: string) {
   if (user.role === 'super-admin') return;
   if (
@@ -28,11 +31,20 @@ export function assertOfferAccess(user: AuthUser, sellerId: string) {
       HttpStatus.FORBIDDEN,
     );
 }
+
+export function isImmediateOfferUpdate(dto: UpdateSellerOfferDto): boolean {
+  const keys = Object.keys(dto).filter(
+    (key) => (dto as Record<string, unknown>)[key] !== undefined,
+  );
+  return (
+    keys.length > 0 && keys.every((key) => OFFER_IMMEDIATE_FIELDS.has(key))
+  );
+}
+
 export const toOfferResponse = (offer: SellerOffer) => ({
   offerId: offer.id,
   sellerId: offer.sellerId,
   productId: offer.productId,
-  attributes: offer.attributes,
   sku: offer.sku,
   price: Number(offer.price),
   stockQuantity: offer.stockQuantity,
@@ -41,9 +53,12 @@ export const toOfferResponse = (offer: SellerOffer) => ({
   taxStatus: offer.taxStatus,
   taxClass: offer.taxClass,
   isActive: offer.isActive,
+  approvalStatus: offer.approvalStatus ?? 'approved',
+  rejectionReason: offer.rejectionReason ?? null,
   createdAt: offer.createdAt,
   updatedAt: offer.updatedAt,
 });
+
 @Injectable()
 export class OffersService {
   constructor(
@@ -53,10 +68,16 @@ export class OffersService {
     @InjectRepository(Product)
     private readonly products: Repository<Product>,
   ) {}
+
   async findAll(query: ListSellerOffersDto) {
     const { page, limit, offset } = getPaginationParams(query);
     const qb = this.offers.createQueryBuilder('offer');
-    for (const field of ['sellerId', 'productId', 'isActive'] as const)
+    for (const field of [
+      'sellerId',
+      'productId',
+      'isActive',
+      'approvalStatus',
+    ] as const)
       if (query[field] !== undefined)
         qb.andWhere(`offer.${field} = :${field}`, { [field]: query[field] });
     const [items, total] = await qb
@@ -67,6 +88,7 @@ export class OffersService {
       .getManyAndCount();
     return paginatedList(items.map(toOfferResponse), page, limit, total);
   }
+
   async getEntity(id: string) {
     const offer = await this.offers.findOne({
       where: { id },
@@ -80,10 +102,12 @@ export class OffersService {
       );
     return offer;
   }
+
   async findOne(id: string) {
     return toOfferResponse(await this.getEntity(id));
   }
-  async create(user: AuthUser, dto: CreateSellerOfferDto) {
+
+  async create(user: AuthUser, dto: CreateSellerOffersDto) {
     assertOfferAccess(user, dto.sellerId);
     if (!(await this.sellers.existsBy({ id: dto.sellerId })))
       throw new ApiException(
@@ -91,26 +115,75 @@ export class OffersService {
         'فروشنده یافت نشد',
         HttpStatus.NOT_FOUND,
       );
-    if (!(await this.products.existsBy({ id: dto.productId })))
+
+    const skus = dto.items.map((item) => item.sku);
+    if (new Set(skus).size !== skus.length) {
       throw new ApiException(
-        'PRODUCT_NOT_FOUND',
-        'محصول یافت نشد',
-        HttpStatus.NOT_FOUND,
+        'OFFER_SKU_DUPLICATE',
+        'SKU تکراری در لیست درخواست وجود دارد',
+        HttpStatus.BAD_REQUEST,
       );
+    }
+
+    const productIds = [...new Set(dto.items.map((item) => item.productId))];
+    const products = await this.products.findBy({ id: In(productIds) });
+    const productMap = new Map(products.map((product) => [product.id, product]));
+    for (const productId of productIds) {
+      if (!productMap.has(productId)) {
+        throw new ApiException(
+          'PRODUCT_NOT_FOUND',
+          `محصول یافت نشد: ${productId}`,
+          HttpStatus.NOT_FOUND,
+        );
+      }
+    }
+
+    const created = [];
+    for (const item of dto.items) {
+      created.push(await this.createOne(dto.sellerId, item, productMap));
+    }
+    return created;
+  }
+
+  private async createOne(
+    sellerId: string,
+    item: SellerOfferItemDto,
+    productMap: Map<string, Product>,
+  ) {
+    const product = productMap.get(item.productId)!;
+    const approvalStatus =
+      product.approvalStatus === 'approved' ? 'approved' : 'pending';
+
     return this.save(
       this.offers.create({
-        ...dto,
-        isOnSale: dto.isOnSale ?? false,
-        isActive: dto.isActive ?? true,
+        sellerId,
+        productId: item.productId,
+        sku: item.sku,
+        price: item.price,
+        stockQuantity: item.stockQuantity,
+        stockStatus: item.stockStatus,
+        attributes: {},
+        isOnSale: item.isOnSale ?? false,
+        isActive: item.isActive ?? true,
+        taxStatus: item.taxStatus ?? null,
+        taxClass: item.taxClass ?? null,
+        approvalStatus,
+        rejectionReason: null,
       }),
     );
   }
+
   async update(user: AuthUser, id: string, dto: UpdateSellerOfferDto) {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
+
     Object.assign(offer, dto);
+    offer.approvalStatus = 'approved';
+    offer.rejectionReason = null;
+
     return this.save(offer);
   }
+
   async remove(user: AuthUser, id: string) {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
@@ -127,6 +200,7 @@ export class OffersService {
     }
     return {};
   }
+
   private async save(offer: SellerOffer) {
     try {
       return toOfferResponse(await this.offers.save(offer));
@@ -140,14 +214,17 @@ export class OffersService {
       throw error;
     }
   }
+
   async resolvePurchasable(id: string, quantity: number) {
     const offer = await this.getEntity(id);
     if (
       !Number.isInteger(quantity) ||
       quantity < 1 ||
       !offer.isActive ||
+      offer.approvalStatus !== 'approved' ||
       offer.seller.status !== 'active' ||
       offer.product.status !== 'publish' ||
+      offer.product.approvalStatus !== 'approved' ||
       offer.stockStatus !== 'instock' ||
       offer.stockQuantity < quantity
     )
@@ -166,7 +243,7 @@ export class OffersService {
     return {
       offerId: offer.id,
       productId: offer.productId,
-      attributes: { ...offer.attributes },
+      attributes: {},
       sellerId: offer.sellerId,
       sku: offer.sku,
       quantity,

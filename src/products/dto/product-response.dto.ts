@@ -53,6 +53,19 @@ export class ProductResponseDto {
   @ApiProperty()
   status: string;
 
+  @ApiProperty({
+    enum: ['pending', 'approved', 'rejected'],
+    example: 'pending',
+    description: 'وضعیت تأیید ادمین',
+  })
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 'تصاویر محصول ناقص است',
+  })
+  rejectionReason: string | null;
+
   @ApiPropertyOptional({ nullable: true, example: BRAND_EXAMPLES.brandId })
   brandId: string | null;
 
@@ -88,6 +101,27 @@ export class ProductResponseDto {
 
   @ApiPropertyOptional({ nullable: true })
   height: number | null;
+
+  @ApiProperty({
+    example: { color: ['قرمز', 'مشکی'], storage: ['256GB', '512GB'] },
+    description: 'ویژگی‌های مجاز محصول برای قیمت‌گذاری فروشنده',
+    additionalProperties: { type: 'array', items: { type: 'string' } },
+  })
+  attributes: Record<string, string[]>;
+
+  @ApiProperty({
+    type: [String],
+    example: ['550e8400-e29b-41d4-a716-446655440002'],
+    description: 'آرایه شناسه فروشنده‌های مرتبط با محصول',
+  })
+  sellerIds: string[];
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: '550e8400-e29b-41d4-a716-446655440002',
+    description: 'فروشنده‌ای که محصول را اول ثبت کرده',
+  })
+  createdBySellerId: string | null;
 
   @ApiProperty()
   createdAt: Date;
@@ -147,6 +181,8 @@ export function toProductResponse(
     description: product.description,
     shortDescription: product.shortDescription,
     status: product.status,
+    approvalStatus: product.approvalStatus ?? 'pending',
+    rejectionReason: product.rejectionReason ?? null,
     brandId: product.brandId,
     isVirtual: product.isVirtual,
     isDownloadable: product.isDownloadable,
@@ -159,6 +195,9 @@ export function toProductResponse(
     length: product.length !== null ? Number(product.length) : null,
     width: product.width !== null ? Number(product.width) : null,
     height: product.height !== null ? Number(product.height) : null,
+    attributes: product.attributes ?? {},
+    sellerIds: product.sellerIds ?? [],
+    createdBySellerId: product.createdBySellerId ?? null,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
     brand:

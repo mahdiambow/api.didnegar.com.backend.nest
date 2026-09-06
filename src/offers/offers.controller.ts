@@ -25,13 +25,13 @@ import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import {
-  CreateSellerOfferDto,
+  CreateSellerOffersDto,
   UpdateSellerOfferDto,
   SellerOfferResponseDto,
+  ListSellerOffersDto,
 } from './dto/seller-offer.dto.js';
 import type { AuthUser } from '../auth/types/auth-user.type.js';
 import { OffersService } from './offers.service.js';
-import { ListSellerOffersDto } from './dto/seller-offer.dto.js';
 import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 
 const OfferApiResponseDto = createSuccessResponseDto(SellerOfferResponseDto, {
@@ -86,13 +86,16 @@ export class OffersController {
     DEFAULT_ROLE_SLUGS.ADMIN,
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
-  @ApiOperation({ summary: 'ایجاد پیشنهاد فروش' })
-  @ApiResponseMeta({
-    code: 'OFFER_CREATED',
-    message: 'Seller offer created successfully',
+  @ApiOperation({
+    summary: 'ایجاد یک یا چند پیشنهاد فروش',
+    description: 'با آرایه items می‌توان چند محصول را یکجا قیمت‌گذاری کرد',
   })
-  @ApiCreatedResponse({ type: OfferApiResponseDto })
-  create(@Req() req: { user: AuthUser }, @Body() dto: CreateSellerOfferDto) {
+  @ApiResponseMeta({
+    code: 'OFFERS_CREATED',
+    message: 'Seller offers created successfully',
+  })
+  @ApiCreatedResponse({ type: [SellerOfferResponseDto] })
+  create(@Req() req: { user: AuthUser }, @Body() dto: CreateSellerOffersDto) {
     return this.offersService.create(req.user, dto);
   }
 
@@ -104,7 +107,10 @@ export class OffersController {
     DEFAULT_ROLE_SLUGS.ADMIN,
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
-  @ApiOperation({ summary: 'ویرایش پیشنهاد فروش' })
+  @ApiOperation({
+    summary: 'ویرایش پیشنهاد فروش',
+    description: 'تغییر قیمت و سایر فیلدها فوری اعمال می‌شود',
+  })
   @ApiResponseMeta({
     code: 'OFFER_UPDATED',
     message: 'Seller offer updated successfully',

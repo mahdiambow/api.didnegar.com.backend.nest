@@ -4,8 +4,6 @@ import { Seller } from '../sellers/entities/seller.entity.js';
 import { Injectable } from '@nestjs/common';
 import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
-import { AttributeValueRepository } from '../attributes/repositories/attribute-value.repository.js';
-import { AttributeRepository } from '../attributes/repositories/attribute.repository.js';
 
 const FAKE_BRANDS = [
   {
@@ -106,40 +104,24 @@ const FAKE_PRODUCTS = [
   },
 ] as const;
 
-const SEED_VARIANT_ATTRIBUTE_LINKS = [
-  { attributeName: 'storage', valueSlug: '256gb' },
-  { attributeName: 'storage', valueSlug: '512gb' },
-  { attributeName: 'color', valueSlug: 'black' },
-  { attributeName: 'color', valueSlug: 'titanium' },
-] as const;
-
-const SEED_VARIANTS = [
+const SEED_OFFERS = [
   {
     productSlug: 'galaxy-s24-ultra',
     sku: 'SAM-S24U-256-BLK',
     minPrice: 65000000,
-    maxPrice: 72000000,
     stockQuantity: 10,
-    description: 'Galaxy S24 Ultra 256GB مشکی',
-    attributes: ['256gb', 'black'],
   },
   {
     productSlug: 'galaxy-s24-ultra',
     sku: 'SAM-S24U-512-BLK',
     minPrice: 72000000,
-    maxPrice: 79000000,
     stockQuantity: 5,
-    description: 'Galaxy S24 Ultra 512GB مشکی',
-    attributes: ['512gb', 'black'],
   },
   {
     productSlug: 'iphone-15-pro',
     sku: 'APL-IP15P-256-TIT',
     minPrice: 78000000,
-    maxPrice: 85000000,
     stockQuantity: 8,
-    description: 'آیفون 15 Pro 256GB تیتانیوم',
-    attributes: ['256gb', 'titanium'],
   },
 ] as const;
 
@@ -149,8 +131,6 @@ export class ProductsSeedService {
     private readonly dataSource: DataSource,
     private readonly brandRepository: BrandRepository,
     private readonly productRepository: ProductRepository,
-    private readonly attributeValueRepository: AttributeValueRepository,
-    private readonly attributeRepository: AttributeRepository,
   ) {}
 
   async seed() {
@@ -177,8 +157,28 @@ export class ProductsSeedService {
     }
 
     for (const [index, product] of FAKE_PRODUCTS.entries()) {
+      let productAttributes: Record<string, string[]> = {};
+      if (product.slug === 'galaxy-s24-ultra') {
+        productAttributes = {
+          color: ['black'],
+          storage: ['256gb', '512gb'],
+        };
+      } else if (product.slug === 'iphone-15-pro') {
+        productAttributes = {
+          color: ['titanium'],
+          storage: ['256gb'],
+        };
+      }
+
       const existing = await this.productRepository.findBySlug(product.slug);
       if (existing) {
+        if (
+          Object.keys(existing.attributes ?? {}).length === 0 &&
+          Object.keys(productAttributes).length > 0
+        ) {
+          existing.attributes = productAttributes;
+          await this.productRepository.save(existing);
+        }
         continue;
       }
 
@@ -190,71 +190,43 @@ export class ProductsSeedService {
           slug: product.slug,
           shortDescription: product.shortDescription,
           status: 'publish',
+          approvalStatus: 'approved',
           brandId: brandMap.get(product.brandSlug) ?? null,
           averageRating: product.averageRating,
           ratingCount: product.ratingCount,
           totalSales: product.totalSales,
+          attributes: productAttributes,
         }),
       );
-    }
-
-    const attributeMap = new Map<string, string>();
-    for (const link of SEED_VARIANT_ATTRIBUTE_LINKS) {
-      const key = `${link.attributeName}:${link.valueSlug}`;
-      if (attributeMap.has(key)) continue;
-
-      const attribute = await this.attributeRepository.findByName(
-        link.attributeName,
-      );
-      if (!attribute) continue;
-
-      const attributeValue =
-        await this.attributeValueRepository.findByAttributeAndSlug(
-          attribute.id,
-          link.valueSlug,
-        );
-      if (!attributeValue) continue;
-
-      attributeMap.set(link.valueSlug, attributeValue.id);
     }
 
     const seller = await this.dataSource
       .getRepository(Seller)
       .findOneBy({ slug: 'didnegar-shop' });
-    for (const seed of SEED_VARIANTS) {
+    for (const seed of SEED_OFFERS) {
       const product = await this.productRepository.findBySlug(seed.productSlug);
-      const ids = seed.attributes.map((slug) => attributeMap.get(slug));
-      if (!product || ids.some((id) => !id)) continue;
-      const attributes = Object.fromEntries(
-        seed.attributes.map((slug) => {
-          const link = SEED_VARIANT_ATTRIBUTE_LINKS.find(
-            (item) => item.valueSlug === slug,
-          )!;
-          return [link.attributeName, slug];
-        }),
-      );
-      if (seller) {
-        const offers = this.dataSource.getRepository(SellerOffer);
-        if (
-          !(await offers.existsBy({
+      if (!product || !seller) continue;
+      const offers = this.dataSource.getRepository(SellerOffer);
+      if (
+        !(await offers.existsBy({
+          sellerId: seller.id,
+          sku: seed.sku,
+        }))
+      ) {
+        await offers.save(
+          offers.create({
             sellerId: seller.id,
+            productId: product.id,
+            attributes: {},
             sku: seed.sku,
-          }))
-        ) {
-          await offers.save(
-            offers.create({
-              sellerId: seller.id,
-              productId: product.id,
-              attributes,
-              sku: seed.sku,
-              price: seed.minPrice,
-              stockQuantity: seed.stockQuantity,
-              stockStatus: 'instock',
-              isActive: true,
-              isOnSale: false,
-            }),
-          );
-        }
+            price: seed.minPrice,
+            stockQuantity: seed.stockQuantity,
+            stockStatus: 'instock',
+            isActive: true,
+            isOnSale: false,
+            approvalStatus: 'approved',
+          }),
+        );
       }
     }
   }

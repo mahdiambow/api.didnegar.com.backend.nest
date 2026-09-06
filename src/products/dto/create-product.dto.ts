@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsUUID } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsOptional, IsUUID } from 'class-validator';
 import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
 import { BRAND_EXAMPLES } from './brand.examples.js';
 import { ProductWritableFieldsDto } from './product-fields.dto.js';
@@ -12,6 +12,21 @@ export class CreateProductDto extends ProductWritableFieldsDto {
   @IsOptional()
   @IsUUID('4')
   brandId?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: [
+      '550e8400-e29b-41d4-a716-446655440002',
+      '550e8400-e29b-41d4-a716-446655440003',
+    ],
+    description: 'آرایه شناسه فروشنده‌های مرتبط با محصول',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(50)
+  @IsUUID('4', { each: true })
+  sellerIds?: string[];
 
   @ApiPropertyOptional({
     type: [String],

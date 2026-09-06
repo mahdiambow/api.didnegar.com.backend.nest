@@ -5,6 +5,7 @@ import { Product } from '../entities/product.entity.js';
 
 export interface ProductFilters {
   status?: string;
+  approvalStatus?: string;
   brandId?: string;
   name?: string;
   categoryId?: string;
@@ -43,6 +44,12 @@ export class ProductRepository {
 
     if (filters.status) {
       qb.andWhere('product.status = :status', { status: filters.status });
+    }
+
+    if (filters.approvalStatus) {
+      qb.andWhere('product.approvalStatus = :approvalStatus', {
+        approvalStatus: filters.approvalStatus,
+      });
     }
 
     if (filters.brandId) {
@@ -102,6 +109,12 @@ export class ProductRepository {
 
     if (filters.status) {
       qb.andWhere('product.status = :status', { status: filters.status });
+    }
+
+    if (filters.approvalStatus) {
+      qb.andWhere('product.approvalStatus = :approvalStatus', {
+        approvalStatus: filters.approvalStatus,
+      });
     }
 
     if (filters.brandId) {
