@@ -95,6 +95,13 @@ export class Product {
   @Column({ type: 'jsonb', default: {} })
   attributes: Record<string, string[]>;
 
+  /** فروشنده‌های مرتبط با این محصول */
+  @Column({ type: 'uuid', array: true, default: [] })
+  sellerIds: string[];
+
+  @Column({ type: 'uuid', nullable: true })
+  createdBySellerId: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

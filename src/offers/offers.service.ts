@@ -34,63 +34,20 @@ export function assertOfferAccess(user: AuthUser, sellerId: string) {
     );
 }
 
-/** ویژگی‌های آفر باید دقیقاً از گزینه‌های تعریف‌شده روی محصول باشند */
-export function assertOfferAttributesMatchProduct(
-  productAttributes: Record<string, string[]> | null | undefined,
-  offerAttributes: Record<string, string>,
-) {
-  const schema = productAttributes ?? {};
-  const schemaKeys = Object.keys(schema).sort();
-  const offerKeys = Object.keys(offerAttributes).sort();
-
-  if (schemaKeys.length === 0) {
-    if (offerKeys.length > 0) {
-      throw new ApiException(
-        'OFFER_ATTRIBUTES_INVALID',
-        'این محصول ویژگی ندارد؛ attributes باید خالی باشد',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    return;
-  }
-
-  if (
-    schemaKeys.length !== offerKeys.length ||
-    schemaKeys.some((key, index) => key !== offerKeys[index])
-  ) {
-    throw new ApiException(
-      'OFFER_ATTRIBUTES_INVALID',
-      `ویژگی‌های آفر باید دقیقاً شامل این کلیدها باشد: ${schemaKeys.join(', ')}`,
-      HttpStatus.BAD_REQUEST,
-    );
-  }
-
-  for (const key of schemaKeys) {
-    const allowed = schema[key] ?? [];
-    const value = offerAttributes[key];
-    if (!allowed.includes(value)) {
-      throw new ApiException(
-        'OFFER_ATTRIBUTES_INVALID',
-        `مقدار «${value}» برای ویژگی «${key}» مجاز نیست. مقادیر مجاز: ${allowed.join(', ')}`,
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-  }
-}
-
 /** فقط تغییر قیمت/موجودی فوری است؛ بقیه فیلدها نیاز به تأیید دارند */
 export function isImmediateOfferUpdate(dto: UpdateSellerOfferDto): boolean {
   const keys = Object.keys(dto).filter(
     (key) => (dto as Record<string, unknown>)[key] !== undefined,
   );
-  return keys.length > 0 && keys.every((key) => OFFER_IMMEDIATE_FIELDS.has(key));
+  return (
+    keys.length > 0 && keys.every((key) => OFFER_IMMEDIATE_FIELDS.has(key))
+  );
 }
 
 export const toOfferResponse = (offer: SellerOffer) => ({
   offerId: offer.id,
   sellerId: offer.sellerId,
   productId: offer.productId,
-  attributes: offer.attributes,
   sku: offer.sku,
   price: Number(offer.price),
   stockQuantity: offer.stockQuantity,
@@ -168,15 +125,14 @@ export class OffersService {
         'محصول یافت نشد',
         HttpStatus.NOT_FOUND,
       );
-    assertOfferAttributesMatchProduct(product.attributes, dto.attributes);
 
-    // قیمت‌گذاری روی محصول تأییدشده فوری است
     const approvalStatus =
       product.approvalStatus === 'approved' ? 'approved' : 'pending';
 
     return this.save(
       this.offers.create({
         ...dto,
+        attributes: {},
         isOnSale: dto.isOnSale ?? false,
         isActive: dto.isActive ?? true,
         approvalStatus,
@@ -189,35 +145,19 @@ export class OffersService {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
 
-    if (dto.attributes !== undefined) {
-      const product =
-        offer.product ??
-        (await this.products.findOneBy({ id: offer.productId }));
-      if (!product)
-        throw new ApiException(
-          'PRODUCT_NOT_FOUND',
-          'محصول یافت نشد',
-          HttpStatus.NOT_FOUND,
-        );
-      assertOfferAttributesMatchProduct(product.attributes, dto.attributes);
-    }
-
     const immediate = isImmediateOfferUpdate(dto);
     Object.assign(offer, dto);
 
     if (!immediate) {
-      // تغییر ویژگی/SKU/... → منتظر تأیید
       offer.approvalStatus = 'pending';
       offer.rejectionReason = null;
     }
-    // تغییر فقط قیمت/موجودی → همان لحظه تأیید می‌ماند
 
     return this.save(offer);
   }
 
   async review(user: AuthUser, id: string, dto: ReviewSellerOfferDto) {
     const offer = await this.getEntity(id);
-    // فقط ادمین از controller می‌آید؛ مالک فروشنده نباید بتواند خودتأیید کند
     if (!['admin', 'super-admin'].includes(user.role)) {
       throw new ApiException(
         'FORBIDDEN',
@@ -307,7 +247,7 @@ export class OffersService {
     return {
       offerId: offer.id,
       productId: offer.productId,
-      attributes: { ...offer.attributes },
+      attributes: {},
       sellerId: offer.sellerId,
       sku: offer.sku,
       quantity,

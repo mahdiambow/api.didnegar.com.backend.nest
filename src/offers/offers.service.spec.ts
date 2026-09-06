@@ -3,7 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { OffersService, assertOfferAccess, isImmediateOfferUpdate } from './offers.service.js';
+import {
+  OffersService,
+  assertOfferAccess,
+  isImmediateOfferUpdate,
+} from './offers.service.js';
 import { SellerOffer } from './entities/seller-offer.entity.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
 import { Product } from '../products/entities/product.entity.js';
@@ -11,22 +15,24 @@ import {
   CreateSellerOfferDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
+
 const sellerId = '550e8400-e29b-41d4-a716-446655440001';
 const productId = '550e8400-e29b-41d4-a716-446655440002';
 const user = { sub: 'user', role: 'seller', sellerId };
 const input = {
   sellerId,
   productId,
-  attributes: { color: 'red', storage: '128GB' },
   sku: 'SAM-BLU',
   price: 68000000,
   stockQuantity: 10,
   stockStatus: 'instock',
 };
+
 function setup(patch = {}) {
   const offer = {
     ...input,
     id: 'offer',
+    attributes: {},
     isActive: true,
     approvalStatus: 'approved',
     seller: { status: 'active' },
@@ -59,6 +65,7 @@ function setup(patch = {}) {
   );
   return { service, repo, products };
 }
+
 describe('seller offers', () => {
   it('allows only the owner and super-admin to mutate offers', () => {
     expect(() => assertOfferAccess(user, sellerId)).not.toThrow();
@@ -76,6 +83,7 @@ describe('seller offers', () => {
       assertOfferAccess({ ...user, sellerId: null }, sellerId),
     ).toThrow();
   });
+
   it('does not write when a seller requests another seller offer', async () => {
     const { service, repo } = setup();
     await expect(
@@ -86,7 +94,8 @@ describe('seller offers', () => {
     ).rejects.toMatchObject({ status: 403 });
     expect(repo.save).not.toHaveBeenCalled();
   });
-  it('returns the selected seller, SKU, attributes and price for the order snapshot', async () => {
+
+  it('returns the selected seller, SKU and price for the order snapshot', async () => {
     const { service } = setup();
     expect(await service.resolvePurchasable('offer', 2)).toMatchObject({
       offerId: 'offer',
@@ -95,8 +104,10 @@ describe('seller offers', () => {
       sku: input.sku,
       unitPrice: input.price,
       quantity: 2,
+      attributes: {},
     });
   });
+
   it.each([
     { isActive: false },
     { stockQuantity: 0 },
@@ -114,14 +125,12 @@ describe('seller offers', () => {
       setup(patch).service.resolvePurchasable('offer', 1),
     ).rejects.toThrow();
   });
+
   it('applies price-only updates immediately without pending', async () => {
     expect(isImmediateOfferUpdate({ price: 70000000 })).toBe(true);
     expect(
       isImmediateOfferUpdate({ price: 1, stockQuantity: 2, isActive: true }),
     ).toBe(true);
-    expect(isImmediateOfferUpdate({ attributes: { color: 'red' } })).toBe(
-      false,
-    );
     expect(isImmediateOfferUpdate({ price: 1, sku: 'X' })).toBe(false);
 
     const { service } = setup();
@@ -129,19 +138,20 @@ describe('seller offers', () => {
     expect(result.approvalStatus).toBe('approved');
     expect(result.price).toBe(70000000);
   });
-  it('sends attribute changes to pending approval', async () => {
+
+  it('sends sku changes to pending approval', async () => {
     const { service } = setup();
-    const result = await service.update(user, 'offer', {
-      attributes: { color: 'red', storage: '128GB' },
-    });
+    const result = await service.update(user, 'offer', { sku: 'NEW-SKU' });
     expect(result.approvalStatus).toBe('pending');
   });
+
   it('rejects insufficient stock and malformed quantities', async () => {
     for (const quantity of [11, 0, -1, 1.5])
       await expect(
         setup().service.resolvePurchasable('offer', quantity),
       ).rejects.toThrow();
   });
+
   it('maps duplicate seller/SKU to conflict', async () => {
     const { service, repo } = setup();
     repo.save.mockRejectedValueOnce({ code: '23505' });
@@ -149,16 +159,13 @@ describe('seller offers', () => {
       status: 409,
     });
   });
+
   it.each([
     { price: -1 },
     { price: null },
     { stockQuantity: 1.5 },
     { stockStatus: 'wrong' },
     { sku: '' },
-    { attributes: null },
-    { attributes: [] },
-    { attributes: { color: 1 } },
-    { attributes: { color: '' } },
   ])('validates offer input %j', async (patch) => {
     expect(
       (
@@ -168,6 +175,7 @@ describe('seller offers', () => {
       ).length,
     ).toBeGreaterThan(0);
   });
+
   it('accepts valid input and strips seller reassignment from updates', async () => {
     expect(
       await validate(plainToInstance(CreateSellerOfferDto, input)),
@@ -181,20 +189,10 @@ describe('seller offers', () => {
     expect(dto).not.toHaveProperty('sellerId');
     expect(dto).not.toHaveProperty('productId');
   });
-  it('rejects attributes that are not defined on the product', async () => {
-    const { service, products } = setup();
-    products.findOneBy.mockResolvedValueOnce({
-      id: productId,
-      attributes: { color: ['blue'] },
-    });
-    await expect(service.create(user, input)).rejects.toMatchObject({
-      response: { code: 'OFFER_ATTRIBUTES_INVALID' },
-    });
-  });
 });
 
 describe('product offers with seller-specific features', () => {
-  it('allows two sellers to price the same red product independently', async () => {
+  it('allows two sellers to price the same product independently', async () => {
     const { service } = setup();
     const first = await service.create(user, input);
     const second = await service.create(
@@ -202,14 +200,13 @@ describe('product offers with seller-specific features', () => {
       { ...input, sellerId: 'second', price: 70000000 },
     );
     expect(first.productId).toBe(second.productId);
-    expect(first.attributes).toEqual(second.attributes);
     expect(first.price).not.toBe(second.price);
     expect(first.sellerId).not.toBe(second.sellerId);
   });
-  it('snapshots attributes so subsequent edits cannot change the order', async () => {
+
+  it('snapshots empty attributes for order independence', async () => {
     const { service } = setup();
     const snapshot = await service.resolvePurchasable('offer', 1);
-    expect(snapshot.attributes).toEqual(input.attributes);
-    expect(snapshot.attributes).not.toBe(input.attributes);
+    expect(snapshot.attributes).toEqual({});
   });
 });

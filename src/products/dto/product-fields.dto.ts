@@ -151,12 +151,14 @@ export type ProductWritableData = Omit<
   slug: string;
   brandId?: string | null;
   attributes?: Record<string, string[]>;
+  sellerIds?: string[];
 };
 
 export function toProductEntityData(
   dto: ProductWritableData,
   legacyId: number,
 ): Record<string, unknown> {
+  const sellerIds = [...new Set(dto.sellerIds ?? [])];
   return {
     legacyId,
     legacyTable: 'products',
@@ -177,5 +179,7 @@ export function toProductEntityData(
     width: dto.width ?? null,
     height: dto.height ?? null,
     attributes: dto.attributes ?? {},
+    sellerIds,
+    createdBySellerId: sellerIds[0] ?? null,
   };
 }

@@ -109,6 +109,20 @@ export class ProductResponseDto {
   })
   attributes: Record<string, string[]>;
 
+  @ApiProperty({
+    type: [String],
+    example: ['550e8400-e29b-41d4-a716-446655440002'],
+    description: 'آرایه شناسه فروشنده‌های مرتبط با محصول',
+  })
+  sellerIds: string[];
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: '550e8400-e29b-41d4-a716-446655440002',
+    description: 'فروشنده‌ای که محصول را اول ثبت کرده',
+  })
+  createdBySellerId: string | null;
+
   @ApiProperty()
   createdAt: Date;
 
@@ -182,6 +196,8 @@ export function toProductResponse(
     width: product.width !== null ? Number(product.width) : null,
     height: product.height !== null ? Number(product.height) : null,
     attributes: product.attributes ?? {},
+    sellerIds: product.sellerIds ?? [],
+    createdBySellerId: product.createdBySellerId ?? null,
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
     brand:

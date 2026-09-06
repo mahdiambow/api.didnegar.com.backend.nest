@@ -5,6 +5,7 @@ import {
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
 import { CategoriesService } from '../categories/categories.service.js';
+import { SellerRepository } from '../sellers/repositories/seller.repository.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import { toProductEntityData } from './dto/product-fields.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
@@ -21,6 +22,7 @@ export class ProductsService {
   constructor(
     private readonly productRepository: ProductRepository,
     private readonly brandRepository: BrandRepository,
+    private readonly sellerRepository: SellerRepository,
     @Inject(forwardRef(() => CategoriesService))
     private readonly categoriesService: CategoriesService,
   ) {}
@@ -71,16 +73,19 @@ export class ProductsService {
   }
 
   async create(dto: CreateProductDto) {
-    const { categoryIds, ...productData } = dto;
+    const { categoryIds, sellerIds, ...productData } = dto;
 
     await this.assertUniqueFields(productData.slug);
     if (productData.brandId) {
       await this.assertBrandExists(productData.brandId);
     }
+    await this.assertSellersExist(sellerIds);
 
     const legacyId = await this.productRepository.getNextLegacyId();
     const product = await this.productRepository.save(
-      this.productRepository.create(toProductEntityData(productData, legacyId)),
+      this.productRepository.create(
+        toProductEntityData({ ...productData, sellerIds }, legacyId),
+      ),
     );
 
     await this.categoriesService.assignCategoryIdsToProduct(
@@ -102,7 +107,7 @@ export class ProductsService {
       );
     }
 
-    const { categoryIds, ...productData } = dto;
+    const { categoryIds, sellerIds, ...productData } = dto;
 
     if (productData.slug && productData.slug !== product.slug) {
       const slugTaken = await this.productRepository.findBySlug(
@@ -120,10 +125,16 @@ export class ProductsService {
     if (productData.brandId) {
       await this.assertBrandExists(productData.brandId);
     }
+    await this.assertSellersExist(sellerIds);
 
     Object.assign(product, productData);
+    if (sellerIds !== undefined) {
+      product.sellerIds = [...new Set(sellerIds)];
+      if (!product.createdBySellerId && product.sellerIds[0]) {
+        product.createdBySellerId = product.sellerIds[0];
+      }
+    }
 
-    // هر تغییر روی محصول (غیر از قیمت که روی آفر است) → منتظر تأیید مجدد
     product.approvalStatus = 'pending';
     product.rejectionReason = null;
 
@@ -220,6 +231,20 @@ export class ProductsService {
         'برند غیرفعال است',
         HttpStatus.BAD_REQUEST,
       );
+    }
+  }
+
+  private async assertSellersExist(sellerIds?: string[]) {
+    if (!sellerIds?.length) return;
+    for (const sellerId of sellerIds) {
+      const seller = await this.sellerRepository.findById(sellerId);
+      if (!seller) {
+        throw new ApiException(
+          'SELLER_NOT_FOUND',
+          `فروشنده یافت نشد: ${sellerId}`,
+          HttpStatus.NOT_FOUND,
+        );
+      }
     }
   }
 }
