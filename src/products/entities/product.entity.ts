@@ -61,6 +61,12 @@ export class Product {
   @Column({ type: 'boolean', default: false })
   isDownloadable: boolean;
 
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
+
+  @Column({ type: 'int', default: 0 })
+  stock: number;
+
   @Column({ type: 'int', default: 0 })
   ratingCount: number;
 

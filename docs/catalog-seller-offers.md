@@ -1,6 +1,6 @@
 # Product → Variant → Seller Offer
 
-Product holds general catalog data. `sku`, `minPrice`, `maxPrice`, `stockQuantity`, `stockStatus`, `isOnSale`, and `variantIds` are no longer Product input/output fields or persisted Product columns. Product categories and general tax/dimension fields remain supported.
+Product holds general catalog data. `sku`, `minPrice`, `maxPrice`, `stockStatus`, `isOnSale`, and `variantIds` are no longer Product input/output fields or persisted Product columns. Product does expose `stock`. Product categories and general tax/dimension fields remain supported.
 
 ## Variants
 
@@ -38,7 +38,7 @@ Reads require JWT. Writes require admin or super-admin. A variant with offers ca
   "variantId": "550e8400-e29b-41d4-a716-446655440030",
   "sku": "SAM-S24U-256-BLU",
   "price": 68000000,
-  "stockQuantity": 10,
+  "stock": 10,
   "stockStatus": "instock",
   "isOnSale": false,
   "taxStatus": "taxable",

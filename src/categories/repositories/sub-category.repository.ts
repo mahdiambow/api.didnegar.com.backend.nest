@@ -23,7 +23,7 @@ export class SubCategoryRepository {
   findByCategoryId(categoryId: string) {
     return this.repo.find({
       where: { categoryId },
-      order: { name: 'ASC' },
+      order: { sort: 'ASC', name: 'ASC' },
     });
   }
 

@@ -1,10 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export class CreateCategoryDto {
@@ -17,6 +21,15 @@ export class CreateCategoryDto {
   @MaxLength(255)
   name: string;
 
+  @ApiPropertyOptional({
+    example: 'Mobile',
+    description: 'عنوان انگلیسی دسته‌بندی',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  nameEn?: string;
+
   @ApiProperty({
     example: 'mobile',
     description: 'شناسه یکتا — فقط حروف کوچک انگلیسی، عدد و -',
@@ -26,6 +39,18 @@ export class CreateCategoryDto {
   @MaxLength(200)
   @Matches(/^[a-z0-9-]+$/)
   slug: string;
+
+  @ApiPropertyOptional({ example: 0, default: 0, description: 'ترتیب نمایش' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  sort?: number;
+
+  @ApiPropertyOptional({ example: true, default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class UpdateCategoryDto {
@@ -35,10 +60,28 @@ export class UpdateCategoryDto {
   @MaxLength(255)
   name?: string;
 
+  @ApiPropertyOptional({ example: 'Mobile & Tablet' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  nameEn?: string | null;
+
   @ApiPropertyOptional({ example: 'mobile-tablet' })
   @IsOptional()
   @IsString()
   @MaxLength(200)
   @Matches(/^[a-z0-9-]+$/)
   slug?: string;
+
+  @ApiPropertyOptional({ example: 1, description: 'ترتیب نمایش' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  sort?: number;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

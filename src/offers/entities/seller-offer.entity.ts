@@ -16,7 +16,7 @@ import type { Product } from '../../products/entities/product.entity.js';
 @Index(['productId'])
 @Index(['sellerId', 'sku'], { unique: true })
 @Check('CHK_offer_price', '"price" >= 0')
-@Check('CHK_offer_stock', '"stockQuantity" >= 0')
+@Check('CHK_offer_stock', '"stock" >= 0')
 export class SellerOffer {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({ type: 'uuid' }) sellerId: string;
@@ -24,7 +24,7 @@ export class SellerOffer {
   @Column({ type: 'jsonb', default: {} }) attributes: Record<string, string>;
   @Column({ type: 'varchar', length: 100 }) sku: string;
   @Column({ type: 'decimal', precision: 19, scale: 4 }) price: number;
-  @Column({ type: 'int', default: 0 }) stockQuantity: number;
+  @Column({ type: 'int', default: 0 }) stock: number;
   @Column({ type: 'varchar', length: 50, default: 'outofstock' })
   stockStatus: string;
   @Column({ type: 'boolean', default: false }) isOnSale: boolean;
@@ -34,7 +34,6 @@ export class SellerOffer {
     string | null;
   @Column({ type: 'boolean', default: true }) isActive: boolean;
 
-  /** تغییر قیمت فوری تأیید می‌شود؛ تغییر ویژگی/SKU نیاز به تأیید دارد */
   @Index()
   @Column({ type: 'varchar', length: 20, default: 'approved' })
   approvalStatus: 'pending' | 'approved' | 'rejected';

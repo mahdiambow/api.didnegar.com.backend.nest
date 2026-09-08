@@ -10,7 +10,10 @@ export const CATEGORY_EXAMPLES = {
 export const CATEGORY_RESPONSE_EXAMPLE = {
   id: CATEGORY_EXAMPLES.categoryId,
   name: 'موبایل',
+  nameEn: 'Mobile',
   slug: 'mobile',
+  sort: 0,
+  isActive: true,
   createdAt: CATEGORY_EXAMPLES.createdAt,
 };
 
@@ -18,7 +21,10 @@ export const SUB_CATEGORY_RESPONSE_EXAMPLE = {
   id: CATEGORY_EXAMPLES.subCategoryId,
   categoryId: CATEGORY_EXAMPLES.categoryId,
   name: 'گوشی',
+  nameEn: 'Phones',
   slug: 'phones',
+  sort: 0,
+  isActive: true,
   createdAt: CATEGORY_EXAMPLES.createdAt,
   category: CATEGORY_RESPONSE_EXAMPLE,
 };

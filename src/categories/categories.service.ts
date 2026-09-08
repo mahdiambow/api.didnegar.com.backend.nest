@@ -63,7 +63,12 @@ export class CategoriesService {
     }
 
     const category = await this.categoryRepository.save(
-      this.categoryRepository.create(dto),
+      this.categoryRepository.create({
+        ...dto,
+        nameEn: dto.nameEn ?? null,
+        sort: dto.sort ?? 0,
+        isActive: dto.isActive ?? true,
+      }),
     );
     return toCategoryResponse(category);
   }
@@ -129,7 +134,12 @@ export class CategoriesService {
     }
 
     const subCategory = await this.subCategoryRepository.save(
-      this.subCategoryRepository.create(dto),
+      this.subCategoryRepository.create({
+        ...dto,
+        nameEn: dto.nameEn ?? null,
+        sort: dto.sort ?? 0,
+        isActive: dto.isActive ?? true,
+      }),
     );
     return toSubCategoryResponse(subCategory);
   }

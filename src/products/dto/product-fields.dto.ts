@@ -1,11 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
+  IsIn,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
   Min,
   ValidateBy,
@@ -89,6 +92,18 @@ export class ProductWritableFieldsDto {
   @IsBoolean()
   isDownloadable?: boolean;
 
+  @ApiPropertyOptional({ example: true, default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @ApiPropertyOptional({ example: 10, default: 0, description: 'موجودی محصول' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  stock?: number;
+
   @ApiPropertyOptional({ example: 'taxable' })
   @IsOptional()
   @IsString()
@@ -141,6 +156,25 @@ export class ProductWritableFieldsDto {
     },
   })
   attributes?: Record<string, string[]>;
+
+  @ApiPropertyOptional({
+    enum: ['pending', 'approved', 'rejected'],
+    example: 'approved',
+    description: 'وضعیت تأیید محصول',
+  })
+  @IsOptional()
+  @IsIn(['pending', 'approved', 'rejected'])
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+
+  @ApiPropertyOptional({
+    example: 'تصاویر محصول ناقص است',
+    description: 'دلیل رد — وقتی approvalStatus=rejected',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  rejectionReason?: string | null;
 }
 
 export type ProductWritableData = Omit<
@@ -152,6 +186,8 @@ export type ProductWritableData = Omit<
   brandId?: string | null;
   attributes?: Record<string, string[]>;
   sellerIds?: string[];
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string | null;
 };
 
 export function toProductEntityData(
@@ -159,6 +195,7 @@ export function toProductEntityData(
   legacyId: number,
 ): Record<string, unknown> {
   const sellerIds = [...new Set(dto.sellerIds ?? [])];
+  const approvalStatus = dto.approvalStatus ?? 'pending';
   return {
     legacyId,
     legacyTable: 'products',
@@ -167,11 +204,14 @@ export function toProductEntityData(
     description: dto.description ?? null,
     shortDescription: dto.shortDescription ?? null,
     status: dto.status ?? 'publish',
-    approvalStatus: 'pending',
-    rejectionReason: null,
+    approvalStatus,
+    rejectionReason:
+      approvalStatus === 'rejected' ? (dto.rejectionReason ?? null) : null,
     brandId: dto.brandId ?? null,
     isVirtual: dto.isVirtual ?? false,
     isDownloadable: dto.isDownloadable ?? false,
+    isActive: dto.isActive ?? true,
+    stock: dto.stock ?? 0,
     taxStatus: dto.taxStatus ?? null,
     taxClass: dto.taxClass ?? null,
     weight: dto.weight ?? null,

@@ -32,6 +32,7 @@ export class ProductsService {
     limit?: string | number;
     status?: string;
     approvalStatus?: string;
+    isActive?: boolean;
     brandId?: string;
     name?: string;
     categoryId?: string;
@@ -44,6 +45,7 @@ export class ProductsService {
       {
         status: query.status,
         approvalStatus: query.approvalStatus,
+        isActive: query.isActive,
         brandId: query.brandId,
         name: query.name,
         categoryId: query.categoryId,
@@ -80,6 +82,17 @@ export class ProductsService {
       await this.assertBrandExists(productData.brandId);
     }
     await this.assertSellersExist(sellerIds);
+
+    if (
+      productData.approvalStatus === 'rejected' &&
+      !productData.rejectionReason?.trim()
+    ) {
+      throw new ApiException(
+        'REJECTION_REASON_REQUIRED',
+        'برای رد محصول باید دلیل وارد شود',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
 
     const legacyId = await this.productRepository.getNextLegacyId();
     const product = await this.productRepository.save(
@@ -135,8 +148,33 @@ export class ProductsService {
       }
     }
 
-    product.approvalStatus = 'pending';
-    product.rejectionReason = null;
+    if (productData.approvalStatus !== undefined) {
+      if (productData.approvalStatus === 'rejected') {
+        const reason = productData.rejectionReason?.trim();
+        if (!reason) {
+          throw new ApiException(
+            'REJECTION_REASON_REQUIRED',
+            'برای رد محصول باید دلیل وارد شود',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        product.approvalStatus = 'rejected';
+        product.rejectionReason = reason;
+      } else if (productData.approvalStatus === 'approved') {
+        product.approvalStatus = 'approved';
+        product.rejectionReason = null;
+        if (product.status !== 'publish') {
+          product.status = 'publish';
+        }
+      } else {
+        product.approvalStatus = 'pending';
+        product.rejectionReason = null;
+      }
+    } else {
+      // تغییر محتوا بدون تعیین صریح وضعیت → منتظر تأیید مجدد
+      product.approvalStatus = 'pending';
+      product.rejectionReason = null;
+    }
 
     await this.productRepository.save(product);
     if (categoryIds !== undefined) {

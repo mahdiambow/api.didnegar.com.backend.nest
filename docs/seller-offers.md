@@ -14,7 +14,7 @@ POST /seller-offers
       "productId": "550e8400-e29b-41d4-a716-446655440011",
       "sku": "SAM-S24U-256-BLU",
       "price": 68000000,
-      "stockQuantity": 10,
+      "stock": 10,
       "stockStatus": "instock",
       "isOnSale": false,
       "isActive": true
@@ -23,7 +23,7 @@ POST /seller-offers
       "productId": "550e8400-e29b-41d4-a716-446655440012",
       "sku": "SAM-S24U-512-BLK",
       "price": 72000000,
-      "stockQuantity": 5,
+      "stock": 5,
       "stockStatus": "instock"
     }
   ]
@@ -37,4 +37,19 @@ POST /seller-offers
 ```json
 PATCH /seller-offers/:id
 { "price": 41000000 }
+```
+
+## تأیید پیشنهاد (ادمین)
+
+```json
+PATCH /seller-offers/:id/approval
+{ "approvalStatus": "approved" }
+```
+
+```json
+PATCH /seller-offers/:id/approval
+{
+  "approvalStatus": "rejected",
+  "rejectionReason": "قیمت نامعتبر است"
+}
 ```

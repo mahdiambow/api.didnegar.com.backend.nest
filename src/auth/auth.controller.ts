@@ -36,7 +36,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login-or-signup')
-  @OtpSendThrottle()
+ // @OtpSendThrottle()
   @ApiResponseMeta({
     code: 'OTP_SENT',
     message: 'OTP sent successfully',
@@ -64,7 +64,7 @@ export class AuthController {
   }
 
   @Post('login-with-password')
-  @LoginThrottle()
+  //@LoginThrottle()
   @ApiResponseMeta({
     code: 'LOGIN_SUCCESS',
     message: 'Logged in successfully',

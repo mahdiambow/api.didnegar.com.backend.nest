@@ -61,8 +61,20 @@ export class CategoryResponseDto {
   @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.name })
   name: string;
 
+  @ApiPropertyOptional({
+    example: CATEGORY_RESPONSE_EXAMPLE.nameEn,
+    nullable: true,
+  })
+  nameEn: string | null;
+
   @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.slug })
   slug: string;
+
+  @ApiProperty({ example: 0 })
+  sort: number;
+
+  @ApiProperty({ example: true })
+  isActive: boolean;
 
   @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.createdAt })
   createdAt: Date;
@@ -78,8 +90,20 @@ export class SubCategoryResponseDto {
   @ApiProperty({ example: SUB_CATEGORY_RESPONSE_EXAMPLE.name })
   name: string;
 
+  @ApiPropertyOptional({
+    example: SUB_CATEGORY_RESPONSE_EXAMPLE.nameEn,
+    nullable: true,
+  })
+  nameEn: string | null;
+
   @ApiProperty({ example: SUB_CATEGORY_RESPONSE_EXAMPLE.slug })
   slug: string;
+
+  @ApiProperty({ example: 0 })
+  sort: number;
+
+  @ApiProperty({ example: true })
+  isActive: boolean;
 
   @ApiProperty({ example: SUB_CATEGORY_RESPONSE_EXAMPLE.createdAt })
   createdAt: Date;
@@ -141,7 +165,10 @@ export function toCategoryResponse(category: Category): CategoryResponseDto {
   return {
     id: category.id,
     name: category.name,
+    nameEn: category.nameEn ?? null,
     slug: category.slug,
+    sort: category.sort ?? 0,
+    isActive: category.isActive ?? true,
     createdAt: category.createdAt,
   };
 }
@@ -154,7 +181,10 @@ export function toSubCategoryResponse(
     id: subCategory.id,
     categoryId: subCategory.categoryId,
     name: subCategory.name,
+    nameEn: subCategory.nameEn ?? null,
     slug: subCategory.slug,
+    sort: subCategory.sort ?? 0,
+    isActive: subCategory.isActive ?? true,
     createdAt: subCategory.createdAt,
     category:
       includeCategory && subCategory.category

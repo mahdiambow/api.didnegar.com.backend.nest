@@ -24,7 +24,7 @@ const item = {
   productId,
   sku: 'SAM-BLU',
   price: 68000000,
-  stockQuantity: 10,
+  stock: 10,
   stockStatus: 'instock',
 };
 const input = { sellerId, items: [item] };

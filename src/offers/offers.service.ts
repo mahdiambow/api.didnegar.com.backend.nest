@@ -14,6 +14,7 @@ import {
   CreateSellerOffersDto,
   ListSellerOffersDto,
   OFFER_IMMEDIATE_FIELDS,
+  ReviewSellerOfferDto,
   SellerOfferItemDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
@@ -47,7 +48,7 @@ export const toOfferResponse = (offer: SellerOffer) => ({
   productId: offer.productId,
   sku: offer.sku,
   price: Number(offer.price),
-  stockQuantity: offer.stockQuantity,
+  stock: offer.stock,
   stockStatus: offer.stockStatus,
   isOnSale: offer.isOnSale,
   taxStatus: offer.taxStatus,
@@ -160,7 +161,7 @@ export class OffersService {
         productId: item.productId,
         sku: item.sku,
         price: item.price,
-        stockQuantity: item.stockQuantity,
+        stock: item.stock,
         stockStatus: item.stockStatus,
         attributes: {},
         isOnSale: item.isOnSale ?? false,
@@ -180,6 +181,31 @@ export class OffersService {
     Object.assign(offer, dto);
     offer.approvalStatus = 'approved';
     offer.rejectionReason = null;
+
+    return this.save(offer);
+  }
+
+  async review(id: string, dto: ReviewSellerOfferDto) {
+    const offer = await this.getEntity(id);
+
+    if (dto.approvalStatus === 'rejected') {
+      const reason = dto.rejectionReason?.trim();
+      if (!reason) {
+        throw new ApiException(
+          'REJECTION_REASON_REQUIRED',
+          'برای رد پیشنهاد باید دلیل وارد شود',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      offer.approvalStatus = 'rejected';
+      offer.rejectionReason = reason;
+    } else if (dto.approvalStatus === 'approved') {
+      offer.approvalStatus = 'approved';
+      offer.rejectionReason = null;
+    } else {
+      offer.approvalStatus = 'pending';
+      offer.rejectionReason = null;
+    }
 
     return this.save(offer);
   }
@@ -225,8 +251,9 @@ export class OffersService {
       offer.seller.status !== 'active' ||
       offer.product.status !== 'publish' ||
       offer.product.approvalStatus !== 'approved' ||
+      offer.product.isActive === false ||
       offer.stockStatus !== 'instock' ||
-      offer.stockQuantity < quantity
+      offer.stock < quantity
     )
       throw new ApiException(
         'OFFER_UNAVAILABLE',
