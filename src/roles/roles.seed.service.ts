@@ -9,6 +9,7 @@ import { RoleRepository } from './repositories/role.repository.js';
 const SYSTEM_ROLE_NAMES: Record<DefaultRoleSlug, string> = {
   [DEFAULT_ROLE_SLUGS.USER]: 'کاربر',
   [DEFAULT_ROLE_SLUGS.SELLER]: 'فروشنده',
+  [DEFAULT_ROLE_SLUGS.SUPER_SELLER]: 'سوپر فروشنده',
   [DEFAULT_ROLE_SLUGS.ADMIN]: 'ادمین',
   [DEFAULT_ROLE_SLUGS.SUPER_ADMIN]: 'Didnegar',
 };

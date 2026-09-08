@@ -46,7 +46,7 @@ export class SellerOfferItemDto {
   @IsInt()
   @Min(0)
   @Max(2147483647)
-  stockQuantity: number;
+  stock: number;
 
   @ApiProperty({ enum: ['instock', 'outofstock', 'onbackorder'] })
   @IsIn(['instock', 'outofstock', 'onbackorder'])
@@ -143,8 +143,36 @@ export class SellerOfferResponseDto extends SellerOfferItemDto {
 /** فیلدهایی که تغییرشان فوری اعمال می‌شود */
 export const OFFER_IMMEDIATE_FIELDS = new Set([
   'price',
-  'stockQuantity',
+  'stock',
   'stockStatus',
   'isOnSale',
   'isActive',
 ]);
+
+export const OFFER_APPROVAL_STATUSES = [
+  'pending',
+  'approved',
+  'rejected',
+] as const;
+
+export type OfferApprovalStatus = (typeof OFFER_APPROVAL_STATUSES)[number];
+
+export class ReviewSellerOfferDto {
+  @ApiProperty({
+    enum: OFFER_APPROVAL_STATUSES,
+    example: 'approved',
+    description: 'وضعیت تأیید پیشنهاد: pending | approved | rejected',
+  })
+  @IsIn(OFFER_APPROVAL_STATUSES)
+  approvalStatus: OfferApprovalStatus;
+
+  @ApiPropertyOptional({
+    example: 'قیمت نامعتبر است',
+    description: 'دلیل رد — برای rejected الزامی است',
+    nullable: true,
+  })
+  @ValidateIf((dto: ReviewSellerOfferDto) => dto.approvalStatus === 'rejected')
+  @IsString()
+  @MaxLength(1000)
+  rejectionReason?: string | null;
+}

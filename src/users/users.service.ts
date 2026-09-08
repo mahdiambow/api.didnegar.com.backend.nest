@@ -12,6 +12,7 @@ import { toUserResponse } from '../auth/dto/user-response.dto.js';
 import { UserRepository } from '../auth/repositories/user.repository.js';
 import { RoleRepository } from '../roles/repositories/role.repository.js';
 import { SellerRepository } from '../sellers/repositories/seller.repository.js';
+import type { Role } from '../roles/entities/role.entity.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 
@@ -38,7 +39,7 @@ export class UsersService {
     );
 
     return paginatedList(
-      items.map(toUserResponse),
+      await Promise.all(items.map((item) => this.toResponse(item))),
       page,
       limit,
       total,
@@ -56,7 +57,7 @@ export class UsersService {
     }
 
     this.assertUserAccessible(scope, user.sellerId);
-    return toUserResponse(user);
+    return this.toResponse(user);
   }
 
   async create(scope: TenantScope, dto: CreateUserDto) {
@@ -69,21 +70,21 @@ export class UsersService {
       );
     }
 
-    const role = await this.roleRepository.findById(dto.roleId);
-    if (!role) {
-      throw new ApiException(
-        'ROLE_NOT_FOUND',
-        'نقش یافت نشد',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const sellerId = await this.resolveSellerId(scope, dto.sellerId, role.sellerId);
+    const { primaryRole, extraRoleIds } = await this.resolveRoleIds(
+      scope,
+      dto.roleIds,
+    );
+    const sellerId = await this.resolveSellerId(
+      scope,
+      dto.sellerId,
+      primaryRole.sellerId,
+    );
 
     const saved = await this.userRepository.save(
       this.userRepository.create({
         username: dto.username,
-        roleId: dto.roleId,
+        roleId: primaryRole.id,
+        extraRoleIds,
         sellerId,
         email: dto.email ?? null,
         displayName: dto.displayName ?? null,
@@ -97,7 +98,7 @@ export class UsersService {
     );
 
     const loaded = await this.userRepository.findByIdOrFail(saved.id);
-    return toUserResponse(loaded);
+    return this.toResponse(loaded);
   }
 
   async update(scope: TenantScope, id: string, dto: UpdateUserDto) {
@@ -112,29 +113,13 @@ export class UsersService {
 
     this.assertUserAccessible(scope, user.sellerId);
 
-    if (dto.roleId) {
-      const role = await this.roleRepository.findById(dto.roleId);
-      if (!role) {
-        throw new ApiException(
-          'ROLE_NOT_FOUND',
-          'نقش یافت نشد',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      if (
-        !isSuperAdmin(scope) &&
-        role.sellerId &&
-        role.sellerId !== scope.sellerId
-      ) {
-        throw new ApiException(
-          'FORBIDDEN',
-          'امکان اختصاص این نقش وجود ندارد',
-          HttpStatus.FORBIDDEN,
-        );
-      }
-
-      user.roleId = dto.roleId;
+    if (dto.roleIds) {
+      const { primaryRole, extraRoleIds } = await this.resolveRoleIds(
+        scope,
+        dto.roleIds,
+      );
+      user.roleId = primaryRole.id;
+      user.extraRoleIds = extraRoleIds;
     }
 
     if (dto.email !== undefined) user.email = dto.email;
@@ -150,7 +135,7 @@ export class UsersService {
 
     await this.userRepository.save(user);
     const loaded = await this.userRepository.findByIdOrFail(id);
-    return toUserResponse(loaded);
+    return this.toResponse(loaded);
   }
 
   async remove(scope: TenantScope, id: string) {
@@ -166,6 +151,53 @@ export class UsersService {
     this.assertUserAccessible(scope, user.sellerId);
     await this.userRepository.remove(user);
     return {};
+  }
+
+  private async resolveRoleIds(scope: TenantScope, roleIds: string[]) {
+    const uniqueIds = [...new Set(roleIds)];
+    const roles = await this.roleRepository.findByIds(uniqueIds);
+    const roleMap = new Map(roles.map((role) => [role.id, role]));
+
+    const missing = uniqueIds.filter((id) => !roleMap.has(id));
+    if (missing.length) {
+      throw new ApiException(
+        'ROLE_NOT_FOUND',
+        `نقش یافت نشد: ${missing.join(', ')}`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const ordered = uniqueIds.map((id) => roleMap.get(id)!);
+    for (const role of ordered) {
+      this.assertRoleAssignable(scope, role);
+    }
+
+    const [primaryRole, ...extraRoles] = ordered;
+    return {
+      primaryRole,
+      extraRoleIds: extraRoles.map((role) => role.id),
+    };
+  }
+
+  private async toResponse(user: {
+    extraRoleIds?: string[] | null;
+  } & Parameters<typeof toUserResponse>[0]) {
+    const extraRoles = await this.roleRepository.findByIds(
+      user.extraRoleIds ?? [],
+    );
+    return toUserResponse(user, extraRoles);
+  }
+
+  private assertRoleAssignable(scope: TenantScope, role: Role) {
+    if (isSuperAdmin(scope)) return;
+
+    if (role.sellerId && role.sellerId !== scope.sellerId) {
+      throw new ApiException(
+        'FORBIDDEN',
+        'امکان اختصاص این نقش وجود ندارد',
+        HttpStatus.FORBIDDEN,
+      );
+    }
   }
 
   private async resolveSellerId(

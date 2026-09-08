@@ -5,10 +5,13 @@ export class RoleResponseDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   id: string;
 
-  @ApiProperty({ example: 'editor' })
+  @ApiProperty({
+    example: 'super-seller',
+    description: 'نقش‌های سیستمی: user | seller | super-seller | admin | super-admin',
+  })
   slug: string;
 
-  @ApiProperty({ example: 'ویرایشگر' })
+  @ApiProperty({ example: 'سوپر فروشنده' })
   name: string;
 
   @ApiProperty({ example: ['users:read'], type: [String] })

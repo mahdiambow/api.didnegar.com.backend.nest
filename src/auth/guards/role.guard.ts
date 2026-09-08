@@ -8,6 +8,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ApiException } from '../../common/exceptions/api.exception.js';
 import { ROLES_KEY } from '../decorators/require-role.decorator.js';
+import { userHasRole, type AuthUser } from '../types/auth-user.type.js';
 
 @Injectable()
 export class RoleGuard implements CanActivate {
@@ -24,13 +25,13 @@ export class RoleGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const user = request.user as { sub: string; role: string } | undefined;
+    const user = request.user as AuthUser | undefined;
 
     if (!user) {
       throw new UnauthorizedException('احراز هویت نشده‌اید');
     }
 
-    if (!required.includes(user.role)) {
+    if (!userHasRole(user, ...required)) {
       throw new ApiException(
         'FORBIDDEN',
         `فقط نقش‌های ${required.join(', ')} مجاز هستند`,

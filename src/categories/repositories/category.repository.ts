@@ -18,7 +18,7 @@ export class CategoryRepository {
   }
 
   findAll() {
-    return this.repo.find({ order: { name: 'ASC' } });
+    return this.repo.find({ order: { sort: 'ASC', name: 'ASC' } });
   }
 
   create(data: Partial<Category>) {

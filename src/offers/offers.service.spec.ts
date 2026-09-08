@@ -19,12 +19,12 @@ import {
 const sellerId = '550e8400-e29b-41d4-a716-446655440001';
 const productId = '550e8400-e29b-41d4-a716-446655440002';
 const productId2 = '550e8400-e29b-41d4-a716-446655440003';
-const user = { sub: 'user', role: 'seller', sellerId };
+const user = { sub: 'user', role: 'seller', roles: ['seller'], sellerId };
 const item = {
   productId,
   sku: 'SAM-BLU',
   price: 68000000,
-  stockQuantity: 10,
+  stock: 10,
   stockStatus: 'instock',
 };
 const input = { sellerId, items: [item] };
@@ -76,7 +76,7 @@ describe('seller offers', () => {
     expect(() => assertOfferAccess(user, sellerId)).not.toThrow();
     expect(() =>
       assertOfferAccess(
-        { ...user, role: 'super-admin', sellerId: null },
+        { ...user, role: 'super-admin', roles: ['super-admin'], sellerId: null },
         sellerId,
       ),
     ).not.toThrow();

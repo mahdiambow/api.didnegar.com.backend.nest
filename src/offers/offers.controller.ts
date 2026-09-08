@@ -29,6 +29,7 @@ import {
   UpdateSellerOfferDto,
   SellerOfferResponseDto,
   ListSellerOffersDto,
+  ReviewSellerOfferDto,
 } from './dto/seller-offer.dto.js';
 import type { AuthUser } from '../auth/types/auth-user.type.js';
 import { OffersService } from './offers.service.js';
@@ -83,6 +84,7 @@ export class OffersController {
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(
     DEFAULT_ROLE_SLUGS.SELLER,
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
     DEFAULT_ROLE_SLUGS.ADMIN,
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
@@ -99,11 +101,35 @@ export class OffersController {
     return this.offersService.create(req.user, dto);
   }
 
+  @Patch(':id/approval')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @RequireRole(
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+    DEFAULT_ROLE_SLUGS.ADMIN,
+    DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+  )
+  @ApiOperation({
+    summary: 'تأیید / رد / بازگرداندن به انتظار پیشنهاد فروش (فقط ادمین)',
+  })
+  @ApiResponseMeta({
+    code: 'OFFER_REVIEWED',
+    message: 'Seller offer approval status updated',
+  })
+  @ApiOkResponse({ type: OfferApiResponseDto })
+  review(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReviewSellerOfferDto,
+  ) {
+    return this.offersService.review(id, dto);
+  }
+
   @Patch(':id')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(
     DEFAULT_ROLE_SLUGS.SELLER,
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
     DEFAULT_ROLE_SLUGS.ADMIN,
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
@@ -129,6 +155,7 @@ export class OffersController {
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(
     DEFAULT_ROLE_SLUGS.SELLER,
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
     DEFAULT_ROLE_SLUGS.ADMIN,
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )

@@ -55,7 +55,11 @@ export class AuthController {
     code: 'OTP_VERIFIED',
     message: 'OTP verified successfully',
   })
-  @ApiOperation({ summary: 'تایید کد OTP با شماره موبایل و دریافت token' })
+  @ApiOperation({
+    summary: 'تایید کد OTP با شماره موبایل و دریافت token',
+    description:
+      'در پاسخ کاربر، فیلد roles شامل نقش اصلی و نقش‌های اضافه است (مثلاً ["super-admin","super-seller"])',
+  })
   @ApiBody({ type: VerifyOtpDto })
   @ApiOkResponse({ type: VerifyOtpApiResponseDto })
   @ApiTooManyRequestsResponse({ type: ApiErrorResponseDto })
@@ -69,7 +73,11 @@ export class AuthController {
     code: 'LOGIN_SUCCESS',
     message: 'Logged in successfully',
   })
-  @ApiOperation({ summary: 'ورود با شماره موبایل و رمز عبور' })
+  @ApiOperation({
+    summary: 'ورود با شماره موبایل و رمز عبور',
+    description:
+      'نمونه سوپرادمین+سوپرسلر: 09363078987 — در پاسخ فیلد roles را ببینید',
+  })
   @ApiBody({ type: LoginWithPasswordDto })
   @ApiOkResponse({ type: LoginWithPasswordApiResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
@@ -85,6 +93,7 @@ export class AuthController {
   })
   @ApiOperation({
     summary: 'اعتبارسنجی access token (با امکان refresh)',
+    description: 'پاسخ شامل role (اصلی) و roles (همه نقش‌ها) است',
   })
   @ApiBody({ type: ValidateTokenDto })
   @ApiOkResponse({ type: ValidateTokenApiResponseDto })

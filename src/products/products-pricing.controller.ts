@@ -1,6 +1,7 @@
 import type { AuthUser } from '../auth/types/auth-user.type.js';
 import { RoleGuard } from '../auth/guards/role.guard.js';
 import { RequireRole } from '../auth/decorators/require-role.decorator.js';
+import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
 import {
   Body,
   Req,
@@ -55,7 +56,12 @@ const ImportPricesApiResponseDto = createSuccessResponseDto(
 @ApiTags('Seller Offers')
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RoleGuard)
-@RequireRole('seller', 'admin', 'super-admin')
+@RequireRole(
+  DEFAULT_ROLE_SLUGS.SELLER,
+  DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+  DEFAULT_ROLE_SLUGS.ADMIN,
+  DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+)
 @Controller('seller-offers/prices')
 export class ProductsPricingController {
   constructor(private readonly productPricingService: ProductPricingService) {}

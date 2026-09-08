@@ -2,15 +2,21 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { User } from '../entities/user.entity.js';
 import type { UserProfile } from '../entities/user-profile.entity.js';
 import type { UserAddress } from '../entities/user-address.entity.js';
+import type { Role } from '../../roles/entities/role.entity.js';
+import { resolveUserRoles } from '../types/auth-user.type.js';
 
 export class UserRoleSummaryDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   id: string;
 
-  @ApiProperty({ example: 'seller' })
+  @ApiProperty({
+    example: 'super-admin',
+    description:
+      'نقش اصلی — یکی از: user | seller | super-seller | admin | super-admin',
+  })
   slug: string;
 
-  @ApiProperty({ example: 'فروشنده' })
+  @ApiProperty({ example: 'Didnegar' })
   name: string;
 }
 
@@ -84,7 +90,10 @@ export class UserResponseDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   id: string;
 
-  @ApiProperty({ example: '09363078987' })
+  @ApiProperty({
+    example: '09363078987',
+    description: 'سوپرادمین نمونه با نقش اضافه super-seller',
+  })
   username: string;
 
   @ApiPropertyOptional({ example: 'user@example.com' })
@@ -108,6 +117,23 @@ export class UserResponseDto {
   @ApiProperty({ type: UserRoleSummaryDto })
   role: UserRoleSummaryDto;
 
+  @ApiProperty({
+    type: [String],
+    example: [
+      '550e8400-e29b-41d4-a716-446655440001',
+      '550e8400-e29b-41d4-a716-446655440002',
+    ],
+    description: 'شناسه همه نقش‌ها — اولین مورد نقش اصلی است',
+  })
+  roleIds: string[];
+
+  @ApiProperty({
+    type: [String],
+    example: ['super-admin', 'super-seller'],
+    description: 'slug همه نقش‌ها',
+  })
+  roles: string[];
+
   @ApiPropertyOptional({ type: UserSellerSummaryDto, nullable: true })
   seller: UserSellerSummaryDto | null;
 
@@ -124,7 +150,14 @@ export class UserResponseDto {
   updatedAt: Date;
 }
 
-export function toUserResponse(user: User): UserResponseDto {
+export function toUserResponse(
+  user: User,
+  extraRoles: Role[] = [],
+): UserResponseDto {
+  const orderedExtra = (user.extraRoleIds ?? [])
+    .map((id) => extraRoles.find((role) => role.id === id))
+    .filter((role): role is Role => Boolean(role));
+
   return {
     id: user.id,
     username: user.username,
@@ -139,6 +172,11 @@ export function toUserResponse(user: User): UserResponseDto {
       slug: user.role.slug,
       name: user.role.name,
     },
+    roleIds: [user.role.id, ...orderedExtra.map((role) => role.id)],
+    roles: resolveUserRoles(
+      user.role.slug,
+      orderedExtra.map((role) => role.slug),
+    ),
     seller: user.seller
       ? {
           id: user.seller.id,

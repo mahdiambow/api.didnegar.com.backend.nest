@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtPayload } from '../interfaces/jwt-payload.interface.js';
+import { resolveUserRoles } from '../types/auth-user.type.js';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -18,6 +19,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('توکن نامعتبر است');
     }
 
-    return { sub: payload.sub, role: payload.role, sellerId: payload.sellerId ?? null };
+    const roles = resolveUserRoles(payload.role, payload.roles ?? []);
+
+    return {
+      sub: payload.sub,
+      role: payload.role,
+      roles,
+      sellerId: payload.sellerId ?? null,
+    };
   }
 }

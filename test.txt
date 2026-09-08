@@ -1,0 +1,140 @@
+developer@ubuntu1:/var/www$ cat docker-compose.yml
+services:
+
+  # ==========================================
+  # NGINX
+  # ==========================================
+  nginx:
+    image: nginx:alpine
+    container_name: didnegar_nginx
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - api
+
+  # ==========================================
+  # PostgreSQL
+  # ==========================================
+  postgres:
+    image: postgres:16-bookworm
+    container_name: didnegar_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - app-network
+
+  # ==========================================
+  # API - NestJS
+  # ==========================================
+  api:
+    build:
+      context: ./api.didnegar.com.backend.nest
+      dockerfile: Dockerfile
+    image: didnegar-api:latest
+    container_name: didnegar_api
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_DATABASE}
+      JWT_SECRET: ${JWT_SECRET}
+      SEED_ON_STARTUP: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # ==========================================
+  # PGADMIN
+  # ==========================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: didnegar_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    expose:
+      - "80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - app-network
+
+  # ==========================================
+  # NEW MYSQL
+  # ==========================================
+  new-mysql:
+    build:
+      context: ./new-mysql
+      dockerfile: Dockerfile
+    container_name: new-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${NEW_DB_PASSWORD}
+      MYSQL_DATABASE: ${NEW_DB_NAME}
+    ports:
+      - "3308:3306"
+    volumes:
+      - new_mysql_data:/var/lib/mysql
+    networks:
+      - app-network
+
+  # ==========================================
+  # PHPMyAdmin (for MySQL Management)
+  # ==========================================
+  phpmyadmin:
+    build:
+      context: ./phpmyadmin
+      dockerfile: Dockerfile
+    container_name: phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_ARBITRARY: 1
+      PMA_HOST: new-mysql
+    ports:
+      - "8080:80"
+    depends_on:
+      - new-mysql
+    networks:
+      - app-network
+
+# ==========================================
+# NETWORKS
+# ==========================================
+networks:
+  app-network:
+    driver: bridge
+
+# ==========================================
+# VOLUMES
+# ==========================================
+volumes:
+  postgres_data:
+  pgadmin_data:
+  new_mysql_data:

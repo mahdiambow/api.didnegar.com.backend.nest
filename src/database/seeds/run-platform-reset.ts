@@ -49,6 +49,7 @@ async function run() {
             WHEN slug = 'super-admin' THEN 'Didnegar'
             WHEN slug = 'user' THEN 'کاربر'
             WHEN slug = 'seller' THEN 'فروشنده'
+            WHEN slug = 'super-seller' THEN 'سوپر فروشنده'
             WHEN slug = 'admin' THEN 'ادمین'
             ELSE name
           END
@@ -62,10 +63,15 @@ async function run() {
       `
       UPDATE users
       SET "roleId" = (SELECT id FROM roles WHERE slug = $1 AND "sellerId" IS NULL LIMIT 1),
-          "sellerId" = NULL
-      WHERE username = $2
+          "sellerId" = NULL,
+          "extraRoleIds" = ARRAY[(SELECT id FROM roles WHERE slug = $2 AND "sellerId" IS NULL LIMIT 1)]::uuid[]
+      WHERE username = $3
     `,
-      [DEFAULT_ROLE_SLUGS.SUPER_ADMIN, SUPER_ADMIN_USERNAME],
+      [
+        DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+        DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+        SUPER_ADMIN_USERNAME,
+      ],
     );
 
     await qr.query(
@@ -96,7 +102,7 @@ async function run() {
       `
       DELETE FROM roles r
       WHERE r."sellerId" IS NULL
-        AND r.slug NOT IN ('user', 'seller', 'admin', 'super-admin')
+        AND r.slug NOT IN ('user', 'seller', 'super-seller', 'admin', 'super-admin')
     `,
     );
 

@@ -76,7 +76,11 @@ export class RolesController {
     code: 'ROLES_FOUND',
     message: 'Roles retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست نقش‌ها با pagination' })
+  @ApiOperation({
+    summary: 'لیست نقش‌ها با pagination',
+    description:
+      'نقش‌های سیستمی: user | seller | super-seller | admin | super-admin',
+  })
   @ApiOkResponse({ type: RolesPaginatedApiResponseDto })
   findAll(@Req() req: { user: AuthUser }, @Query() query: ListRolesQueryDto) {
     return this.rolesService.findAll(req.user, query);

@@ -75,6 +75,12 @@ export class ProductResponseDto {
   @ApiProperty()
   isDownloadable: boolean;
 
+  @ApiProperty({ example: true })
+  isActive: boolean;
+
+  @ApiProperty({ example: 10, description: 'موجودی محصول' })
+  stock: number;
+
   @ApiProperty()
   ratingCount: number;
 
@@ -186,6 +192,8 @@ export function toProductResponse(
     brandId: product.brandId,
     isVirtual: product.isVirtual,
     isDownloadable: product.isDownloadable,
+    isActive: product.isActive ?? true,
+    stock: product.stock ?? 0,
     ratingCount: product.ratingCount,
     averageRating: Number(product.averageRating),
     totalSales: product.totalSales,

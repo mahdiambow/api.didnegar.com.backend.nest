@@ -352,6 +352,7 @@ export const ALL_PERMISSIONS: readonly Permission[] =
 export const DEFAULT_ROLE_SLUGS = {
   USER: 'user',
   SELLER: 'seller',
+  SUPER_SELLER: 'super-seller',
   ADMIN: 'admin',
   SUPER_ADMIN: 'super-admin',
 } as const;
@@ -402,6 +403,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<
 > = {
   [DEFAULT_ROLE_SLUGS.USER]: [],
   [DEFAULT_ROLE_SLUGS.SELLER]: SELLER_PERMISSIONS,
+  [DEFAULT_ROLE_SLUGS.SUPER_SELLER]: SELLER_PERMISSIONS,
   [DEFAULT_ROLE_SLUGS.ADMIN]: [],
   [DEFAULT_ROLE_SLUGS.SUPER_ADMIN]: ALL_PERMISSIONS,
 };
