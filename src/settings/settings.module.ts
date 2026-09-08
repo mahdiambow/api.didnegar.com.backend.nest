@@ -8,9 +8,10 @@ import { AuthModule } from '../auth/auth.module.js';
 import { FooterSettings } from './entities/footer-settings.entity.js';
 import { SettingsController } from './settings.controller.js';
 import { SettingsService } from './settings.service.js';
-
 import { HeaderSettings } from './entities/header-settings.entity.js';
 import { HeaderSettingsController } from './header-settings.controller.js';
+import { AboutUs } from './entities/about-us.entity.js';
+import { AboutUsController } from './about-us.controller.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { HeaderSettingsController } from './header-settings.controller.js';
     TypeOrmModule.forFeature([
       FooterSettings,
       HeaderSettings,
+      AboutUs,
       Banner,
       Category,
     ]),
@@ -25,6 +27,7 @@ import { HeaderSettingsController } from './header-settings.controller.js';
   controllers: [
     SettingsController,
     HeaderSettingsController,
+    AboutUsController,
     BannersController,
   ],
   providers: [SettingsService, BannersService],
