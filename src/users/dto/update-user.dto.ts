@@ -1,5 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
   IsBoolean,
   IsEmail,
   IsOptional,
@@ -10,10 +14,22 @@ import {
 } from 'class-validator';
 
 export class UpdateUserDto {
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiPropertyOptional({
+    type: [String],
+    example: [
+      '550e8400-e29b-41d4-a716-446655440001',
+      '550e8400-e29b-41d4-a716-446655440002',
+    ],
+    description:
+      'آرایه شناسه نقش‌ها — اولین آیتم نقش اصلی، بقیه اضافه. جایگزینی کامل لیست فعلی',
+  })
   @IsOptional()
-  @IsUUID()
-  roleId?: string;
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(10)
+  @ArrayUnique()
+  @IsUUID('4', { each: true })
+  roleIds?: string[];
 
   @ApiPropertyOptional({ example: 'user@example.com' })
   @IsOptional()

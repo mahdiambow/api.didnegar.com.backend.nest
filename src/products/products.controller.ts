@@ -111,13 +111,17 @@ export class ProductsController {
 
   @Patch(':id/approval')
   @UseGuards(RoleGuard)
-  @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
+  @RequireRole(
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+    DEFAULT_ROLE_SLUGS.ADMIN,
+    DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+  )
   @ApiResponseMeta({
     code: 'PRODUCT_REVIEWED',
     message: 'Product approval status updated',
   })
   @ApiOperation({
-    summary: 'تأیید / رد / بازگرداندن به انتظار محصول (فقط ادمین)',
+    summary: 'تأیید / رد / بازگرداندن به انتظار محصول (ادمین / سوپر فروشنده)',
   })
   @ApiOkResponse({ type: ProductApiResponseDto })
   review(

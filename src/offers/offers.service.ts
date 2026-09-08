@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { AuthUser } from '../auth/types/auth-user.type.js';
+import { userHasRole } from '../auth/types/auth-user.type.js';
+import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
 import {
   getPaginationParams,
   paginatedList,
@@ -20,11 +22,18 @@ import {
 } from './dto/seller-offer.dto.js';
 
 export function assertOfferAccess(user: AuthUser, sellerId: string) {
-  if (user.role === 'super-admin') return;
+  if (
+    userHasRole(
+      user,
+      DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+      DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+    )
+  )
+    return;
   if (
     !user.sellerId ||
     user.sellerId !== sellerId ||
-    !['seller', 'admin'].includes(user.role)
+    !userHasRole(user, DEFAULT_ROLE_SLUGS.SELLER, DEFAULT_ROLE_SLUGS.ADMIN)
   )
     throw new ApiException(
       'FORBIDDEN',

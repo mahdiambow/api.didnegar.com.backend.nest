@@ -46,14 +46,29 @@ async function bootstrap() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Didnegar API')
-    .setDescription('مستندات API')
+    .setDescription(
+      [
+        'مستندات API',
+        '',
+        '### نقش‌ها',
+        '- `user` | `seller` | `super-seller` | `admin` | `super-admin`',
+        '- کاربر می‌تواند چند نقش داشته باشد با `roleIds: [uuid, ...]` (اولی نقش اصلی است)',
+        '- در JWT و پاسخ لاگین فیلد `roles` شامل همه نقش‌هاست',
+        '',
+        '### Offer Products',
+        '- فروشنده با `POST /offer-products` درخواست می‌دهد (`pending`)',
+        '- `super-seller` / `admin` / `super-admin` با `PATCH /offer-products/:id/approval` تأیید می‌کنند',
+        '- بعد از approved → Product + SellerOffer ساخته می‌شود',
+      ].join('\n'),
+    )
     .setVersion('1.0')
     .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Access token دریافتی از verify-otp',
+        description:
+          'Access token از login/verify-otp — شامل role و roles (چندنقشی)',
       },
       'access-token',
     )

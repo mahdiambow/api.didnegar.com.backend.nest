@@ -14,6 +14,14 @@ export class RoleRepository {
     return this.repo.findOne({ where: { id } });
   }
 
+  findByIds(ids: string[]) {
+    if (!ids.length) return Promise.resolve([] as Role[]);
+    return this.repo
+      .createQueryBuilder('role')
+      .where('role.id IN (:...ids)', { ids })
+      .getMany();
+  }
+
   findBySlug(slug: string, sellerId: string | null = null) {
     return this.repo.findOne({
       where: {

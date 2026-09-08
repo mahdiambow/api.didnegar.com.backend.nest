@@ -6,6 +6,7 @@ import { ApiException } from '../common/exceptions/api.exception.js';
 import { JwtPayload } from './interfaces/jwt-payload.interface.js';
 import { toUserResponse } from './dto/user-response.dto.js';
 import { RolesSeedService } from '../roles/roles.seed.service.js';
+import { RoleRepository } from '../roles/repositories/role.repository.js';
 import { UserRepository } from './repositories/user.repository.js';
 import { RefreshTokenRepository } from './repositories/refresh-token.repository.js';
 import {
@@ -13,6 +14,8 @@ import {
   otpTtlMs,
   refreshTokenExpiresAt,
 } from './config/auth.config.js';
+import { resolveUserRoles } from './types/auth-user.type.js';
+import type { User } from './entities/user.entity.js';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +27,7 @@ export class AuthService {
     private readonly refreshTokenRepository: RefreshTokenRepository,
     private readonly jwtService: JwtService,
     private readonly rolesSeedService: RolesSeedService,
+    private readonly roleRepository: RoleRepository,
   ) {}
 
   async loginOrSignup(mobile: string) {
@@ -91,14 +95,10 @@ export class AuthService {
       );
     }
 
-    const tokens = await this.issueTokens(
-      user.id,
-      user.role.slug,
-      user.sellerId,
-    );
+    const tokens = await this.issueTokensForUser(user);
 
     return {
-      user: toUserResponse(user),
+      user: await this.toResponse(user),
       ...tokens,
     };
   }
@@ -138,14 +138,10 @@ export class AuthService {
       isActive: true,
     });
 
-    const tokens = await this.issueTokens(
-      user.id,
-      user.role.slug,
-      user.sellerId,
-    );
+    const tokens = await this.issueTokensForUser(user);
 
     return {
-      user: toUserResponse(user),
+      user: await this.toResponse(user),
       hasPassword: !!user.password,
       ...tokens,
     };
@@ -176,6 +172,7 @@ export class AuthService {
         refreshed: false,
         userId: user.id,
         role: user.role.slug,
+        roles: await this.resolveRoleSlugs(user),
         sellerId: user.sellerId,
       };
     } catch (error) {
@@ -197,6 +194,7 @@ export class AuthService {
         refreshed: true,
         userId: refreshed.userId,
         role: refreshed.role,
+        roles: refreshed.roles,
         sellerId: refreshed.sellerId,
         accessToken: refreshed.accessToken,
         refreshToken: refreshed.refreshToken,
@@ -249,14 +247,17 @@ export class AuthService {
       );
     }
 
+    const roles = await this.resolveRoleSlugs(user);
     const tokens = await this.issueTokens(
       user.id,
       user.role.slug,
+      roles,
       user.sellerId,
     );
     return {
       userId: user.id,
       role: user.role.slug,
+      roles,
       sellerId: user.sellerId,
       ...tokens,
     };
@@ -284,7 +285,7 @@ export class AuthService {
       );
     }
 
-    return toUserResponse(updatedUser);
+    return this.toResponse(updatedUser);
   }
 
   private async sendOtpSms(mobile: string, code: string): Promise<void> {
@@ -292,20 +293,45 @@ export class AuthService {
     console.log(`[SMS] ارسال کد ${code} به شماره ${mobile}`);
   }
 
+  private async toResponse(user: User) {
+    const extraRoles = await this.roleRepository.findByIds(
+      user.extraRoleIds ?? [],
+    );
+    return toUserResponse(user, extraRoles);
+  }
+
+  private async resolveRoleSlugs(user: User) {
+    const extraRoles = await this.roleRepository.findByIds(
+      user.extraRoleIds ?? [],
+    );
+    return resolveUserRoles(
+      user.role.slug,
+      extraRoles.map((role) => role.slug),
+    );
+  }
+
+  private async issueTokensForUser(user: User) {
+    const roles = await this.resolveRoleSlugs(user);
+    return this.issueTokens(user.id, user.role.slug, roles, user.sellerId);
+  }
+
   private async issueTokens(
     userId: string,
     roleSlug: string,
+    roles: string[],
     sellerId: string | null,
   ) {
     const accessPayload: JwtPayload = {
       sub: userId,
       role: roleSlug,
+      roles,
       sellerId,
       type: 'access',
     };
     const refreshPayload: JwtPayload = {
       sub: userId,
       role: roleSlug,
+      roles,
       sellerId,
       type: 'refresh',
     };

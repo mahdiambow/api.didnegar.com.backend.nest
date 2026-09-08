@@ -14,6 +14,7 @@ const SEED_USERS = [
   {
     username: '09363078987',
     roleSlug: DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+    extraRoleSlugs: [DEFAULT_ROLE_SLUGS.SUPER_SELLER] as const,
     displayName: 'Super Admin',
     firstName: 'مدیر',
     lastName: 'سیستم',
@@ -35,6 +36,14 @@ const SEED_USERS = [
     lastName: 'فروشگاه',
     email: 'seller@didnegar.com',
     sellerKey: 'didnegar-shop',
+  },
+  {
+    username: '09444444444',
+    roleSlug: DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+    displayName: 'سوپر فروشنده',
+    firstName: 'سوپر',
+    lastName: 'فروشنده',
+    email: 'superseller@didnegar.com',
   },
   {
     username: '09333333333',
@@ -64,19 +73,30 @@ export class UsersSeedService {
     const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
 
     for (const [index, userSeed] of SEED_USERS.entries()) {
+      const role = await this.roleRepository.findBySlug(userSeed.roleSlug, null);
+      if (!role) {
+        throw new Error(`Role not found: ${userSeed.roleSlug}`);
+      }
+
+      const extraRoleIds: string[] = [];
+      if ('extraRoleSlugs' in userSeed) {
+        for (const slug of userSeed.extraRoleSlugs) {
+          const extra = await this.roleRepository.findBySlug(slug, null);
+          if (extra) extraRoleIds.push(extra.id);
+        }
+      }
+
       const existing = await this.userRepo.findOne({
         where: { username: userSeed.username },
       });
       if (existing) {
+        existing.extraRoleIds = extraRoleIds;
+        await this.userRepo.save(existing);
+
         if ('sellerKey' in userSeed && userSeed.sellerKey) {
           this.sellerUserIds.set(userSeed.sellerKey, existing.id);
         }
         continue;
-      }
-
-      const role = await this.roleRepository.findBySlug(userSeed.roleSlug, null);
-      if (!role) {
-        throw new Error(`Role not found: ${userSeed.roleSlug}`);
       }
 
       const user = await this.userRepo.save(
@@ -88,6 +108,7 @@ export class UsersSeedService {
           lastName: userSeed.lastName,
           email: userSeed.email,
           roleId: role.id,
+          extraRoleIds,
           legacyId: index + 1,
           legacyTable: 'users',
           isActive: true,

@@ -251,7 +251,14 @@ export class SellersService {
       this.userRepository.findUsersBySellerId(seller.id),
     ]);
 
-    const admins = users.map(toUserResponse);
+    const admins = await Promise.all(
+      users.map(async (user) => {
+        const extraRoles = await this.roleRepository.findByIds(
+          user.extraRoleIds ?? [],
+        );
+        return toUserResponse(user, extraRoles);
+      }),
+    );
 
     return toSellerResponse(seller, {
       contractId: contract?.id ?? null,

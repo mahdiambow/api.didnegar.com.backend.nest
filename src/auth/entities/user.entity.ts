@@ -55,6 +55,10 @@ export class User {
   @Column({ type: 'uuid' })
   roleId: string;
 
+  /** نقش‌های اضافه علاوه بر role اصلی (آرایه uuid) */
+  @Column({ type: 'uuid', array: true, default: [] })
+  extraRoleIds: string[];
+
   @Column({ type: 'uuid', nullable: true })
   sellerId: string | null;
 

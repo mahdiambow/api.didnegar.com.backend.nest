@@ -4,7 +4,8 @@ import { IsNotEmpty, IsString, Matches, MinLength } from 'class-validator';
 export class LoginWithPasswordDto {
   @ApiProperty({
     example: '09363078987',
-    description: 'شماره موبایل',
+    description:
+      'شماره موبایل — نمونه سوپرادمین+سوپرسلر: 09363078987',
   })
   @IsString()
   @IsNotEmpty()

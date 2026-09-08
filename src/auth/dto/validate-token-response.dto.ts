@@ -11,8 +11,25 @@ export class ValidateTokenDataDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   userId: string;
 
-  @ApiProperty({ example: 'user' })
+  @ApiProperty({
+    example: 'super-admin',
+    description: 'نقش اصلی کاربر',
+  })
   role: string;
+
+  @ApiProperty({
+    type: [String],
+    example: ['super-admin', 'super-seller'],
+    description: 'نقش اصلی + نقش‌های اضافه (برای RoleGuard استفاده می‌شود)',
+  })
+  roles: string[];
+
+  @ApiPropertyOptional({
+    example: null,
+    nullable: true,
+    description: 'شناسه فروشنده در صورت وجود',
+  })
+  sellerId?: string | null;
 
   @ApiPropertyOptional({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' })
   accessToken?: string;

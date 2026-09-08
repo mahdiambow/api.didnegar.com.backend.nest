@@ -84,6 +84,7 @@ export class OffersController {
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(
     DEFAULT_ROLE_SLUGS.SELLER,
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
     DEFAULT_ROLE_SLUGS.ADMIN,
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
@@ -103,7 +104,11 @@ export class OffersController {
   @Patch(':id/approval')
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
-  @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
+  @RequireRole(
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+    DEFAULT_ROLE_SLUGS.ADMIN,
+    DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+  )
   @ApiOperation({
     summary: 'تأیید / رد / بازگرداندن به انتظار پیشنهاد فروش (فقط ادمین)',
   })
@@ -124,6 +129,7 @@ export class OffersController {
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(
     DEFAULT_ROLE_SLUGS.SELLER,
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
     DEFAULT_ROLE_SLUGS.ADMIN,
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
@@ -149,6 +155,7 @@ export class OffersController {
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(
     DEFAULT_ROLE_SLUGS.SELLER,
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
     DEFAULT_ROLE_SLUGS.ADMIN,
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )

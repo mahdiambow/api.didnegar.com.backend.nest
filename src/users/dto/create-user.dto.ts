@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
   IsBoolean,
   IsEmail,
   IsNotEmpty,
@@ -18,9 +22,21 @@ export class CreateUserDto {
   @Matches(/^09\d{9}$/, { message: 'شماره موبایل نامعتبر است' })
   username: string;
 
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
-  @IsUUID()
-  roleId: string;
+  @ApiProperty({
+    type: [String],
+    example: [
+      '550e8400-e29b-41d4-a716-446655440001',
+      '550e8400-e29b-41d4-a716-446655440002',
+    ],
+    description:
+      'آرایه شناسه نقش‌ها — اولین آیتم نقش اصلی است، بقیه نقش‌های اضافه (مثلاً super-admin + super-seller)',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(10)
+  @ArrayUnique()
+  @IsUUID('4', { each: true })
+  roleIds: string[];
 
   @ApiPropertyOptional({
     example: '550e8400-e29b-41d4-a716-446655440000',
