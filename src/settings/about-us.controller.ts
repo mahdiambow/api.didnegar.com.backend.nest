@@ -33,7 +33,7 @@ const AboutUsApiResponseDto = createSuccessResponseDto(AboutUsResponseDto, {
   name: 'AboutUs',
 });
 
-@ApiTags('Settings')
+@ApiTags('About Us')
 @Controller('settings/about-us')
 export class AboutUsController {
   constructor(private readonly settingsService: SettingsService) {}

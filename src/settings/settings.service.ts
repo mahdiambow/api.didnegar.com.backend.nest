@@ -8,6 +8,11 @@ import { HeaderSettings } from './entities/header-settings.entity.js';
 import { CreateHeaderDto, UpdateHeaderDto } from './dto/header.dto.js';
 import { AboutUs } from './entities/about-us.entity.js';
 import { CreateAboutUsDto, UpdateAboutUsDto } from './dto/about-us.dto.js';
+import { ContactSettings } from './entities/contact-settings.entity.js';
+import {
+  CreateContactSettingsDto,
+  UpdateContactSettingsDto,
+} from './dto/contact-settings.dto.js';
 
 @Injectable()
 export class SettingsService {
@@ -18,6 +23,8 @@ export class SettingsService {
     private readonly headerRepository: Repository<HeaderSettings>,
     @InjectRepository(AboutUs)
     private readonly aboutUsRepository: Repository<AboutUs>,
+    @InjectRepository(ContactSettings)
+    private readonly contactSettingsRepository: Repository<ContactSettings>,
   ) {}
 
   async getFooter() {
@@ -163,6 +170,67 @@ export class SettingsService {
       throw new ApiException(
         'ABOUT_US_NOT_FOUND',
         'درباره ما یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return {};
+  }
+
+  async getContactSettings() {
+    const settings = await this.contactSettingsRepository.findOneBy({ id: 1 });
+    if (!settings) {
+      throw new ApiException(
+        'CONTACT_SETTINGS_NOT_FOUND',
+        'تنظیمات تماس با ما یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return {
+      ...settings,
+      latitude:
+        settings.latitude !== null ? Number(settings.latitude) : null,
+      longitude:
+        settings.longitude !== null ? Number(settings.longitude) : null,
+    };
+  }
+
+  async createContactSettings(dto: CreateContactSettingsDto) {
+    try {
+      await this.contactSettingsRepository.insert({
+        id: 1,
+        address: dto.address,
+        latitude: dto.latitude ?? null,
+        longitude: dto.longitude ?? null,
+        phoneNumber: dto.phoneNumber,
+        workingHours: dto.workingHours,
+      });
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') {
+        throw new ApiException(
+          'CONTACT_SETTINGS_ALREADY_EXISTS',
+          'تنظیمات تماس با ما از قبل وجود دارد',
+          HttpStatus.CONFLICT,
+        );
+      }
+      throw error;
+    }
+    return this.getContactSettings();
+  }
+
+  async updateContactSettings(dto: UpdateContactSettingsDto) {
+    await this.getContactSettings();
+    if (Object.keys(dto).length) {
+      await this.contactSettingsRepository.update({ id: 1 }, dto);
+    }
+    return this.getContactSettings();
+  }
+
+  async removeContactSettings() {
+    const result = await this.contactSettingsRepository.delete({ id: 1 });
+    if (!result.affected) {
+      throw new ApiException(
+        'CONTACT_SETTINGS_NOT_FOUND',
+        'تنظیمات تماس با ما یافت نشد',
         HttpStatus.NOT_FOUND,
       );
     }
