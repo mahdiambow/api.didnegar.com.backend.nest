@@ -55,7 +55,7 @@ export class Seller {
   @Column({ type: 'varchar', length: 20, default: SellerStatus.ACTIVE })
   status: SellerStatus;
 
-  @Column({ type: 'jsonb', default: {} })
+  @Column({ type: 'json', default: {} })
   settings: SellerSettings;
 
   @CreateDateColumn()

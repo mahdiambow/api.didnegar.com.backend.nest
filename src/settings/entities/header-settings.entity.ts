@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 
 @Entity('header_settings')
-@Check('CHK_header_settings_singleton', '"id" = 1')
+@Check('CHK_header_settings_singleton', '`id` = 1')
 export class HeaderSettings {
   @PrimaryColumn({ type: 'smallint', default: 1 })
   id: number;

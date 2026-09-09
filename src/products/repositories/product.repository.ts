@@ -69,7 +69,7 @@ export class ProductRepository {
     }
 
     if (filters.name) {
-      qb.andWhere('product.name ILIKE :name', { name: `%${filters.name}%` });
+      qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
     return qb.getMany();
@@ -141,7 +141,7 @@ export class ProductRepository {
     }
 
     if (filters.name) {
-      qb.andWhere('product.name ILIKE :name', { name: `%${filters.name}%` });
+      qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
     return qb.getManyAndCount();

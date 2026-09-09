@@ -3,7 +3,6 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -14,17 +13,9 @@ import type { BannerItemDto } from '../dto/banner.dto.js';
 import { BannerPage, BannerSection } from '../types/banner.enums.js';
 
 @Entity('banners')
-@Index('UQ_banners_home_section', ['section'], {
-  unique: true,
-  where: '"page" = \'home\'',
-})
-@Index('UQ_banners_category_section', ['categoryId', 'section'], {
-  unique: true,
-  where: '"page" = \'category_sidebar\'',
-})
 @Check(
   'CHK_banners_placement',
-  `("page" = 'home' AND "categoryId" IS NULL AND "section" IN ('main_slider', 'three_images', 'narrow_banner', 'video', 'two_images', 'single_banner')) OR ("page" = 'category_sidebar' AND "categoryId" IS NOT NULL AND "section" = 'sidebar')`,
+  "(`page` = 'home' AND `categoryId` IS NULL AND `section` IN ('main_slider', 'three_images', 'narrow_banner', 'video', 'two_images', 'single_banner')) OR (`page` = 'category_sidebar' AND `categoryId` IS NOT NULL AND `section` = 'sidebar')",
 )
 export class Banner {
   @PrimaryGeneratedColumn('uuid')
@@ -43,7 +34,7 @@ export class Banner {
   @JoinColumn({ name: 'categoryId' })
   category: Category | null;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: 'json' })
   items: BannerItemDto[];
 
   @CreateDateColumn()

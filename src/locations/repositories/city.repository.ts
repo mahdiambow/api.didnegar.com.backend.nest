@@ -44,7 +44,7 @@ export class CityRepository {
     }
 
     if (filters.name) {
-      qb.andWhere('city.name ILIKE :name', { name: `%${filters.name}%` });
+      qb.andWhere('city.name LIKE :name', { name: `%${filters.name}%` });
     }
 
     return qb.getManyAndCount();

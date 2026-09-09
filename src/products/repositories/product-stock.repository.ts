@@ -56,9 +56,9 @@ export class ProductStockRepository {
     const result = await this.stocks(manager)
       .createQueryBuilder()
       .update(ProductStock)
-      .set({ stock: () => `"stock" - :quantity` })
-      .where('"productId" = :productId')
-      .andWhere('"stock" >= :quantity')
+      .set({ stock: () => '`stock` - :quantity' })
+      .where('`productId` = :productId')
+      .andWhere('`stock` >= :quantity')
       .setParameters({ productId, quantity })
       .execute();
 
@@ -75,8 +75,8 @@ export class ProductStockRepository {
     const result = await this.stocks(manager)
       .createQueryBuilder()
       .update(ProductStock)
-      .set({ stock: () => `"stock" + :quantity` })
-      .where('"productId" = :productId')
+      .set({ stock: () => '`stock` + :quantity' })
+      .where('`productId` = :productId')
       .setParameters({ productId, quantity })
       .execute();
 

@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 
 @Entity('contact_settings')
-@Check('CHK_contact_settings_singleton', '"id" = 1')
+@Check('CHK_contact_settings_singleton', '`id` = 1')
 export class ContactSettings {
   @PrimaryColumn({ type: 'smallint', default: 1 })
   id: number;

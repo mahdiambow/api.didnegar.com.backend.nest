@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 
 @Entity('footer_settings')
-@Check('CHK_footer_settings_singleton', '"id" = 1')
+@Check('CHK_footer_settings_singleton', '`id` = 1')
 export class FooterSettings {
   @PrimaryColumn({ type: 'smallint', default: 1 })
   id: number;

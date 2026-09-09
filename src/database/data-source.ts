@@ -6,7 +6,7 @@ import { DataSource } from 'typeorm';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default new DataSource({
-  type: 'postgres',
+  type: 'mysql',
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT),
   username: process.env.DB_USERNAME,

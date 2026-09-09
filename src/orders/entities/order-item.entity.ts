@@ -23,7 +23,7 @@ export class OrderItem {
   @Column({ type: 'uuid', nullable: true })
   offerId: string | null;
 
-  @Column({ type: 'jsonb', default: {} })
+  @Column({ type: 'json', default: {} })
   attributes: Record<string, string>;
 
   @Column({ type: 'uuid', nullable: true })

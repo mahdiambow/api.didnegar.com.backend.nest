@@ -16,8 +16,8 @@ import type { SellerOffer } from '../../offers/entities/seller-offer.entity.js';
 @Entity('offer_products')
 @Index(['sellerId'])
 @Index(['approvalStatus'])
-@Check('CHK_offer_product_price', '"price" >= 0')
-@Check('CHK_offer_product_stock', '"stock" >= 0')
+@Check('CHK_offer_product_price', '`price` >= 0')
+@Check('CHK_offer_product_stock', '`stock` >= 0')
 export class OfferProduct {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -41,10 +41,10 @@ export class OfferProduct {
   @Column({ type: 'uuid', nullable: true })
   brandId: string | null;
 
-  @Column({ type: 'uuid', array: true, default: [] })
+  @Column({ type: 'json', default: [] })
   categoryIds: string[];
 
-  @Column({ type: 'jsonb', default: {} })
+  @Column({ type: 'json', default: {} })
   attributes: Record<string, string[]>;
 
   @Column({ type: 'boolean', default: false })

@@ -22,7 +22,7 @@ export class Role {
   @Column({ type: 'varchar', length: 100 })
   name: string;
 
-  @Column({ type: 'text', array: true, default: '{}' })
+  @Column({ type: 'json', default: [] })
   permissions: string[];
 
   @Column({ type: 'boolean', default: false })

@@ -30,28 +30,25 @@
 ### Docker
 
 The Dockerfile builds the API with Node.js 22 and runs it as a non-root user.
-Compose includes PostgreSQL 16 with persistent storage. Existing `.env` files
+Compose includes MariaDB 11.4 with persistent storage. Existing `.env` files
 are never copied into the image.
 
 If you do not already have a `.env`, copy `.env.example` to `.env` and replace
 the database password and JWT secret before starting.
 
-**Database prerequisite:** the current migrations assume existing base tables
-such as `users`; they do not initialize a completely empty database. Restore
-your existing database into the Compose PostgreSQL service before starting
-the API. For a plain SQL dump compatible with PostgreSQL 16:
+**Database:** migrations include a MariaDB baseline schema
+(`InitMariaDbSchema`). Use a fresh MariaDB database (do not point at an old
+PostgreSQL instance).
 
 ```bash
-docker compose up -d postgres
-docker compose exec -T postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < backup.sql
+docker compose up -d mariadb
 docker compose up -d --build
 ```
 
-Once the database is initialized, `docker compose up -d --build` is sufficient.
 Swagger is available at `http://localhost:3000/api` (or the `PORT` in `.env`).
 Migrations run automatically on API startup; automatic sample-data seeding is
-disabled. Compose sets the internal database host to `postgres` and port to
-`5432`. PostgreSQL is only accessible inside the Compose network.
+disabled. Compose sets the internal database host to `mariadb` and port to
+`3306`. MariaDB is published on the host via `DB_PORT` (default `3306`).
 
 Build and export the image to transfer it to another machine:
 

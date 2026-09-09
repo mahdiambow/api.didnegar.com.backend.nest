@@ -110,22 +110,22 @@ export class Product {
   @Column({ type: 'boolean', default: false })
   isFeatured: boolean;
 
-  @Column({ type: 'jsonb', default: [] })
+  @Column({ type: 'json', default: [] })
   seo: ProductSeoItem[];
 
   @Column({
-    type: 'jsonb',
+    type: 'json',
     default: () => `'{"featuredImg":null,"gallery":[]}'`,
   })
   image: ProductImageData;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'json', nullable: true })
   price: ProductPriceData | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'json', nullable: true })
   shippingMethod: ProductShippingMethodData | null;
 
-  @Column({ type: 'jsonb', default: [] })
+  @Column({ type: 'json', default: [] })
   tableInfo: ProductTableInfoItem[];
 
   @Column({ type: 'int', default: 0 })
@@ -158,10 +158,10 @@ export class Product {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   height: number | null;
 
-  @Column({ type: 'uuid', array: true, default: [] })
+  @Column({ type: 'json', default: [] })
   attributeIds: string[];
 
-  @Column({ type: 'uuid', array: true, default: [] })
+  @Column({ type: 'json', default: [] })
   sellerIds: string[];
 
   @Column({ type: 'uuid', nullable: true })

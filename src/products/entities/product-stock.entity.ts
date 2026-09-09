@@ -12,7 +12,7 @@ import {
 import type { Product } from './product.entity.js';
 
 @Entity('product_stocks')
-@Check('CHK_product_stock', '"stock" >= 0')
+@Check('CHK_product_stock', '`stock` >= 0')
 export class ProductStock {
   @PrimaryGeneratedColumn('uuid')
   id: string;

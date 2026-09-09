@@ -13,7 +13,7 @@ export type AboutUsFaqItem = {
 };
 
 @Entity('about_us')
-@Check('CHK_about_us_singleton', '"id" = 1')
+@Check('CHK_about_us_singleton', '`id` = 1')
 export class AboutUs {
   @PrimaryColumn({ type: 'smallint', default: 1 })
   id: number;
@@ -24,7 +24,7 @@ export class AboutUs {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ type: 'jsonb', default: [] })
+  @Column({ type: 'json', default: [] })
   faqs: AboutUsFaqItem[];
 
   @CreateDateColumn()

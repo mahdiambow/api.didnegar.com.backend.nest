@@ -22,7 +22,7 @@ export class SellerContract {
   @Column({ type: 'varchar', length: 150 })
   sellerName: string;
 
-  @Column({ type: 'uuid', array: true, default: '{}' })
+  @Column({ type: 'json', default: [] })
   userIds: string[];
 
   @Column({ type: 'varchar', length: 150 })
@@ -31,13 +31,13 @@ export class SellerContract {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
-  @Column({ type: 'timestamptz' })
+  @Column({ type: 'datetime' })
   contractDate: Date;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ type: 'datetime' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: 'datetime' })
   updatedAt: Date;
 
   @ManyToOne('Seller', 'contracts', { onDelete: 'CASCADE', nullable: true })

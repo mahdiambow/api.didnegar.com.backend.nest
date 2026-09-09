@@ -11,8 +11,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DB_HOST: postgres
-      DB_PORT: 5432
+      DB_HOST: migration-mysql
+      DB_PORT: 3306
       DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in .env}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
       DB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in .env}
@@ -21,24 +21,56 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     depends_on:
-      postgres:
+      migration-mysql:
         condition: service_healthy
 
-  postgres:
-    image: postgres:16-bookworm
+  migration-mysql:
+    image: mysql:8.0
+    container_name: migration-mysql
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USERNAME:?Set DB_USERNAME in .env}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-      POSTGRES_DB: ${DB_DATABASE:?Set DB_DATABASE in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-didnegar}
+      MYSQL_USER: ${DB_USERNAME:-didnegar}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-didnegar}
+    ports:
+      - "${DB_PORT:-3309}:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - migration_mysql_data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=caching_sha2_password
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      test:
+        [
+          'CMD',
+          'mysqladmin',
+          'ping',
+          '-h',
+          '127.0.0.1',
+          '-uroot',
+          '-p${MYSQL_ROOT_PASSWORD:-root}',
+        ]
       interval: 5s
       timeout: 5s
-      retries: 10
-      start_period: 10s
+      retries: 20
+      start_period: 20s
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: migration-mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    ports:
+      - '8080:80'
+    depends_on:
+      migration-mysql:
+        condition: service_healthy
 
 volumes:
-  postgres_data:
+  migration_mysql_data:

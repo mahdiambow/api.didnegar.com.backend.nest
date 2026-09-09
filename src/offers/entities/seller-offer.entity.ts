@@ -15,13 +15,13 @@ import type { Product } from '../../products/entities/product.entity.js';
 @Entity('seller_offers')
 @Index(['productId'])
 @Index(['sellerId', 'sku'], { unique: true })
-@Check('CHK_offer_price', '"price" >= 0')
-@Check('CHK_offer_stock', '"stock" >= 0')
+@Check('CHK_offer_price', '`price` >= 0')
+@Check('CHK_offer_stock', '`stock` >= 0')
 export class SellerOffer {
   @PrimaryGeneratedColumn('uuid') id: string;
   @Column({ type: 'uuid' }) sellerId: string;
   @Column({ type: 'uuid' }) productId: string;
-  @Column({ type: 'jsonb', default: {} }) attributes: Record<string, string>;
+  @Column({ type: 'json', default: {} }) attributes: Record<string, string>;
   @Column({ type: 'varchar', length: 100 }) sku: string;
   @Column({ type: 'decimal', precision: 19, scale: 4 }) price: number;
   @Column({ type: 'int', default: 0 }) stock: number;

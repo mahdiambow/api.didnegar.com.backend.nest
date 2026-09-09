@@ -83,7 +83,7 @@ Price management moved from `/products/prices` to `/seller-offers/prices`:
 
 `1788700000000-SeparateSellerOffers` archives old product and variant records in `catalog_products_legacy_archive` and `catalog_variants_legacy_archive`, then removes the obsolete fields and adds offers and order snapshot columns. It does not infer a seller from legacy prices. Map those archived records to real sellers explicitly before relying on them for checkout. Existing seed fixtures create offers only for the known demo seller `didnegar-shop`.
 
-Rollback restores archived columns; it refuses to run after new offers or new variants exist, avoiding silent loss of the new commerce data. Migrations run automatically on application startup in this project. The migration was tested on a disposable PostgreSQL database, not the configured application database.
+Rollback restores archived columns; it refuses to run after new offers or new variants exist, avoiding silent loss of the new commerce data. Migrations run automatically on application startup in this project.
 
 Checks:
 
@@ -93,4 +93,4 @@ npm test
 TEST_PG_SOCKET=/tmp/catalog-offers-db-20260906 node test/catalog-offers.integration.mjs
 ```
 
-The integration test requires a disposable local PostgreSQL instance on the supplied `/tmp` socket, port 55439. It creates and removes its own test database and exercises migration up/down/up, concurrent combinations, multiple sellers, tenant authorization, Excel prices, order snapshots, shipping, dependency injection, and Swagger.
+The catalog integration test is currently disabled pending a MariaDB rewrite.

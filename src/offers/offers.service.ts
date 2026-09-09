@@ -300,13 +300,13 @@ export class OffersService {
       .createQueryBuilder()
       .update(SellerOffer)
       .set({
-        stock: () => `"stock" - :quantity`,
+        stock: () => '`stock` - :quantity',
         stockStatus: () =>
-          `CASE WHEN "stock" - :quantity <= 0 THEN 'outofstock' ELSE "stockStatus" END`,
+          "CASE WHEN `stock` - :quantity <= 0 THEN 'outofstock' ELSE `stockStatus` END",
       })
       .where('id = :offerId')
-      .andWhere('"stock" >= :quantity')
-      .andWhere('"stockStatus" = :stockStatus', { stockStatus: 'instock' })
+      .andWhere('`stock` >= :quantity')
+      .andWhere('`stockStatus` = :stockStatus', { stockStatus: 'instock' })
       .setParameters({ offerId, quantity })
       .execute();
 

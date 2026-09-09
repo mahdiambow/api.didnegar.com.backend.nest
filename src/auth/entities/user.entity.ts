@@ -56,7 +56,7 @@ export class User {
   roleId: string;
 
   /** نقش‌های اضافه علاوه بر role اصلی (آرایه uuid) */
-  @Column({ type: 'uuid', array: true, default: [] })
+  @Column({ type: 'json', default: [] })
   extraRoleIds: string[];
 
   @Column({ type: 'uuid', nullable: true })
