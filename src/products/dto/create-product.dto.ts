@@ -32,7 +32,7 @@ export class CreateProductDto extends ProductWritableFieldsDto {
     type: [String],
     example: [CATEGORY_EXAMPLES.subCategoryId],
     description:
-      'شناسه category یا subCategory — POST /categories یا /sub-categories',
+      'شناسه category یا subCategory — سلسله: parent-categories → categories → sub-categories',
   })
   @IsOptional()
   @IsArray()

@@ -1,18 +1,18 @@
-import { ApiProperty, ApiPropertyOptional, OmitType, PartialType } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsOptional, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Category } from '../entities/category.entity.js';
+import { ParentCategory } from '../entities/parent-category.entity.js';
 import { SubCategory } from '../entities/sub-category.entity.js';
 import { ProductCategory } from '../entities/product-category.entity.js';
 import {
   CATEGORY_EXAMPLES,
   CATEGORY_RESPONSE_EXAMPLE,
+  PARENT_CATEGORY_RESPONSE_EXAMPLE,
   PRODUCT_CATEGORY_RESPONSE_EXAMPLE,
   SUB_CATEGORY_RESPONSE_EXAMPLE,
 } from './category.examples.js';
-import {
-  ProductCategoryLinkDto,
-} from './product-category-link.dto.js';
+import { ProductCategoryLinkDto } from './product-category-link.dto.js';
 
 export class CreateProductCategoryDto extends ProductCategoryLinkDto {
   @ApiProperty({
@@ -54,9 +54,66 @@ export class ListProductCategoriesQueryDto {
   limit?: number;
 }
 
+export class ListCategoriesQueryDto {
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.parentCategoryId,
+    description: 'فیلتر بر اساس parent category',
+  })
+  @IsOptional()
+  @IsUUID()
+  parentCategoryId?: string;
+}
+
+export class ListSubCategoriesQueryDto {
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.categoryId,
+    description: 'فیلتر بر اساس category',
+  })
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string;
+
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.parentCategoryId,
+    description: 'فیلتر بر اساس parent category',
+  })
+  @IsOptional()
+  @IsUUID()
+  parentCategoryId?: string;
+}
+
+export class ParentCategoryResponseDto {
+  @ApiProperty({ example: PARENT_CATEGORY_RESPONSE_EXAMPLE.id })
+  id: string;
+
+  @ApiProperty({ example: PARENT_CATEGORY_RESPONSE_EXAMPLE.name })
+  name: string;
+
+  @ApiPropertyOptional({
+    example: PARENT_CATEGORY_RESPONSE_EXAMPLE.nameEn,
+    nullable: true,
+  })
+  nameEn: string | null;
+
+  @ApiProperty({ example: PARENT_CATEGORY_RESPONSE_EXAMPLE.slug })
+  slug: string;
+
+  @ApiProperty({ example: 0 })
+  sort: number;
+
+  @ApiProperty({ example: true })
+  isActive: boolean;
+
+  @ApiProperty({ example: PARENT_CATEGORY_RESPONSE_EXAMPLE.createdAt })
+  createdAt: Date;
+}
+
 export class CategoryResponseDto {
   @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.id })
   id: string;
+
+  @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.parentCategoryId })
+  parentCategoryId: string;
 
   @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.name })
   name: string;
@@ -78,6 +135,12 @@ export class CategoryResponseDto {
 
   @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.createdAt })
   createdAt: Date;
+
+  @ApiPropertyOptional({
+    type: ParentCategoryResponseDto,
+    example: PARENT_CATEGORY_RESPONSE_EXAMPLE,
+  })
+  parentCategory?: ParentCategoryResponseDto;
 }
 
 export class SubCategoryResponseDto {
@@ -86,6 +149,12 @@ export class SubCategoryResponseDto {
 
   @ApiProperty({ example: SUB_CATEGORY_RESPONSE_EXAMPLE.categoryId })
   categoryId: string;
+
+  @ApiProperty({
+    example: CATEGORY_EXAMPLES.parentCategoryId,
+    description: 'شناسه parent category',
+  })
+  parentCategoryId: string | null;
 
   @ApiProperty({ example: SUB_CATEGORY_RESPONSE_EXAMPLE.name })
   name: string;
@@ -107,6 +176,13 @@ export class SubCategoryResponseDto {
 
   @ApiProperty({ example: SUB_CATEGORY_RESPONSE_EXAMPLE.createdAt })
   createdAt: Date;
+
+  @ApiPropertyOptional({
+    type: ParentCategoryResponseDto,
+    example: PARENT_CATEGORY_RESPONSE_EXAMPLE,
+    description: 'parent category populate شده',
+  })
+  parentCategory?: ParentCategoryResponseDto | null;
 
   @ApiPropertyOptional({
     type: CategoryResponseDto,
@@ -161,34 +237,66 @@ export class ProductCategoryResponseDto {
   updatedAt: Date;
 }
 
-export function toCategoryResponse(category: Category): CategoryResponseDto {
+export function toParentCategoryResponse(
+  parent: ParentCategory,
+): ParentCategoryResponseDto {
+  return {
+    id: parent.id,
+    name: parent.name,
+    nameEn: parent.nameEn ?? null,
+    slug: parent.slug,
+    sort: parent.sort ?? 0,
+    isActive: parent.isActive ?? true,
+    createdAt: parent.createdAt,
+  };
+}
+
+export function toCategoryResponse(
+  category: Category,
+  includeParent = true,
+): CategoryResponseDto {
   return {
     id: category.id,
+    parentCategoryId: category.parentCategoryId,
     name: category.name,
     nameEn: category.nameEn ?? null,
     slug: category.slug,
     sort: category.sort ?? 0,
     isActive: category.isActive ?? true,
     createdAt: category.createdAt,
+    parentCategory: category.parentCategory
+      ? toParentCategoryResponse(category.parentCategory)
+      : undefined,
   };
 }
 
 export function toSubCategoryResponse(
   subCategory: SubCategory,
-  includeCategory = false,
+  includeCategory = true,
 ): SubCategoryResponseDto {
+  const parentCategory =
+    subCategory.category?.parentCategory ?? undefined;
+  const parentCategoryId =
+    subCategory.category?.parentCategoryId ??
+    parentCategory?.id ??
+    null;
+
   return {
     id: subCategory.id,
     categoryId: subCategory.categoryId,
+    parentCategoryId,
     name: subCategory.name,
     nameEn: subCategory.nameEn ?? null,
     slug: subCategory.slug,
     sort: subCategory.sort ?? 0,
     isActive: subCategory.isActive ?? true,
     createdAt: subCategory.createdAt,
+    parentCategory: parentCategory
+      ? toParentCategoryResponse(parentCategory)
+      : null,
     category:
       includeCategory && subCategory.category
-        ? toCategoryResponse(subCategory.category)
+        ? toCategoryResponse(subCategory.category, true)
         : undefined,
   };
 }
@@ -207,7 +315,7 @@ export function toProductCategoryResponse(
     subCategoryId: link.subCategoryId,
     isPrimary: link.isPrimary,
     position: link.position,
-    category: category ? toCategoryResponse(category) : null,
+    category: category ? toCategoryResponse(category, true) : null,
     subCategory: link.subCategory
       ? toSubCategoryResponse(link.subCategory, true)
       : null,

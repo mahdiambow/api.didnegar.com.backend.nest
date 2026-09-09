@@ -1,5 +1,6 @@
 /** نمونه UUIDها برای Swagger — فقط مستندات */
 export const CATEGORY_EXAMPLES = {
+  parentCategoryId: '550e8400-e29b-41d4-a716-446655440009',
   categoryId: '550e8400-e29b-41d4-a716-446655440010',
   subCategoryId: '550e8400-e29b-41d4-a716-446655440011',
   productId: '550e8400-e29b-41d4-a716-446655440000',
@@ -7,25 +8,39 @@ export const CATEGORY_EXAMPLES = {
   createdAt: '2026-09-02T10:00:00.000Z',
 } as const;
 
+export const PARENT_CATEGORY_RESPONSE_EXAMPLE = {
+  id: CATEGORY_EXAMPLES.parentCategoryId,
+  name: 'کالای دیجیتال',
+  nameEn: 'Digital',
+  slug: 'digital',
+  sort: 0,
+  isActive: true,
+  createdAt: CATEGORY_EXAMPLES.createdAt,
+};
+
 export const CATEGORY_RESPONSE_EXAMPLE = {
   id: CATEGORY_EXAMPLES.categoryId,
+  parentCategoryId: CATEGORY_EXAMPLES.parentCategoryId,
   name: 'موبایل',
   nameEn: 'Mobile',
   slug: 'mobile',
   sort: 0,
   isActive: true,
   createdAt: CATEGORY_EXAMPLES.createdAt,
+  parentCategory: PARENT_CATEGORY_RESPONSE_EXAMPLE,
 };
 
 export const SUB_CATEGORY_RESPONSE_EXAMPLE = {
   id: CATEGORY_EXAMPLES.subCategoryId,
   categoryId: CATEGORY_EXAMPLES.categoryId,
+  parentCategoryId: CATEGORY_EXAMPLES.parentCategoryId,
   name: 'گوشی',
   nameEn: 'Phones',
   slug: 'phones',
   sort: 0,
   isActive: true,
   createdAt: CATEGORY_EXAMPLES.createdAt,
+  parentCategory: PARENT_CATEGORY_RESPONSE_EXAMPLE,
   category: CATEGORY_RESPONSE_EXAMPLE,
 };
 

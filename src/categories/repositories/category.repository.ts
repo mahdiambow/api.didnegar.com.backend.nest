@@ -10,15 +10,26 @@ export class CategoryRepository {
   ) {}
 
   findById(id: string) {
-    return this.repo.findOne({ where: { id } });
+    return this.repo.findOne({
+      where: { id },
+      relations: { parentCategory: true },
+    });
   }
 
   findBySlug(slug: string) {
     return this.repo.findOne({ where: { slug } });
   }
 
-  findAll() {
-    return this.repo.find({ order: { sort: 'ASC', name: 'ASC' } });
+  findAll(parentCategoryId?: string) {
+    return this.repo.find({
+      where: parentCategoryId ? { parentCategoryId } : undefined,
+      relations: { parentCategory: true },
+      order: { sort: 'ASC', name: 'ASC' },
+    });
+  }
+
+  findByParentCategoryId(parentCategoryId: string) {
+    return this.findAll(parentCategoryId);
   }
 
   create(data: Partial<Category>) {

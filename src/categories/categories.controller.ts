@@ -21,6 +21,10 @@ import { createSuccessResponseDto } from '../common/response/dto/create-success-
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { CategoriesService } from './categories.service.js';
 import {
+  CreateParentCategoryDto,
+  UpdateParentCategoryDto,
+} from './dto/create-parent-category.dto.js';
+import {
   CreateCategoryDto,
   UpdateCategoryDto,
 } from './dto/create-category.dto.js';
@@ -29,13 +33,25 @@ import {
   UpdateSubCategoryDto,
 } from './dto/create-sub-category.dto.js';
 import {
+  ParentCategoryResponseDto,
   CategoryResponseDto,
   SubCategoryResponseDto,
   ProductCategoryResponseDto,
   CreateProductCategoryDto,
   UpdateProductCategoryDto,
   ListProductCategoriesQueryDto,
+  ListCategoriesQueryDto,
+  ListSubCategoriesQueryDto,
 } from './dto/category-response.dto.js';
+
+const ParentCategoryApiResponseDto = createSuccessResponseDto(
+  ParentCategoryResponseDto,
+  {
+    code: 'PARENT_CATEGORY_FOUND',
+    message: 'Parent category retrieved successfully',
+    name: 'ParentCategory',
+  },
+);
 
 const CategoryApiResponseDto = createSuccessResponseDto(CategoryResponseDto, {
   code: 'CATEGORY_FOUND',
@@ -70,6 +86,73 @@ const ProductCategoriesPaginatedApiResponseDto = createPaginatedResponseDto(
   },
 );
 
+@ApiTags('Parent Categories')
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard)
+@Controller('parent-categories')
+export class ParentCategoriesController {
+  constructor(private readonly categoriesService: CategoriesService) {}
+
+  @Get()
+  @ApiResponseMeta({
+    code: 'PARENT_CATEGORIES_FOUND',
+    message: 'Parent categories retrieved successfully',
+  })
+  @ApiOperation({ summary: 'لیست parent category ها (سطح ۱)' })
+  findAll() {
+    return this.categoriesService.findAllParentCategories();
+  }
+
+  @Get(':parentCategoryId/categories')
+  @ApiOperation({ summary: 'لیست دسته‌های یک parent category' })
+  findCategories(@Param('parentCategoryId') parentCategoryId: string) {
+    return this.categoriesService.findAllCategories(parentCategoryId);
+  }
+
+  @Get(':id')
+  @ApiResponseMeta({
+    code: 'PARENT_CATEGORY_FOUND',
+    message: 'Parent category retrieved successfully',
+  })
+  @ApiOperation({ summary: 'دریافت parent category' })
+  @ApiOkResponse({ type: ParentCategoryApiResponseDto })
+  findOne(@Param('id') id: string) {
+    return this.categoriesService.findParentCategory(id);
+  }
+
+  @Post()
+  @ApiResponseMeta({
+    code: 'PARENT_CATEGORY_CREATED',
+    message: 'Parent category created successfully',
+  })
+  @ApiOperation({ summary: 'ایجاد parent category' })
+  @ApiOkResponse({ type: ParentCategoryApiResponseDto })
+  create(@Body() dto: CreateParentCategoryDto) {
+    return this.categoriesService.createParentCategory(dto);
+  }
+
+  @Patch(':id')
+  @ApiResponseMeta({
+    code: 'PARENT_CATEGORY_UPDATED',
+    message: 'Parent category updated successfully',
+  })
+  @ApiOperation({ summary: 'ویرایش parent category' })
+  @ApiOkResponse({ type: ParentCategoryApiResponseDto })
+  update(@Param('id') id: string, @Body() dto: UpdateParentCategoryDto) {
+    return this.categoriesService.updateParentCategory(id, dto);
+  }
+
+  @Delete(':id')
+  @ApiResponseMeta({
+    code: 'PARENT_CATEGORY_DELETED',
+    message: 'Parent category deleted successfully',
+  })
+  @ApiOperation({ summary: 'حذف parent category' })
+  remove(@Param('id') id: string) {
+    return this.categoriesService.removeParentCategory(id);
+  }
+}
+
 @ApiTags('Categories')
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
@@ -82,9 +165,18 @@ export class CategoriesController {
     code: 'CATEGORIES_FOUND',
     message: 'Categories retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست دسته‌بندی‌ها' })
-  findAllCategories() {
-    return this.categoriesService.findAllCategories();
+  @ApiOperation({
+    summary: 'لیست دسته‌بندی‌ها (سطح ۲)',
+    description: 'اختیاری: ?parentCategoryId=...',
+  })
+  findAllCategories(@Query() query: ListCategoriesQueryDto) {
+    return this.categoriesService.findAllCategories(query.parentCategoryId);
+  }
+
+  @Get(':categoryId/sub-categories')
+  @ApiOperation({ summary: 'لیست زیردسته‌های یک دسته (سطح ۳)' })
+  findSubCategories(@Param('categoryId') categoryId: string) {
+    return this.categoriesService.findSubCategoriesByCategory(categoryId);
   }
 
   @Get(':id')
@@ -103,7 +195,7 @@ export class CategoriesController {
     code: 'CATEGORY_CREATED',
     message: 'Category created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد دسته‌بندی' })
+  @ApiOperation({ summary: 'ایجاد دسته‌بندی — نیاز به parentCategoryId' })
   @ApiOkResponse({ type: CategoryApiResponseDto })
   createCategory(@Body() dto: CreateCategoryDto) {
     return this.categoriesService.createCategory(dto);
@@ -129,12 +221,6 @@ export class CategoriesController {
   removeCategory(@Param('id') id: string) {
     return this.categoriesService.removeCategory(id);
   }
-
-  @Get(':categoryId/sub-categories')
-  @ApiOperation({ summary: 'لیست زیردسته‌های یک دسته' })
-  findSubCategories(@Param('categoryId') categoryId: string) {
-    return this.categoriesService.findSubCategoriesByCategory(categoryId);
-  }
 }
 
 @ApiTags('Sub Categories')
@@ -144,12 +230,36 @@ export class CategoriesController {
 export class SubCategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
+  @Get()
+  @ApiResponseMeta({
+    code: 'SUB_CATEGORIES_FOUND',
+    message: 'Sub categories retrieved successfully',
+  })
+  @ApiOperation({
+    summary: 'لیست زیردسته‌ها (با category و parentCategory)',
+    description: 'فیلتر اختیاری: ?categoryId=... یا ?parentCategoryId=...',
+  })
+  findAll(@Query() query: ListSubCategoriesQueryDto) {
+    return this.categoriesService.findSubCategories(query);
+  }
+
+  @Get(':id')
+  @ApiResponseMeta({
+    code: 'SUB_CATEGORY_FOUND',
+    message: 'Sub category retrieved successfully',
+  })
+  @ApiOperation({ summary: 'دریافت زیردسته با دیتای populate شده' })
+  @ApiOkResponse({ type: SubCategoryApiResponseDto })
+  findOne(@Param('id') id: string) {
+    return this.categoriesService.findSubCategory(id);
+  }
+
   @Post()
   @ApiResponseMeta({
     code: 'SUB_CATEGORY_CREATED',
     message: 'Sub category created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد زیردسته' })
+  @ApiOperation({ summary: 'ایجاد زیردسته (سطح ۳)' })
   @ApiOkResponse({ type: SubCategoryApiResponseDto })
   createSubCategory(@Body() dto: CreateSubCategoryDto) {
     return this.categoriesService.createSubCategory(dto);

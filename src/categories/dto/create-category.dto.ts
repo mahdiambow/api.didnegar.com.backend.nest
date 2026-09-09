@@ -5,13 +5,22 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
   Min,
 } from 'class-validator';
+import { CATEGORY_EXAMPLES } from './category.examples.js';
 
 export class CreateCategoryDto {
+  @ApiProperty({
+    example: CATEGORY_EXAMPLES.parentCategoryId,
+    description: 'شناسه parent category',
+  })
+  @IsUUID()
+  parentCategoryId: string;
+
   @ApiProperty({
     example: 'موبایل',
     description: 'نام فارسی دسته‌بندی',
@@ -54,6 +63,14 @@ export class CreateCategoryDto {
 }
 
 export class UpdateCategoryDto {
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.parentCategoryId,
+    description: 'شناسه parent category',
+  })
+  @IsOptional()
+  @IsUUID()
+  parentCategoryId?: string;
+
   @ApiPropertyOptional({ example: 'موبایل و تبلت' })
   @IsOptional()
   @IsString()

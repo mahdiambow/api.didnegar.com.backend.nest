@@ -212,9 +212,9 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
       ) ENGINE=InnoDB
     `);
 
-    // --- categories ---
+    // --- parent_categories ---
     await queryRunner.query(`
-      CREATE TABLE \`categories\` (
+      CREATE TABLE \`parent_categories\` (
         \`id\` CHAR(36) NOT NULL,
         \`legacyId\` BIGINT NULL,
         \`legacyTable\` VARCHAR(255) NULL,
@@ -225,8 +225,29 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
         \`isActive\` TINYINT(1) NOT NULL DEFAULT 1,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         \`updatedAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        CONSTRAINT \`PK_parent_categories\` PRIMARY KEY (\`id\`),
+        UNIQUE INDEX \`IDX_parent_categories_slug\` (\`slug\`)
+      ) ENGINE=InnoDB
+    `);
+
+    // --- categories ---
+    await queryRunner.query(`
+      CREATE TABLE \`categories\` (
+        \`id\` CHAR(36) NOT NULL,
+        \`parentCategoryId\` CHAR(36) NOT NULL,
+        \`legacyId\` BIGINT NULL,
+        \`legacyTable\` VARCHAR(255) NULL,
+        \`name\` VARCHAR(255) NOT NULL,
+        \`nameEn\` VARCHAR(255) NULL,
+        \`slug\` VARCHAR(200) NOT NULL,
+        \`sort\` INT NOT NULL DEFAULT 0,
+        \`isActive\` TINYINT(1) NOT NULL DEFAULT 1,
+        \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        \`updatedAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         CONSTRAINT \`PK_categories\` PRIMARY KEY (\`id\`),
-        UNIQUE INDEX \`IDX_categories_slug\` (\`slug\`)
+        INDEX \`IDX_categories_parentCategoryId\` (\`parentCategoryId\`),
+        UNIQUE INDEX \`IDX_categories_slug\` (\`slug\`),
+        CONSTRAINT \`FK_categories_parentCategoryId\` FOREIGN KEY (\`parentCategoryId\`) REFERENCES \`parent_categories\`(\`id\`) ON DELETE RESTRICT ON UPDATE RESTRICT
       ) ENGINE=InnoDB
     `);
 
@@ -652,6 +673,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS \`attributes\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`sub_categories\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`categories\``);
+    await queryRunner.query(`DROP TABLE IF EXISTS \`parent_categories\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`brands\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`cities\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`states\``);
