@@ -5,22 +5,14 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
-  ManyToOne,
-  JoinColumn,
   Index,
 } from 'typeorm';
-import type { ParentCategory } from './parent-category.entity.js';
-import type { SubCategory } from './sub-category.entity.js';
-import type { ProductCategory } from './product-category.entity.js';
+import type { Category } from './category.entity.js';
 
-@Entity('categories')
-export class Category {
+@Entity('parent_categories')
+export class ParentCategory {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
-  @Index()
-  @Column({ type: 'uuid' })
-  parentCategoryId: string;
 
   @Column({ type: 'bigint', nullable: true })
   legacyId: number | null;
@@ -50,13 +42,6 @@ export class Category {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne('ParentCategory', 'categories', { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'parentCategoryId' })
-  parentCategory: ParentCategory;
-
-  @OneToMany('SubCategory', 'category')
-  subCategories: SubCategory[];
-
-  @OneToMany('ProductCategory', 'category')
-  productCategories: ProductCategory[];
+  @OneToMany('Category', 'parentCategory')
+  categories: Category[];
 }

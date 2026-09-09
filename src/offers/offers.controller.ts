@@ -90,7 +90,8 @@ export class OffersController {
   )
   @ApiOperation({
     summary: 'ایجاد یک یا چند پیشنهاد فروش',
-    description: 'با آرایه items می‌توان چند محصول را یکجا قیمت‌گذاری کرد',
+    description:
+      'با آرایه items چند محصول را یکجا قیمت‌گذاری کنید. فیلد اختیاری product روی هر آیتم همه فیلدهای کاتالوگ همان محصول را آپدیت می‌کند.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_CREATED',

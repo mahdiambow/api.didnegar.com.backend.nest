@@ -21,7 +21,7 @@ export class OrdersSeedService {
   async seed() {
     const userId =
       await this.usersSeedService.findUserIdByUsername('09333333333');
-    const product = await this.productRepository.findBySlug('galaxy-s24-ultra');
+    const product = await this.productRepository.findBySlug('sony-a7iv');
     const shipping =
       await this.shippingMethodRepository.findBySlug('mahex-cod');
 
@@ -30,7 +30,7 @@ export class OrdersSeedService {
     }
 
     const offer = await this.dataSource.getRepository(SellerOffer).findOne({
-      where: { sku: 'SAM-S24U-256-BLK', seller: { slug: 'didnegar-shop' } },
+      where: { sku: 'SNY-A7IV-BODY-OFFER', seller: { slug: 'didnegar-shop' } },
     });
     if (!offer) return;
     await this.seedPendingOrder(userId, product.id, shipping.id, offer);

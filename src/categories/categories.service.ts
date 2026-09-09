@@ -5,9 +5,14 @@ import {
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
 import { ProductRepository } from '../products/repositories/product.repository.js';
+import { ParentCategoryRepository } from './repositories/parent-category.repository.js';
 import { CategoryRepository } from './repositories/category.repository.js';
 import { SubCategoryRepository } from './repositories/sub-category.repository.js';
 import { ProductCategoryRepository } from './repositories/product-category.repository.js';
+import {
+  CreateParentCategoryDto,
+  UpdateParentCategoryDto,
+} from './dto/create-parent-category.dto.js';
 import {
   CreateCategoryDto,
   UpdateCategoryDto,
@@ -19,6 +24,7 @@ import {
 import {
   CreateProductCategoryDto,
   UpdateProductCategoryDto,
+  toParentCategoryResponse,
   toCategoryResponse,
   toSubCategoryResponse,
   toProductCategoryResponse,
@@ -28,16 +34,106 @@ import { ProductCategoryLinkInput } from './dto/product-category-link.dto.js';
 @Injectable()
 export class CategoriesService {
   constructor(
+    private readonly parentCategoryRepository: ParentCategoryRepository,
     private readonly categoryRepository: CategoryRepository,
     private readonly subCategoryRepository: SubCategoryRepository,
     private readonly productCategoryRepository: ProductCategoryRepository,
     private readonly productRepository: ProductRepository,
   ) {}
 
-  findAllCategories() {
-    return this.categoryRepository
+  findAllParentCategories() {
+    return this.parentCategoryRepository
       .findAll()
-      .then((items) => items.map(toCategoryResponse));
+      .then((items) => items.map(toParentCategoryResponse));
+  }
+
+  async findParentCategory(id: string) {
+    const parent = await this.parentCategoryRepository.findById(id);
+    if (!parent) {
+      throw new ApiException(
+        'PARENT_CATEGORY_NOT_FOUND',
+        'دسته والد یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return toParentCategoryResponse(parent);
+  }
+
+  async createParentCategory(dto: CreateParentCategoryDto) {
+    const existing = await this.parentCategoryRepository.findBySlug(dto.slug);
+    if (existing) {
+      throw new ApiException(
+        'PARENT_CATEGORY_SLUG_EXISTS',
+        'دسته والد با این slug از قبل وجود دارد',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const parent = await this.parentCategoryRepository.save(
+      this.parentCategoryRepository.create({
+        ...dto,
+        nameEn: dto.nameEn ?? null,
+        sort: dto.sort ?? 0,
+        isActive: dto.isActive ?? true,
+      }),
+    );
+    return toParentCategoryResponse(parent);
+  }
+
+  async updateParentCategory(id: string, dto: UpdateParentCategoryDto) {
+    const parent = await this.parentCategoryRepository.findById(id);
+    if (!parent) {
+      throw new ApiException(
+        'PARENT_CATEGORY_NOT_FOUND',
+        'دسته والد یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (dto.slug && dto.slug !== parent.slug) {
+      const slugTaken = await this.parentCategoryRepository.findBySlug(dto.slug);
+      if (slugTaken) {
+        throw new ApiException(
+          'PARENT_CATEGORY_SLUG_EXISTS',
+          'دسته والد با این slug از قبل وجود دارد',
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
+    Object.assign(parent, dto);
+    return toParentCategoryResponse(
+      await this.parentCategoryRepository.save(parent),
+    );
+  }
+
+  async removeParentCategory(id: string) {
+    const parent = await this.parentCategoryRepository.findById(id);
+    if (!parent) {
+      throw new ApiException(
+        'PARENT_CATEGORY_NOT_FOUND',
+        'دسته والد یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const children = await this.categoryRepository.findByParentCategoryId(id);
+    if (children.length > 0) {
+      throw new ApiException(
+        'PARENT_CATEGORY_HAS_CHILDREN',
+        'ابتدا دسته‌های وابسته را حذف یا جابه‌جا کنید',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    await this.parentCategoryRepository.remove(parent);
+    return {};
+  }
+
+  findAllCategories(parentCategoryId?: string) {
+    return this.categoryRepository
+      .findAll(parentCategoryId)
+      .then((items) => items.map((item) => toCategoryResponse(item, true)));
   }
 
   async findCategory(id: string) {
@@ -49,10 +145,12 @@ export class CategoriesService {
         HttpStatus.NOT_FOUND,
       );
     }
-    return toCategoryResponse(category);
+    return toCategoryResponse(category, true);
   }
 
   async createCategory(dto: CreateCategoryDto) {
+    await this.assertParentCategoryExists(dto.parentCategoryId);
+
     const existing = await this.categoryRepository.findBySlug(dto.slug);
     if (existing) {
       throw new ApiException(
@@ -70,7 +168,8 @@ export class CategoriesService {
         isActive: dto.isActive ?? true,
       }),
     );
-    return toCategoryResponse(category);
+    const loaded = await this.categoryRepository.findById(category.id);
+    return toCategoryResponse(loaded!, true);
   }
 
   async updateCategory(id: string, dto: UpdateCategoryDto) {
@@ -81,6 +180,10 @@ export class CategoriesService {
         'دسته‌بندی یافت نشد',
         HttpStatus.NOT_FOUND,
       );
+    }
+
+    if (dto.parentCategoryId) {
+      await this.assertParentCategoryExists(dto.parentCategoryId);
     }
 
     if (dto.slug && dto.slug !== category.slug) {
@@ -95,7 +198,9 @@ export class CategoriesService {
     }
 
     Object.assign(category, dto);
-    return toCategoryResponse(await this.categoryRepository.save(category));
+    await this.categoryRepository.save(category);
+    const loaded = await this.categoryRepository.findById(id);
+    return toCategoryResponse(loaded!, true);
   }
 
   async removeCategory(id: string) {
@@ -112,10 +217,35 @@ export class CategoriesService {
     return {};
   }
 
+  async findSubCategories(filters: {
+    categoryId?: string;
+    parentCategoryId?: string;
+  } = {}) {
+    if (filters.categoryId) {
+      await this.assertCategoryExists(filters.categoryId);
+    }
+    if (filters.parentCategoryId) {
+      await this.assertParentCategoryExists(filters.parentCategoryId);
+    }
+
+    const items = await this.subCategoryRepository.findAll(filters);
+    return items.map((item) => toSubCategoryResponse(item, true));
+  }
+
+  async findSubCategory(id: string) {
+    const subCategory = await this.subCategoryRepository.findById(id);
+    if (!subCategory) {
+      throw new ApiException(
+        'SUB_CATEGORY_NOT_FOUND',
+        'زیردسته یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return toSubCategoryResponse(subCategory, true);
+  }
+
   async findSubCategoriesByCategory(categoryId: string) {
-    await this.assertCategoryExists(categoryId);
-    const items = await this.subCategoryRepository.findByCategoryId(categoryId);
-    return items.map((item) => toSubCategoryResponse(item));
+    return this.findSubCategories({ categoryId });
   }
 
   async createSubCategory(dto: CreateSubCategoryDto) {
@@ -141,7 +271,8 @@ export class CategoriesService {
         isActive: dto.isActive ?? true,
       }),
     );
-    return toSubCategoryResponse(subCategory);
+    const loaded = await this.subCategoryRepository.findById(subCategory.id);
+    return toSubCategoryResponse(loaded!, true);
   }
 
   async updateSubCategory(id: string, dto: UpdateSubCategoryDto) {
@@ -169,9 +300,9 @@ export class CategoriesService {
     }
 
     Object.assign(subCategory, dto);
-    return toSubCategoryResponse(
-      await this.subCategoryRepository.save(subCategory),
-    );
+    await this.subCategoryRepository.save(subCategory);
+    const loaded = await this.subCategoryRepository.findById(id);
+    return toSubCategoryResponse(loaded!, true);
   }
 
   async removeSubCategory(id: string) {
@@ -257,8 +388,7 @@ export class CategoriesService {
     productId: string,
     link: ProductCategoryLinkInput,
   ) {
-    const { categoryId, subCategoryId } =
-      await this.resolveCategoryLink(link);
+    const { categoryId, subCategoryId } = await this.resolveCategoryLink(link);
 
     const duplicate =
       await this.productCategoryRepository.findByProductCategorySubCategory(
@@ -365,6 +495,19 @@ export class CategoriesService {
     return this.productCategoryRepository
       .findByProductId(productId)
       .then((items) => items.map(toProductCategoryResponse));
+  }
+
+  private async assertParentCategoryExists(parentCategoryId: string) {
+    const parent =
+      await this.parentCategoryRepository.findById(parentCategoryId);
+    if (!parent) {
+      throw new ApiException(
+        'PARENT_CATEGORY_NOT_FOUND',
+        'دسته والد یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return parent;
   }
 
   private async assertCategoryExists(categoryId: string) {

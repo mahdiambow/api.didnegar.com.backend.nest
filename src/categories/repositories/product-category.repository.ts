@@ -11,8 +11,8 @@ export class ProductCategoryRepository {
   ) {}
 
   private readonly relations = {
-    category: true,
-    subCategory: { category: true },
+    category: { parentCategory: true },
+    subCategory: { category: { parentCategory: true } },
     product: true,
   } as const;
 
@@ -41,8 +41,8 @@ export class ProductCategoryRepository {
     return this.repo.find({
       where: { productId },
       relations: {
-        category: true,
-        subCategory: { category: true },
+        category: { parentCategory: true },
+        subCategory: { category: { parentCategory: true } },
       },
       order: { position: 'ASC', createdAt: 'ASC' },
     });
@@ -60,8 +60,13 @@ export class ProductCategoryRepository {
     const qb = this.repo
       .createQueryBuilder('pc')
       .leftJoinAndSelect('pc.category', 'category')
+      .leftJoinAndSelect('category.parentCategory', 'parentCategory')
       .leftJoinAndSelect('pc.subCategory', 'subCategory')
       .leftJoinAndSelect('subCategory.category', 'subCategoryCategory')
+      .leftJoinAndSelect(
+        'subCategoryCategory.parentCategory',
+        'subParentCategory',
+      )
       .orderBy('pc.position', 'ASC')
       .addOrderBy('pc.createdAt', 'ASC')
       .skip(offset)

@@ -12,7 +12,7 @@ export class SubCategoryRepository {
   findById(id: string) {
     return this.repo.findOne({
       where: { id },
-      relations: { category: true },
+      relations: { category: { parentCategory: true } },
     });
   }
 
@@ -20,11 +20,31 @@ export class SubCategoryRepository {
     return this.repo.findOne({ where: { categoryId, slug } });
   }
 
+  findAll(filters: { categoryId?: string; parentCategoryId?: string } = {}) {
+    const qb = this.repo
+      .createQueryBuilder('sub')
+      .leftJoinAndSelect('sub.category', 'category')
+      .leftJoinAndSelect('category.parentCategory', 'parentCategory')
+      .orderBy('sub.sort', 'ASC')
+      .addOrderBy('sub.name', 'ASC');
+
+    if (filters.categoryId) {
+      qb.andWhere('sub.categoryId = :categoryId', {
+        categoryId: filters.categoryId,
+      });
+    }
+
+    if (filters.parentCategoryId) {
+      qb.andWhere('category.parentCategoryId = :parentCategoryId', {
+        parentCategoryId: filters.parentCategoryId,
+      });
+    }
+
+    return qb.getMany();
+  }
+
   findByCategoryId(categoryId: string) {
-    return this.repo.find({
-      where: { categoryId },
-      order: { sort: 'ASC', name: 'ASC' },
-    });
+    return this.findAll({ categoryId });
   }
 
   create(data: Partial<SubCategory>) {

@@ -27,8 +27,8 @@ export class ProductRepository {
             brand: true,
             productStock: true,
             productCategories: {
-              category: true,
-              subCategory: { category: true },
+              category: { parentCategory: true },
+              subCategory: { category: { parentCategory: true } },
             },
           }
         : undefined,
@@ -98,8 +98,13 @@ export class ProductRepository {
         .leftJoinAndSelect('product.productStock', 'productStock')
         .leftJoinAndSelect('product.productCategories', 'productCategories')
         .leftJoinAndSelect('productCategories.category', 'category')
+        .leftJoinAndSelect('category.parentCategory', 'parentCategory')
         .leftJoinAndSelect('productCategories.subCategory', 'subCategory')
-        .leftJoinAndSelect('subCategory.category', 'subCategoryCategory');
+        .leftJoinAndSelect('subCategory.category', 'subCategoryCategory')
+        .leftJoinAndSelect(
+          'subCategoryCategory.parentCategory',
+          'subParentCategory',
+        );
     }
 
     if (filters.categoryId) {

@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
@@ -11,6 +11,7 @@ import {
 } from '../common/response/helpers/paginated-response.helper.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
 import { Product } from '../products/entities/product.entity.js';
+import { ProductsService } from '../products/products.service.js';
 import { SellerOffer } from './entities/seller-offer.entity.js';
 import {
   CreateSellerOffersDto,
@@ -77,6 +78,8 @@ export class OffersService {
     @InjectRepository(Seller) private readonly sellers: Repository<Seller>,
     @InjectRepository(Product)
     private readonly products: Repository<Product>,
+    @Inject(forwardRef(() => ProductsService))
+    private readonly productsService: ProductsService,
   ) {}
 
   async findAll(query: ListSellerOffersDto) {
@@ -135,6 +138,16 @@ export class OffersService {
       );
     }
 
+    for (const sku of skus) {
+      if (await this.offers.existsBy({ sku })) {
+        throw new ApiException(
+          'OFFER_EXISTS',
+          `SKU تکراری است: ${sku}`,
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
     const productIds = [...new Set(dto.items.map((item) => item.productId))];
     const products = await this.products.findBy({ id: In(productIds) });
     const productMap = new Map(products.map((product) => [product.id, product]));
@@ -160,6 +173,12 @@ export class OffersService {
     item: SellerOfferItemDto,
     productMap: Map<string, Product>,
   ) {
+    if (item.product && Object.keys(item.product).length > 0) {
+      await this.productsService.update(item.productId, item.product);
+      const refreshed = await this.products.findOneBy({ id: item.productId });
+      if (refreshed) productMap.set(item.productId, refreshed);
+    }
+
     const product = productMap.get(item.productId)!;
     const approvalStatus =
       product.approvalStatus === 'approved' ? 'approved' : 'pending';
@@ -187,7 +206,24 @@ export class OffersService {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
 
-    Object.assign(offer, dto);
+    const { product: productPatch, ...offerFields } = dto;
+    if (productPatch && Object.keys(productPatch).length > 0) {
+      await this.productsService.update(offer.productId, productPatch);
+    }
+
+    if (
+      offerFields.sku !== undefined &&
+      offerFields.sku !== offer.sku &&
+      (await this.offers.existsBy({ sku: offerFields.sku }))
+    ) {
+      throw new ApiException(
+        'OFFER_EXISTS',
+        `SKU تکراری است: ${offerFields.sku}`,
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    Object.assign(offer, offerFields);
     offer.approvalStatus = 'approved';
     offer.rejectionReason = null;
 
@@ -240,10 +276,16 @@ export class OffersService {
     try {
       return toOfferResponse(await this.offers.save(offer));
     } catch (error) {
-      if ((error as { code?: string }).code === '23505')
+      const err = error as { code?: string | number; errno?: number };
+      if (
+        err.code === '23505' ||
+        err.code === 'ER_DUP_ENTRY' ||
+        err.errno === 1062 ||
+        String(err.code) === '1062'
+      )
         throw new ApiException(
           'OFFER_EXISTS',
-          'SKU برای این فروشنده تکراری است',
+          'SKU تکراری است',
           HttpStatus.CONFLICT,
         );
       throw error;

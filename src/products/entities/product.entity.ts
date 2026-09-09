@@ -80,8 +80,8 @@ export class Product {
   shortDescription: string | null;
 
   @Index({ unique: true })
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  sku: string | null;
+  @Column({ type: 'varchar', length: 100 })
+  sku: string;
 
   @Index()
   @Column({ type: 'varchar', length: 50, default: 'publish' })

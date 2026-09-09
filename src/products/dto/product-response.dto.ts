@@ -74,7 +74,7 @@ export class ProductResponseDto {
   shortDescription: string | null;
 
   @ApiPropertyOptional({ nullable: true, example: 'SAM-S24U-256' })
-  sku: string | null;
+  sku: string;
 
   @ApiProperty()
   status: string;
@@ -283,7 +283,7 @@ export function toProductResponse(
     slug: product.slug,
     description: product.description,
     shortDescription: product.shortDescription,
-    sku: product.sku ?? null,
+    sku: product.sku,
     status: product.status,
     approvalStatus: product.approvalStatus ?? 'pending',
     rejectionReason: product.rejectionReason ?? null,

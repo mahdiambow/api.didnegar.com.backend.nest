@@ -237,7 +237,10 @@ export class ProductWritableFieldsDto {
   @MaxLength(5000)
   excerpt?: string | null;
 
-  @ApiProperty({ example: 'galaxy-s24' })
+  @ApiProperty({
+    example: 'galaxy-s24',
+    description: 'باید یکتا باشد',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
@@ -256,11 +259,11 @@ export class ProductWritableFieldsDto {
   @IsString()
   shortDescription?: string;
 
-  @ApiPropertyOptional({ example: 'SAM-S24U-256' })
-  @IsOptional()
+  @ApiProperty({ example: 'SAM-S24U-256', description: 'باید یکتا باشد' })
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
-  sku?: string | null;
+  sku: string;
 
   @ApiPropertyOptional({ example: 'publish', default: 'publish' })
   @IsOptional()
@@ -494,7 +497,7 @@ export function toProductEntityData(
     slug: dto.slug,
     description: dto.description ?? null,
     shortDescription: dto.shortDescription ?? null,
-    sku: dto.sku ?? null,
+    sku: dto.sku,
     status: dto.status ?? 'publish',
     approvalStatus,
     rejectionReason:

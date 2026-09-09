@@ -24,7 +24,7 @@ import { SellersModule } from '../sellers/sellers.module.js';
     forwardRef(() => AuthModule),
     forwardRef(() => CategoriesModule),
     AttributesModule,
-    OffersModule,
+    forwardRef(() => OffersModule),
     SellersModule,
   ],
   controllers: [ProductsController, ProductsPricingController],

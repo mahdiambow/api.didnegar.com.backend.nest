@@ -100,11 +100,17 @@ export class ProductsService {
     }
 
     const legacyId = await this.productRepository.getNextLegacyId();
-    const product = await this.productRepository.save(
-      this.productRepository.create(
-        toProductEntityData({ ...productData, sellerIds }, legacyId),
-      ),
-    );
+    let product;
+    try {
+      product = await this.productRepository.save(
+        this.productRepository.create(
+          toProductEntityData({ ...productData, sellerIds }, legacyId),
+        ),
+      );
+    } catch (error) {
+      this.throwIfDuplicateKey(error);
+      throw error;
+    }
 
     await this.productStockRepository.upsertForProduct(
       product.id,
@@ -201,7 +207,12 @@ export class ProductsService {
       product.rejectionReason = null;
     }
 
-    await this.productRepository.save(product);
+    try {
+      await this.productRepository.save(product);
+    } catch (error) {
+      this.throwIfDuplicateKey(error);
+      throw error;
+    }
     if (stock !== undefined) {
       await this.productStockRepository.upsertForProduct(id, stock);
     }
@@ -270,7 +281,7 @@ export class ProductsService {
       .then((brands) => brands.map(toBrandResponse));
   }
 
-  private async assertUniqueFields(slug: string, sku?: string | null) {
+  private async assertUniqueFields(slug: string, sku: string) {
     const slugTaken = await this.productRepository.findBySlug(slug);
     if (slugTaken) {
       throw new ApiException(
@@ -280,16 +291,38 @@ export class ProductsService {
       );
     }
 
-    if (sku) {
-      const skuTaken = await this.productRepository.findBySku(sku);
-      if (skuTaken) {
-        throw new ApiException(
-          'PRODUCT_SKU_EXISTS',
-          'محصول با این sku از قبل وجود دارد',
-          HttpStatus.CONFLICT,
-        );
-      }
+    const skuTaken = await this.productRepository.findBySku(sku);
+    if (skuTaken) {
+      throw new ApiException(
+        'PRODUCT_SKU_EXISTS',
+        'محصول با این sku از قبل وجود دارد',
+        HttpStatus.CONFLICT,
+      );
     }
+  }
+
+  private throwIfDuplicateKey(error: unknown): void {
+    const err = error as { code?: string | number; errno?: number };
+    const isDuplicate =
+      err.code === '23505' ||
+      err.code === 'ER_DUP_ENTRY' ||
+      err.errno === 1062 ||
+      String(err.code) === '1062';
+    if (!isDuplicate) return;
+
+    const message = String((error as { message?: string }).message ?? '');
+    if (message.includes('slug')) {
+      throw new ApiException(
+        'PRODUCT_SLUG_EXISTS',
+        'محصول با این slug از قبل وجود دارد',
+        HttpStatus.CONFLICT,
+      );
+    }
+    throw new ApiException(
+      'PRODUCT_SKU_EXISTS',
+      'محصول با این sku از قبل وجود دارد',
+      HttpStatus.CONFLICT,
+    );
   }
 
   private async assertBrandExists(brandId: string) {

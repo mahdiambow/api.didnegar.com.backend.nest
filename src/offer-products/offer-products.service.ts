@@ -210,6 +210,7 @@ export class OfferProductsService {
             {
               name: item.name,
               slug: item.slug,
+              sku: item.sku,
               description: item.description ?? undefined,
               shortDescription: item.shortDescription ?? undefined,
               status: 'publish',
