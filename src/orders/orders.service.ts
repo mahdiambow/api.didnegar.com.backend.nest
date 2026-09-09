@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import {
   getPaginationParams,
@@ -7,17 +8,21 @@ import {
 import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
 import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
+import { ProductStockRepository } from '../products/repositories/product-stock.repository.js';
 import { CreateOrderDto, OrderProductDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { toOrderResponse } from './dto/order-response.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
+import { Order } from '../payments/entities/order.entity.js';
 
 @Injectable()
 export class OrdersService {
   constructor(
+    private readonly dataSource: DataSource,
     private readonly orderRepository: OrderRepository,
     private readonly offersService: OffersService,
     private readonly shippingService: ShippingService,
+    private readonly productStockRepository: ProductStockRepository,
   ) {}
 
   async findAll(query: {
@@ -46,19 +51,52 @@ export class OrdersService {
     );
     const amounts = this.calculateAmounts(items, shippingMethod);
 
-    const order = await this.orderRepository.save(
-      this.orderRepository.create({
-        userId,
-        items,
-        shippingMethodId: shippingMethod.id,
-        subtotal: amounts.subtotal,
-        shippingAmount: amounts.shippingAmount,
-        amount: amounts.payableAmount,
-        status: 'pending',
-      }),
-    );
+    // فقط ردیف‌های stock کم می‌شوند (اتمیک) — جدول products قفل نمی‌شود
+    const orderId = await this.dataSource.transaction(async (manager) => {
+      for (const item of items) {
+        const offerOk = await this.offersService.tryDecrementStock(
+          item.offerId,
+          item.quantity,
+          manager,
+        );
+        if (!offerOk) {
+          throw new ApiException(
+            'OFFER_UNAVAILABLE',
+            'پیشنهاد فروش یا موجودی موردنیاز در دسترس نیست',
+            HttpStatus.CONFLICT,
+          );
+        }
 
-    const saved = await this.orderRepository.findById(order.id);
+        const productOk = await this.productStockRepository.tryDecrement(
+          item.productId,
+          item.quantity,
+          manager,
+        );
+        if (!productOk) {
+          throw new ApiException(
+            'PRODUCT_OUT_OF_STOCK',
+            'موجودی محصول کافی نیست',
+            HttpStatus.CONFLICT,
+          );
+        }
+      }
+
+      const orderRepo = manager.getRepository(Order);
+      const order = await orderRepo.save(
+        orderRepo.create({
+          userId,
+          items,
+          shippingMethodId: shippingMethod.id,
+          subtotal: amounts.subtotal,
+          shippingAmount: amounts.shippingAmount,
+          amount: amounts.payableAmount,
+          status: 'pending',
+        }),
+      );
+      return order.id;
+    });
+
+    const saved = await this.orderRepository.findById(orderId);
     return toOrderResponse(saved!);
   }
 
@@ -125,17 +163,15 @@ export class OrdersService {
 
       if (!shippingMethod) {
         throw new ApiException(
-          'SHIPPING_METHOD_NOT_FOUND',
-          'روش ارسال یافت نشد',
-          HttpStatus.NOT_FOUND,
+          'SHIPPING_METHOD_REQUIRED',
+          'روش ارسال مشخص نیست',
+          HttpStatus.BAD_REQUEST,
         );
       }
 
       const amounts = this.calculateAmounts(items, shippingMethod);
-
-      order.items = this.orderRepository.create({ items }).items;
+      order.items = items as typeof order.items;
       order.shippingMethodId = shippingMethod.id;
-
       if (!hasManualAmounts) {
         order.subtotal = amounts.subtotal;
         order.shippingAmount = amounts.shippingAmount;
@@ -143,20 +179,24 @@ export class OrdersService {
       }
     }
 
-    if (dto.status !== undefined) {
-      order.status = dto.status;
-    }
-
     if (hasManualAmounts) {
       order.subtotal = dto.subtotal!;
       order.shippingAmount = dto.shippingAmount!;
       order.amount = dto.amount!;
     } else {
-      if (dto.subtotal !== undefined) order.subtotal = dto.subtotal;
+      if (dto.subtotal !== undefined) {
+        order.subtotal = dto.subtotal;
+      }
       if (dto.shippingAmount !== undefined) {
         order.shippingAmount = dto.shippingAmount;
       }
-      if (dto.amount !== undefined) order.amount = dto.amount;
+      if (dto.amount !== undefined) {
+        order.amount = dto.amount;
+      }
+    }
+
+    if (dto.status !== undefined) {
+      order.status = dto.status;
     }
 
     const updated = await this.orderRepository.save(order);

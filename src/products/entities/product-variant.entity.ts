@@ -5,10 +5,8 @@ import {
   ManyToOne,
   JoinColumn,
   Index,
-  OneToMany,
 } from 'typeorm';
 import type { Product } from './product.entity.js';
-import type { ProductVariantAttribute } from './product-variant-attribute.entity.js';
 
 @Entity('product_variants')
 export class ProductVariant {
@@ -22,7 +20,4 @@ export class ProductVariant {
   @ManyToOne('Product', 'variants', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'product_id' })
   product: Product;
-
-  @OneToMany('ProductVariantAttribute', 'variant')
-  variantAttributes: ProductVariantAttribute[];
 }

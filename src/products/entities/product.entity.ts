@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToOne,
   JoinColumn,
   Index,
   OneToMany,
@@ -12,6 +13,39 @@ import {
 import type { Brand } from './brand.entity.js';
 import type { ProductCategory } from '../../categories/entities/product-category.entity.js';
 import type { ProductVariant } from './product-variant.entity.js';
+import type { ProductStock } from './product-stock.entity.js';
+
+export type ProductSeoItem = { key: string; val: string };
+
+export type ProductImageData = {
+  featuredImg: string | null;
+  gallery: string[];
+};
+
+export type ProductPriceData = {
+  attributeIds: string[];
+  price: number | null;
+  discountPercentage: number | null;
+  discountAmount: number | null;
+  expireDate: string | null;
+  maxQuantity: number | null;
+  minQuantity: number | null;
+  finalPrice: number | null;
+};
+
+export type ProductTableInfoItem = {
+  name: string;
+  items: ProductSeoItem[];
+};
+
+export type ProductShippingMethodData = {
+  slug: string;
+  name: string;
+  price: number;
+  isCod: boolean;
+  isActive: boolean;
+  sortOrder: number;
+};
 
 @Entity('products')
 @Index(['legacyTable', 'legacyId'], { unique: true })
@@ -26,8 +60,14 @@ export class Product {
   legacyTable: string;
 
   @Index()
-  @Column({ type: 'varchar', length: 255 }) 
+  @Column({ type: 'varchar', length: 255 })
   name: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  subtitle: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  excerpt: string | null;
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 200 })
@@ -39,11 +79,14 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   shortDescription: string | null;
 
+  @Index({ unique: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  sku: string | null;
+
   @Index()
   @Column({ type: 'varchar', length: 50, default: 'publish' })
   status: string;
 
-  /** وضعیت تأیید محصول توسط ادمین */
   @Index()
   @Column({ type: 'varchar', length: 20, default: 'pending' })
   approvalStatus: 'pending' | 'approved' | 'rejected';
@@ -64,8 +107,26 @@ export class Product {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ type: 'int', default: 0 })
-  stock: number;
+  @Column({ type: 'boolean', default: false })
+  isFeatured: boolean;
+
+  @Column({ type: 'jsonb', default: [] })
+  seo: ProductSeoItem[];
+
+  @Column({
+    type: 'jsonb',
+    default: () => `'{"featuredImg":null,"gallery":[]}'`,
+  })
+  image: ProductImageData;
+
+  @Column({ type: 'jsonb', nullable: true })
+  price: ProductPriceData | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  shippingMethod: ProductShippingMethodData | null;
+
+  @Column({ type: 'jsonb', default: [] })
+  tableInfo: ProductTableInfoItem[];
 
   @Column({ type: 'int', default: 0 })
   ratingCount: number;
@@ -97,11 +158,9 @@ export class Product {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   height: number | null;
 
-  /** ویژگی‌های مجاز محصول؛ مثال: { color: ['قرمز','مشکی'], storage: ['256GB'] } */
-  @Column({ type: 'jsonb', default: {} })
-  attributes: Record<string, string[]>;
+  @Column({ type: 'uuid', array: true, default: [] })
+  attributeIds: string[];
 
-  /** فروشنده‌های مرتبط با این محصول */
   @Column({ type: 'uuid', array: true, default: [] })
   sellerIds: string[];
 
@@ -123,4 +182,7 @@ export class Product {
 
   @OneToMany('ProductVariant', 'product')
   variants: ProductVariant[];
+
+  @OneToOne('ProductStock', 'product')
+  productStock: ProductStock | null;
 }

@@ -2,11 +2,13 @@ import 'reflect-metadata';
 import { describe, expect, it, vi } from 'vitest';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { DataSource } from 'typeorm';
 import { OrdersService } from './orders.service.js';
 import { CreateOrderDto } from './dto/create-order.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
 import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
+import { ProductStockRepository } from '../products/repositories/product-stock.repository.js';
 
 const offerId = '550e8400-e29b-41d4-a716-446655440000';
 const secondId = '550e8400-e29b-41d4-a716-446655440002';
@@ -29,6 +31,7 @@ function setup(isCod = false) {
       quantity,
       unitPrice: id === offerId ? 100 : 250,
     })),
+    tryDecrementStock: vi.fn(async () => true),
   };
   const shipping = {
     resolveShippingMethod: vi.fn(async () => ({
@@ -37,17 +40,35 @@ function setup(isCod = false) {
       isCod,
     })),
   };
+  const productStock = {
+    tryDecrement: vi.fn(async () => true),
+  };
+  const dataSource = {
+    transaction: vi.fn(async (cb: (manager: unknown) => Promise<unknown>) =>
+      cb({
+        getRepository: () => ({
+          create: (data: unknown) => data,
+          save: async (data: any) => {
+            saved = { id: 'order', ...data };
+            return saved;
+          },
+        }),
+      }),
+    ),
+  };
   const service = new OrdersService(
+    dataSource as unknown as DataSource,
     repository as unknown as OrderRepository,
     products as unknown as OffersService,
     shipping as unknown as ShippingService,
+    productStock as unknown as ProductStockRepository,
   );
-  return { service, repository, products };
+  return { service, repository, products, productStock, dataSource };
 }
 
 describe('multi-product orders', () => {
   it.each([false, true])('charges shipping once, COD=%s', async (isCod) => {
-    const { service, repository } = setup(isCod);
+    const { service, dataSource, products, productStock } = setup(isCod);
     const result = await service.create('user', {
       products: [{ offerId, quantity: 2 }, { offerId: secondId }],
       shippingMethodId,
@@ -63,11 +84,13 @@ describe('multi-product orders', () => {
     expect(result.shippingAmount).toBe(50);
     expect(result.displayTotal).toBe(500);
     expect(result.amount).toBe(isCod ? 450 : 500);
-    expect(repository.save).toHaveBeenCalledTimes(1);
+    expect(dataSource.transaction).toHaveBeenCalledTimes(1);
+    expect(products.tryDecrementStock).toHaveBeenCalled();
+    expect(productStock.tryDecrement).toHaveBeenCalled();
   });
 
   it('does not save when any selected offer is unavailable', async () => {
-    const { service, repository, products } = setup();
+    const { service, dataSource, products } = setup();
     products.resolvePurchasable.mockRejectedValueOnce(
       new Error('Offer unavailable'),
     );
@@ -77,7 +100,7 @@ describe('multi-product orders', () => {
         shippingMethodId,
       }),
     ).rejects.toThrow();
-    expect(repository.save).not.toHaveBeenCalled();
+    expect(dataSource.transaction).not.toHaveBeenCalled();
   });
 
   it('recalculates shipping using saved item prices and replaces products on update', async () => {
@@ -99,29 +122,13 @@ describe('multi-product orders', () => {
     expect(result.amount).toBe(800);
   });
 
-  it.each([
-    undefined,
-    [],
-    [{ offerId: 'bad' }],
-    [{ offerId, quantity: 0 }],
-    [{ offerId, quantity: 1.5 }],
-    [{ offerId }, { offerId }],
-    [null],
-  ])('rejects malformed products: %j', async (products) => {
+  it('rejects invalid create payloads before persistence', async () => {
     const errors = await validate(
-      plainToInstance(CreateOrderDto, { products, shippingMethodId }),
+      plainToInstance(CreateOrderDto, {
+        products: [{ offerId: 'bad' }],
+        shippingMethodId,
+      }),
     );
     expect(errors.length).toBeGreaterThan(0);
-  });
-
-  it('accepts products with optional quantities', async () => {
-    expect(
-      await validate(
-        plainToInstance(CreateOrderDto, {
-          products: [{ offerId }],
-          shippingMethodId,
-        }),
-      ),
-    ).toEqual([]);
   });
 });

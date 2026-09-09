@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { AuthUser } from '../auth/types/auth-user.type.js';
 import { userHasRole } from '../auth/types/auth-user.type.js';
@@ -285,5 +285,31 @@ export class OffersService {
       quantity,
       unitPrice: price,
     };
+  }
+
+  /** کم‌کردن اتمیک موجودی آفر — بدون نگه‌داشتن لاک روی product */
+  async tryDecrementStock(
+    offerId: string,
+    quantity: number,
+    manager?: EntityManager,
+  ): Promise<boolean> {
+    if (!Number.isInteger(quantity) || quantity < 1) return false;
+    const repo = manager ? manager.getRepository(SellerOffer) : this.offers;
+
+    const result = await repo
+      .createQueryBuilder()
+      .update(SellerOffer)
+      .set({
+        stock: () => `"stock" - :quantity`,
+        stockStatus: () =>
+          `CASE WHEN "stock" - :quantity <= 0 THEN 'outofstock' ELSE "stockStatus" END`,
+      })
+      .where('id = :offerId')
+      .andWhere('"stock" >= :quantity')
+      .andWhere('"stockStatus" = :stockStatus', { stockStatus: 'instock' })
+      .setParameters({ offerId, quantity })
+      .execute();
+
+    return (result.affected ?? 0) > 0;
   }
 }

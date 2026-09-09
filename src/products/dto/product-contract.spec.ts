@@ -9,7 +9,6 @@ import { toProductEntityData } from './product-fields.dto.js';
 import { Product } from '../entities/product.entity.js';
 
 const removed = {
-  sku: 'OLD-SKU',
   minPrice: 100,
   maxPrice: 200,
   stockQuantity: 5,
@@ -22,6 +21,7 @@ const general = {
   slug: 'galaxy-s24',
   description: 'توضیحات',
   shortDescription: 'خلاصه',
+  sku: 'SAM-S24U-256',
   status: 'publish',
   isVirtual: false,
   isDownloadable: false,
@@ -58,5 +58,6 @@ describe('general product contract', () => {
       expect(response).not.toHaveProperty(field);
     }
     expect(response.name).toBe(general.name);
+    expect(response.sku).toBe(general.sku);
   });
 });

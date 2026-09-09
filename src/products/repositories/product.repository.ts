@@ -25,6 +25,7 @@ export class ProductRepository {
       relations: includeRelations
         ? {
             brand: true,
+            productStock: true,
             productCategories: {
               category: true,
               subCategory: { category: true },
@@ -36,6 +37,10 @@ export class ProductRepository {
 
   findBySlug(slug: string) {
     return this.repo.findOne({ where: { slug } });
+  }
+
+  findBySku(sku: string) {
+    return this.repo.findOne({ where: { sku } });
   }
 
   findByFilters(filters: ProductFilters = {}) {
@@ -90,6 +95,7 @@ export class ProductRepository {
 
     if (includeRelations) {
       qb.leftJoinAndSelect('product.brand', 'brand')
+        .leftJoinAndSelect('product.productStock', 'productStock')
         .leftJoinAndSelect('product.productCategories', 'productCategories')
         .leftJoinAndSelect('productCategories.category', 'category')
         .leftJoinAndSelect('productCategories.subCategory', 'subCategory')

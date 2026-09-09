@@ -11,6 +11,7 @@ import {
 } from '../common/response/helpers/paginated-response.helper.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
 import { Product } from '../products/entities/product.entity.js';
+import { ProductStock } from '../products/entities/product-stock.entity.js';
 import { ProductRepository } from '../products/repositories/product.repository.js';
 import { BrandRepository } from '../products/repositories/brand.repository.js';
 import { CategoriesService } from '../categories/categories.service.js';
@@ -222,15 +223,22 @@ export class OfferProductsService {
               length: item.length !== null ? Number(item.length) : undefined,
               width: item.width !== null ? Number(item.width) : undefined,
               height: item.height !== null ? Number(item.height) : undefined,
-              attributes: item.attributes ?? {},
+              attributeIds: [],
               sellerIds: [item.sellerId],
-              stock: item.stock,
               approvalStatus: 'approved',
               rejectionReason: null,
             },
             legacyId,
           ),
         ),
+      );
+
+      const stockRepo = manager.getRepository(ProductStock);
+      await stockRepo.save(
+        stockRepo.create({
+          productId: product.id,
+          stock: item.stock,
+        }),
       );
 
       const offer = await offerRepo.save(

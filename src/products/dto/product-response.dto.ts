@@ -9,7 +9,21 @@ import {
 import { PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE } from './product-variant.examples.js';
 import { Brand } from '../entities/brand.entity.js';
 import { Product } from '../entities/product.entity.js';
+import type {
+  ProductImageData,
+  ProductPriceData,
+  ProductSeoItem,
+  ProductShippingMethodData,
+  ProductTableInfoItem,
+} from '../entities/product.entity.js';
 import { BRAND_EXAMPLES, BRAND_RESPONSE_EXAMPLE } from './brand.examples.js';
+import {
+  ProductImageDto,
+  ProductKeyValDto,
+  ProductPriceDto,
+  ProductShippingMethodDto,
+  ProductTableInfoDto,
+} from './product-fields.dto.js';
 
 export class BrandResponseDto {
   @ApiProperty()
@@ -41,6 +55,15 @@ export class ProductResponseDto {
   @ApiProperty()
   name: string;
 
+  @ApiPropertyOptional({ nullable: true, example: 'پرچمدار سامسونگ ۲۰۲۴' })
+  subtitle: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 'خلاصه کوتاه محصول برای لیست‌ها',
+  })
+  excerpt: string | null;
+
   @ApiProperty()
   slug: string;
 
@@ -49,6 +72,9 @@ export class ProductResponseDto {
 
   @ApiPropertyOptional({ nullable: true })
   shortDescription: string | null;
+
+  @ApiPropertyOptional({ nullable: true, example: 'SAM-S24U-256' })
+  sku: string | null;
 
   @ApiProperty()
   status: string;
@@ -78,8 +104,70 @@ export class ProductResponseDto {
   @ApiProperty({ example: true })
   isActive: boolean;
 
-  @ApiProperty({ example: 10, description: 'موجودی محصول' })
+  @ApiProperty({ example: false })
+  isFeatured: boolean;
+
+  @ApiProperty({
+    example: 10,
+    description: 'موجودی محصول از جدول product_stocks',
+  })
   stock: number;
+
+  @ApiProperty({
+    type: [ProductKeyValDto],
+    example: [{ key: 'meta_title', val: 'خرید Galaxy S24' }],
+  })
+  seo: ProductSeoItem[];
+
+  @ApiProperty({
+    type: ProductImageDto,
+    example: {
+      featuredImg: 'https://cdn.example.com/products/s24-featured.jpg',
+      gallery: ['https://cdn.example.com/products/s24-1.jpg'],
+    },
+  })
+  image: ProductImageData;
+
+  @ApiPropertyOptional({
+    type: ProductPriceDto,
+    nullable: true,
+    example: {
+      attributeIds: ['550e8400-e29b-41d4-a716-446655440060'],
+      price: 68000000,
+      discountPercentage: 10,
+      discountAmount: 2000000,
+      expireDate: '2026-12-31T23:59:59.000Z',
+      maxQuantity: 5,
+      minQuantity: 1,
+      finalPrice: 66000000,
+    },
+  })
+  price: ProductPriceData | null;
+
+  @ApiPropertyOptional({
+    type: ProductShippingMethodDto,
+    nullable: true,
+    example: {
+      slug: 'tipax-cod',
+      name: 'تیپاکس (پس کرایه)',
+      price: 75000,
+      isCod: true,
+      isActive: true,
+      sortOrder: 0,
+    },
+  })
+  shippingMethod: ProductShippingMethodData | null;
+
+  @ApiProperty({
+    type: [ProductTableInfoDto],
+    example: [
+      {
+        name: 'مشخصات فنی',
+        items: [{ key: 'وزن', val: '۲۳۳ گرم' }],
+      },
+    ],
+  })
+  tableInfo: ProductTableInfoItem[];
 
   @ApiProperty()
   ratingCount: number;
@@ -109,11 +197,11 @@ export class ProductResponseDto {
   height: number | null;
 
   @ApiProperty({
-    example: { color: ['قرمز', 'مشکی'], storage: ['256GB', '512GB'] },
-    description: 'ویژگی‌های مجاز محصول برای قیمت‌گذاری فروشنده',
-    additionalProperties: { type: 'array', items: { type: 'string' } },
+    type: [String],
+    example: ['550e8400-e29b-41d4-a716-446655440060'],
+    description: 'شناسه ویژگی‌های محصول (Attribute IDs)',
   })
-  attributes: Record<string, string[]>;
+  attributeIds: string[];
 
   @ApiProperty({
     type: [String],
@@ -176,6 +264,13 @@ export function toBrandResponse(brand: Brand): BrandResponseDto {
   };
 }
 
+function normalizeImage(image: Product['image']): ProductImageData {
+  return {
+    featuredImg: image?.featuredImg ?? null,
+    gallery: Array.isArray(image?.gallery) ? image.gallery : [],
+  };
+}
+
 export function toProductResponse(
   product: Product,
   includeRelations = false,
@@ -183,9 +278,12 @@ export function toProductResponse(
   return {
     id: product.id,
     name: product.name,
+    subtitle: product.subtitle ?? null,
+    excerpt: product.excerpt ?? null,
     slug: product.slug,
     description: product.description,
     shortDescription: product.shortDescription,
+    sku: product.sku ?? null,
     status: product.status,
     approvalStatus: product.approvalStatus ?? 'pending',
     rejectionReason: product.rejectionReason ?? null,
@@ -193,7 +291,13 @@ export function toProductResponse(
     isVirtual: product.isVirtual,
     isDownloadable: product.isDownloadable,
     isActive: product.isActive ?? true,
-    stock: product.stock ?? 0,
+    isFeatured: product.isFeatured ?? false,
+    stock: product.productStock?.stock ?? 0,
+    seo: product.seo ?? [],
+    image: normalizeImage(product.image),
+    price: product.price ?? null,
+    shippingMethod: product.shippingMethod ?? null,
+    tableInfo: product.tableInfo ?? [],
     ratingCount: product.ratingCount,
     averageRating: Number(product.averageRating),
     totalSales: product.totalSales,
@@ -203,7 +307,7 @@ export function toProductResponse(
     length: product.length !== null ? Number(product.length) : null,
     width: product.width !== null ? Number(product.width) : null,
     height: product.height !== null ? Number(product.height) : null,
-    attributes: product.attributes ?? {},
+    attributeIds: product.attributeIds ?? [],
     sellerIds: product.sellerIds ?? [],
     createdBySellerId: product.createdBySellerId ?? null,
     createdAt: product.createdAt,
@@ -224,7 +328,7 @@ export function toProductResponse(
         : undefined,
     variants:
       includeRelations && product.variants
-        ? product.variants.map((item) => toProductAttributeResponse(item, true))
+        ? product.variants.map((item) => toProductAttributeResponse(item))
         : undefined,
   };
 }

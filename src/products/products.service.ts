@@ -7,7 +7,10 @@ import {
 import { CategoriesService } from '../categories/categories.service.js';
 import { SellerRepository } from '../sellers/repositories/seller.repository.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
-import { toProductEntityData } from './dto/product-fields.dto.js';
+import {
+  resolveProductStock,
+  toProductEntityData,
+} from './dto/product-fields.dto.js';
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ReviewProductDto } from './dto/review-product.dto.js';
 import {
@@ -16,11 +19,13 @@ import {
 } from './dto/product-response.dto.js';
 import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
+import { ProductStockRepository } from './repositories/product-stock.repository.js';
 
 @Injectable()
 export class ProductsService {
   constructor(
     private readonly productRepository: ProductRepository,
+    private readonly productStockRepository: ProductStockRepository,
     private readonly brandRepository: BrandRepository,
     private readonly sellerRepository: SellerRepository,
     @Inject(forwardRef(() => CategoriesService))
@@ -77,7 +82,7 @@ export class ProductsService {
   async create(dto: CreateProductDto) {
     const { categoryIds, sellerIds, ...productData } = dto;
 
-    await this.assertUniqueFields(productData.slug);
+    await this.assertUniqueFields(productData.slug, productData.sku);
     if (productData.brandId) {
       await this.assertBrandExists(productData.brandId);
     }
@@ -101,6 +106,11 @@ export class ProductsService {
       ),
     );
 
+    await this.productStockRepository.upsertForProduct(
+      product.id,
+      resolveProductStock(productData),
+    );
+
     await this.categoriesService.assignCategoryIdsToProduct(
       product.id,
       categoryIds ?? [],
@@ -120,7 +130,7 @@ export class ProductsService {
       );
     }
 
-    const { categoryIds, sellerIds, ...productData } = dto;
+    const { categoryIds, sellerIds, stock, ...productData } = dto;
 
     if (productData.slug && productData.slug !== product.slug) {
       const slugTaken = await this.productRepository.findBySlug(
@@ -130,6 +140,21 @@ export class ProductsService {
         throw new ApiException(
           'PRODUCT_SLUG_EXISTS',
           'محصول با این slug از قبل وجود دارد',
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
+
+    if (
+      productData.sku !== undefined &&
+      productData.sku !== null &&
+      productData.sku !== product.sku
+    ) {
+      const skuTaken = await this.productRepository.findBySku(productData.sku);
+      if (skuTaken && skuTaken.id !== product.id) {
+        throw new ApiException(
+          'PRODUCT_SKU_EXISTS',
+          'محصول با این sku از قبل وجود دارد',
           HttpStatus.CONFLICT,
         );
       }
@@ -177,6 +202,9 @@ export class ProductsService {
     }
 
     await this.productRepository.save(product);
+    if (stock !== undefined) {
+      await this.productStockRepository.upsertForProduct(id, stock);
+    }
     if (categoryIds !== undefined) {
       await this.categoriesService.assignCategoryIdsToProduct(id, categoryIds);
     }
@@ -242,7 +270,7 @@ export class ProductsService {
       .then((brands) => brands.map(toBrandResponse));
   }
 
-  private async assertUniqueFields(slug: string) {
+  private async assertUniqueFields(slug: string, sku?: string | null) {
     const slugTaken = await this.productRepository.findBySlug(slug);
     if (slugTaken) {
       throw new ApiException(
@@ -250,6 +278,17 @@ export class ProductsService {
         'محصول با این slug از قبل وجود دارد',
         HttpStatus.CONFLICT,
       );
+    }
+
+    if (sku) {
+      const skuTaken = await this.productRepository.findBySku(sku);
+      if (skuTaken) {
+        throw new ApiException(
+          'PRODUCT_SKU_EXISTS',
+          'محصول با این sku از قبل وجود دارد',
+          HttpStatus.CONFLICT,
+        );
+      }
     }
   }
 

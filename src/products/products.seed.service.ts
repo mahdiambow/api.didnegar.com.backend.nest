@@ -4,6 +4,7 @@ import { Seller } from '../sellers/entities/seller.entity.js';
 import { Injectable } from '@nestjs/common';
 import { BrandRepository } from './repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
+import { ProductStockRepository } from './repositories/product-stock.repository.js';
 
 const FAKE_BRANDS = [
   {
@@ -126,6 +127,7 @@ export class ProductsSeedService {
     private readonly dataSource: DataSource,
     private readonly brandRepository: BrandRepository,
     private readonly productRepository: ProductRepository,
+    private readonly productStockRepository: ProductStockRepository,
   ) {}
 
   async seed() {
@@ -152,28 +154,8 @@ export class ProductsSeedService {
     }
 
     for (const [index, product] of FAKE_PRODUCTS.entries()) {
-      let productAttributes: Record<string, string[]> = {};
-      if (product.slug === 'galaxy-s24-ultra') {
-        productAttributes = {
-          color: ['black'],
-          storage: ['256gb', '512gb'],
-        };
-      } else if (product.slug === 'iphone-15-pro') {
-        productAttributes = {
-          color: ['titanium'],
-          storage: ['256gb'],
-        };
-      }
-
       const existing = await this.productRepository.findBySlug(product.slug);
       if (existing) {
-        if (
-          Object.keys(existing.attributes ?? {}).length === 0 &&
-          Object.keys(productAttributes).length > 0
-        ) {
-          existing.attributes = productAttributes;
-          await this.productRepository.save(existing);
-        }
         continue;
       }
 
@@ -187,13 +169,20 @@ export class ProductsSeedService {
           status: 'publish',
           approvalStatus: 'approved',
           brandId: brandMap.get(product.brandSlug) ?? null,
-          stock: product.stock,
           averageRating: product.averageRating,
           ratingCount: product.ratingCount,
           totalSales: product.totalSales,
-          attributes: productAttributes,
+          attributeIds: [],
         }),
       );
+
+      const created = await this.productRepository.findBySlug(product.slug);
+      if (created) {
+        await this.productStockRepository.upsertForProduct(
+          created.id,
+          product.stock,
+        );
+      }
     }
 
     const seller = await this.dataSource

@@ -17,14 +17,6 @@ export class AttributeRepository {
     return this.repo.findOne({ where: { id } });
   }
 
-  findByIdWithValues(id: string) {
-    return this.repo.findOne({
-      where: { id },
-      relations: { values: true },
-      order: { values: { value: 'ASC' } },
-    });
-  }
-
   findByName(name: string) {
     return this.repo.findOne({ where: { name } });
   }

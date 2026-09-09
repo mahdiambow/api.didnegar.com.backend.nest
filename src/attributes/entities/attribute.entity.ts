@@ -5,9 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
-  OneToMany,
 } from 'typeorm';
-import type { AttributeValue } from './attribute-value.entity.js';
 
 @Entity('attributes')
 @Index(['legacyTable', 'legacyId'], { unique: true })
@@ -36,7 +34,4 @@ export class Attribute {
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @OneToMany('AttributeValue', 'attribute')
-  values: AttributeValue[];
 }
