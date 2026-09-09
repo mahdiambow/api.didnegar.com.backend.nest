@@ -50,6 +50,7 @@ function setup(patch = {}) {
     create: vi.fn((data) => data),
     save: vi.fn(async (data) => ({ ...offer, ...data, id: data.id ?? 'offer' })),
     delete: vi.fn(),
+    existsBy: vi.fn(async () => false),
   };
   const products = {
     existsBy: vi.fn(async () => true),
@@ -63,12 +64,16 @@ function setup(patch = {}) {
       approvalStatus: 'approved',
     })),
   };
+  const productsService = {
+    update: vi.fn(async () => ({ id: productId })),
+  };
   const service = new OffersService(
     repo as unknown as Repository<SellerOffer>,
     { existsBy: vi.fn(async () => true) } as unknown as Repository<Seller>,
     products as unknown as Repository<Product>,
+    productsService as never,
   );
-  return { service, repo, products };
+  return { service, repo, products, productsService };
 }
 
 describe('seller offers', () => {
@@ -110,6 +115,28 @@ describe('seller offers', () => {
     });
     expect(result).toHaveLength(2);
     expect(repo.save).toHaveBeenCalledTimes(2);
+  });
+
+  it('updates product catalog fields when product patch is provided', async () => {
+    const { service, productsService } = setup();
+    await service.create(user, {
+      sellerId,
+      items: [
+        {
+          ...item,
+          product: {
+            name: 'گوشی جدید',
+            subtitle: 'آپدیت از آفر',
+            description: 'توضیح کامل',
+          },
+        },
+      ],
+    });
+    expect(productsService.update).toHaveBeenCalledWith(productId, {
+      name: 'گوشی جدید',
+      subtitle: 'آپدیت از آفر',
+      description: 'توضیح کامل',
+    });
   });
 
   it('returns purchasable snapshot', async () => {

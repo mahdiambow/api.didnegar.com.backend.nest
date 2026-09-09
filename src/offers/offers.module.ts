@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
 import { Product } from '../products/entities/product.entity.js';
+import { ProductsModule } from '../products/products.module.js';
 import { SellerOffer } from './entities/seller-offer.entity.js';
 import { OffersController } from './offers.controller.js';
 import { OffersService } from './offers.service.js';
@@ -10,6 +11,7 @@ import { OffersService } from './offers.service.js';
   imports: [
     AuthModule,
     TypeOrmModule.forFeature([SellerOffer, Seller, Product]),
+    forwardRef(() => ProductsModule),
   ],
   controllers: [OffersController],
   providers: [OffersService],

@@ -14,7 +14,8 @@ import type { Product } from '../../products/entities/product.entity.js';
 
 @Entity('seller_offers')
 @Index(['productId'])
-@Index(['sellerId', 'sku'], { unique: true })
+@Index(['sellerId'])
+@Index(['sku'], { unique: true })
 @Check('CHK_offer_price', '`price` >= 0')
 @Check('CHK_offer_stock', '`stock` >= 0')
 export class SellerOffer {

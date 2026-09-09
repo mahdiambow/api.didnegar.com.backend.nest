@@ -23,6 +23,12 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { CreateProductDto } from '../../products/dto/create-product.dto.js';
+
+/** آپدیت فیلدهای کاتالوگ محصول هنگام ثبت/ویرایش آفر (بدون approval) */
+export class SellerOfferProductPatchDto extends PartialType(
+  OmitType(CreateProductDto, ['approvalStatus', 'rejectionReason'] as const),
+) {}
 
 /** یک آیتم پیشنهاد برای یک محصول */
 export class SellerOfferItemDto {
@@ -30,7 +36,7 @@ export class SellerOfferItemDto {
   @IsUUID()
   productId: string;
 
-  @ApiProperty({ example: 'SAM-S24U-256-BLU' })
+  @ApiProperty({ example: 'SAM-S24U-256-BLU', description: 'باید یکتا باشد' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
@@ -73,6 +79,16 @@ export class SellerOfferItemDto {
   @ValidateIf((_object, value) => value !== undefined)
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    type: SellerOfferProductPatchDto,
+    description:
+      'در صورت ارسال، فیلدهای کاتالوگ همان productId آپدیت می‌شوند (محصول → pending)',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SellerOfferProductPatchDto)
+  product?: SellerOfferProductPatchDto;
 }
 
 /** ثبت یک یا چند پیشنهاد فروش برای یک فروشنده */
