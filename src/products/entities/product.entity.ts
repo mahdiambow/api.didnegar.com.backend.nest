@@ -26,7 +26,7 @@ export class Product {
   legacyTable: string;
 
   @Index()
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255 }) 
   name: string;
 
   @Index({ unique: true })
