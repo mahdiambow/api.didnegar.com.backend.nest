@@ -62,8 +62,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api', app, document, {
     swaggerOptions: {
-      persistAuthorization: true,
+      // false = با رفرش صفحه توکن قبلی پاک می‌شود؛ از Authorize توکن تازه بگذار
+      persistAuthorization: process.env.SWAGGER_PERSIST_AUTH === 'true',
     },
+    customSiteTitle: 'Didnegar API',
   });
 
   const { mediaConfig } = await import('./media/media.config.js');

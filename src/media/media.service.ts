@@ -194,6 +194,9 @@ export class MediaService {
     file: Express.Multer.File | undefined,
     dto: UploadMediaDto,
   ) {
+    this.logger.log(
+      `upload start user=${user.sub} sellerId=${user.sellerId} group=${dto.group} file=${file?.originalname ?? 'none'} size=${file?.size ?? 0} sftp=${mediaConfig.sftp.enabled}`,
+    );
     const group: MediaGroup = dto.group;
     const sellerId = this.requireSellerId(user);
     assertMediaAccess(user, sellerId);
@@ -254,8 +257,18 @@ export class MediaService {
       file.originalname || 'upload',
     );
 
-    await this.storage.ensureDirs(group, sellerId);
-    await this.storage.writeStaging(relativePath, file.buffer);
+    try {
+      await this.storage.ensureDirs(group, sellerId);
+      await this.storage.writeStaging(relativePath, file.buffer);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`storage write failed: ${message}`);
+      throw new ApiException(
+        'MEDIA_STORAGE_FAILED',
+        `ذخیره فایل روی سرور مدیا ناموفق بود (SFTP): ${message}`,
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
 
     const asset = this.media.create({
       id,
@@ -276,6 +289,7 @@ export class MediaService {
     });
 
     await this.media.save(asset);
+    this.logger.log(`upload ok id=${asset.id} path=${relativePath}`);
     return this.toResponse(asset);
   }
 

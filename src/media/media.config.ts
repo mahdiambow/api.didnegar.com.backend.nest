@@ -12,7 +12,9 @@ export const mediaConfig = {
     host: sftpHost,
     port: parsePositiveInt(process.env.MEDIA_SFTP_PORT, 22),
     username: process.env.MEDIA_SFTP_USERNAME?.trim() || 'developer',
-    password: process.env.MEDIA_SFTP_PASSWORD ?? '',
+    password: (process.env.MEDIA_SFTP_PASSWORD ?? '').trim(),
+    privateKeyPath: process.env.MEDIA_SFTP_PRIVATE_KEY_PATH?.trim() || '',
+    privateKey: process.env.MEDIA_SFTP_PRIVATE_KEY?.trim() || '',
     /** Absolute remote base, e.g. /var/www */
     root: (process.env.MEDIA_SFTP_ROOT?.trim() || '/var/www').replace(
       /\/$/,

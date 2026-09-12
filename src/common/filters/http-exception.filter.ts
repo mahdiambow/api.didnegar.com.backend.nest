@@ -4,8 +4,9 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import {
   ApiException,
   mapHttpStatusToErrorCode,
@@ -14,9 +15,12 @@ import type { ApiErrorResponse } from '../response/interfaces/api-error-response
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(HttpExceptionFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let body: ApiErrorResponse = {
@@ -54,8 +58,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     }
 
-    if (!(exception instanceof ApiException) && status >= 500) {
-      console.error(exception);
+    if (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN) {
+      this.logger.warn(
+        `${request.method} ${request.url} → ${status} ${body.code}: ${body.message}`,
+      );
+    } else if (!(exception instanceof ApiException) && status >= 500) {
+      this.logger.error(
+        `${request.method} ${request.url} → ${status}`,
+        exception instanceof Error ? exception.stack : String(exception),
+      );
     }
 
     response.status(status).json(body);
