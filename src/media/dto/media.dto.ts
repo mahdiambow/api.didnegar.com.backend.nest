@@ -21,6 +21,13 @@ import {
 
 export class UploadMediaDto {
   @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'فایل تصویر',
+  })
+  file: Express.Multer.File;
+
+  @ApiProperty({
     enum: MEDIA_GROUPS,
     example: 'seller',
     description:

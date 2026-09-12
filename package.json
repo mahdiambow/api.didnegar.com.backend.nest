@@ -51,6 +51,7 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "ssh2-sftp-client": "^12.1.1",
     "typeorm": "^1.1.0"
   },
   "devDependencies": {
@@ -63,6 +64,7 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^24.0.0",
     "@types/passport-jwt": "^4.0.1",
+    "@types/ssh2-sftp-client": "^9.0.6",
     "@types/supertest": "^7.0.0",
     "@vitest/coverage-v8": "^4.1.2",
     "oxlint": "^1.58.0",

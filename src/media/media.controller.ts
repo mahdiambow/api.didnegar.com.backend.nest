@@ -23,6 +23,7 @@ import {
   ApiOperation,
   ApiTags,
   ApiTooManyRequestsResponse,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
@@ -37,7 +38,6 @@ import type { AuthUser } from '../auth/types/auth-user.type.js';
 import { mediaConfig } from './media.config.js';
 import { MediaService } from './media.service.js';
 import { MediaThrottlerGuard } from './guards/media-throttler.guard.js';
-import { MediaUploadThrottle } from './decorators/media-throttle.decorator.js';
 import {
   AttachMediaAssetDto,
   ListMediaAssetsDto,
@@ -45,7 +45,6 @@ import {
   ReviewMediaAssetDto,
   UploadMediaDto,
 } from './dto/media.dto.js';
-import { MEDIA_GROUPS } from './entities/media-asset.enums.js';
 
 const MediaApiResponseDto = createSuccessResponseDto(MediaAssetResponseDto, {
   code: 'MEDIA_FOUND',
@@ -102,9 +101,9 @@ export class MediaController {
   }
 
   @Post('upload')
+  @ApiBearerAuth('access-token')
   @RequireRole(...sellerRoles)
-  @UseGuards(MediaThrottlerGuard)
-  //@MediaUploadThrottle()
+  @UseGuards(JwtAuthGuard, RoleGuard, MediaThrottlerGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -113,35 +112,20 @@ export class MediaController {
   )
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: { type: 'string', format: 'binary' },
-        group: {
-          type: 'string',
-          enum: [...MEDIA_GROUPS],
-          description: 'blog | product | setting | seller | other',
-        },
-        alt: {
-          type: 'string',
-          description: 'متن جایگزین تصویر (alt)',
-          example: 'عکس محصول دوربین کانن',
-          maxLength: 500,
-        },
-      },
-      required: ['file', 'group'],
-    },
+    description: 'آپلود فایل رسانه — قبلش از Authorize توکن را بگذار',
+    type: UploadMediaDto,
   })
   @ApiOperation({
     summary: 'آپلود رسانه به گالری (staging)',
     description:
-      'فیلد group مسیر فولدر را مشخص می‌کند. برای seller مسیر seller/{sellerId}/ است. sellerId از JWT خوانده می‌شود.',
+      'فیلد group مسیر فولدر را مشخص می‌کند. برای seller مسیر seller/{sellerId}/ است. sellerId از JWT خوانده می‌شود. از دکمه Authorize بالای صفحه توکن را ست کن.',
   })
   @ApiResponseMeta({
     code: 'MEDIA_UPLOADED',
     message: 'Media uploaded successfully',
   })
   @ApiCreatedResponse({ type: MediaApiResponseDto })
+  @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
   @ApiTooManyRequestsResponse({ type: ApiErrorResponseDto })
   upload(
     @Req() req: { user: AuthUser },
