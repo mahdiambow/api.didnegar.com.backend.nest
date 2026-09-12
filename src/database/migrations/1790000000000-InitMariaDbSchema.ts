@@ -8,6 +8,12 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
   name = 'InitMariaDbSchema1790000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    // DB already bootstrapped (e.g. restored dump / previous deploy) but
+    // migrations table empty → skip baseline instead of failing on CREATE.
+    if (await queryRunner.hasTable('sellers')) {
+      return;
+    }
+
     // --- sellers ---
     await queryRunner.query(`
       CREATE TABLE \`sellers\` (

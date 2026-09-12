@@ -4,6 +4,10 @@ export class CreateMediaAssets1790000000003 implements MigrationInterface {
   name = 'CreateMediaAssets1790000000003';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    if (await queryRunner.hasTable('media_assets')) {
+      return;
+    }
+
     await queryRunner.query(`
       CREATE TABLE \`media_assets\` (
         \`id\` varchar(36) NOT NULL,
