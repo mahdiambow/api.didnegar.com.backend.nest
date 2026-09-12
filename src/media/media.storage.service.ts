@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { copyFile, mkdir, rename, unlink, access } from 'node:fs/promises';
+import { copyFile, mkdir, rename, unlink, access, writeFile } from 'node:fs/promises';
 import { dirname, extname, join } from 'node:path';
 import { mediaConfig } from './media.config.js';
-import type { MediaStorageLocation } from './entities/media-asset.enums.js';
+import type {
+  MediaGroup,
+  MediaStorageLocation,
+} from './entities/media-asset.enums.js';
 
 @Injectable()
 export class MediaStorageService {
@@ -19,16 +22,30 @@ export class MediaStorageService {
     return `${mediaConfig.publicBaseUrl}/${location}/${normalized}`;
   }
 
-  async ensureSellerDirs(sellerId: string): Promise<void> {
-    await Promise.all([
-      mkdir(join(mediaConfig.stagingRoot, sellerId), { recursive: true }),
-      mkdir(join(mediaConfig.galleryRoot, sellerId), { recursive: true }),
-    ]);
+  /**
+   * seller → seller/{sellerId}/{id}.ext
+   * blog|product|setting|other → {group}/{id}.ext
+   */
+  buildRelativePath(
+    group: MediaGroup,
+    sellerId: string,
+    assetId: string,
+    originalName: string,
+  ): string {
+    const ext = this.safeExtension(originalName);
+    if (group === 'seller') {
+      return `seller/${sellerId}/${assetId}${ext}`;
+    }
+    return `${group}/${assetId}${ext}`;
   }
 
-  buildRelativePath(sellerId: string, assetId: string, originalName: string): string {
-    const ext = this.safeExtension(originalName);
-    return `${sellerId}/${assetId}${ext}`;
+  async ensureDirs(group: MediaGroup, sellerId: string): Promise<void> {
+    const relativeDir =
+      group === 'seller' ? join('seller', sellerId) : group;
+    await Promise.all([
+      mkdir(join(mediaConfig.stagingRoot, relativeDir), { recursive: true }),
+      mkdir(join(mediaConfig.galleryRoot, relativeDir), { recursive: true }),
+    ]);
   }
 
   private safeExtension(originalName: string): string {
@@ -39,13 +56,9 @@ export class MediaStorageService {
     return ext;
   }
 
-  async writeStaging(
-    relativePath: string,
-    buffer: Buffer,
-  ): Promise<void> {
+  async writeStaging(relativePath: string, buffer: Buffer): Promise<void> {
     const fullPath = this.absolutePath('staging', relativePath);
     await mkdir(dirname(fullPath), { recursive: true });
-    const { writeFile } = await import('node:fs/promises');
     await writeFile(fullPath, buffer);
   }
 

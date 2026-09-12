@@ -20,7 +20,9 @@ import type {
   ListMediaAssetsDto,
   MediaAssetResponseDto,
   ReviewMediaAssetDto,
+  UploadMediaDto,
 } from './dto/media.dto.js';
+import type { MediaGroup } from './entities/media-asset.enums.js';
 
 export function canBrowseAllMedia(user: AuthUser): boolean {
   return userHasRole(
@@ -100,10 +102,12 @@ export class MediaService {
   toResponse(asset: MediaAsset): MediaAssetResponseDto {
     return {
       id: asset.id,
+      group: asset.group,
       sellerId: asset.sellerId,
       uploadedByUserId: asset.uploadedByUserId,
       productId: asset.productId,
       originalName: asset.originalName,
+      alt: asset.alt,
       mimeType: asset.mimeType,
       sizeBytes: asset.sizeBytes,
       storageLocation: asset.storageLocation,
@@ -143,6 +147,9 @@ export class MediaService {
       qb.andWhere('media.sellerId = :sellerId', { sellerId });
     }
 
+    if (query.group) {
+      qb.andWhere('media.group = :group', { group: query.group });
+    }
     if (query.productId) {
       qb.andWhere('media.productId = :productId', {
         productId: query.productId,
@@ -182,7 +189,12 @@ export class MediaService {
     return this.toResponse(asset);
   }
 
-  async upload(user: AuthUser, file: Express.Multer.File | undefined) {
+  async upload(
+    user: AuthUser,
+    file: Express.Multer.File | undefined,
+    dto: UploadMediaDto,
+  ) {
+    const group: MediaGroup = dto.group;
     const sellerId = this.requireSellerId(user);
     assertMediaAccess(user, sellerId);
 
@@ -236,20 +248,23 @@ export class MediaService {
 
     const id = randomUUID();
     const relativePath = this.storage.buildRelativePath(
+      group,
       sellerId,
       id,
       file.originalname || 'upload',
     );
 
-    await this.storage.ensureSellerDirs(sellerId);
+    await this.storage.ensureDirs(group, sellerId);
     await this.storage.writeStaging(relativePath, file.buffer);
 
     const asset = this.media.create({
       id,
+      group,
       sellerId,
       uploadedByUserId: user.sub,
       productId: null,
       originalName: (file.originalname || 'upload').slice(0, 255),
+      alt: dto.alt?.trim() ? dto.alt.trim().slice(0, 500) : null,
       mimeType: mime,
       sizeBytes: file.size,
       relativePath,

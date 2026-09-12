@@ -12,6 +12,7 @@ import type { Seller } from '../../sellers/entities/seller.entity.js';
 import type { Product } from '../../products/entities/product.entity.js';
 import type { User } from '../../auth/entities/user.entity.js';
 import type {
+  MediaGroup,
   MediaStatus,
   MediaStorageLocation,
 } from './media-asset.enums.js';
@@ -20,6 +21,10 @@ import type {
 export class MediaAsset {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Index()
+  @Column({ name: 'group', type: 'varchar', length: 20, default: 'other' })
+  group: MediaGroup;
 
   @Index()
   @Column({ type: 'uuid' })
@@ -47,13 +52,19 @@ export class MediaAsset {
   @Column({ type: 'varchar', length: 255 })
   originalName: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  alt: string | null;
+
   @Column({ type: 'varchar', length: 100 })
   mimeType: string;
 
   @Column({ type: 'int' })
   sizeBytes: number;
 
-  /** Relative path under staging/gallery root: `{sellerId}/{id}.ext` */
+  /** Relative path under staging/gallery root:
+   * seller → `seller/{sellerId}/{id}.ext`
+   * others → `{group}/{id}.ext`
+   */
   @Column({ type: 'varchar', length: 500 })
   relativePath: string;
 

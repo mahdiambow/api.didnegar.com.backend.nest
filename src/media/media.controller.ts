@@ -43,7 +43,9 @@ import {
   ListMediaAssetsDto,
   MediaAssetResponseDto,
   ReviewMediaAssetDto,
+  UploadMediaDto,
 } from './dto/media.dto.js';
+import { MEDIA_GROUPS } from './entities/media-asset.enums.js';
 
 const MediaApiResponseDto = createSuccessResponseDto(MediaAssetResponseDto, {
   code: 'MEDIA_FOUND',
@@ -85,7 +87,7 @@ export class MediaController {
   @ApiOperation({
     summary: 'لیست گالری رسانه',
     description:
-      'سلر معمولی فقط رسانه خودش را می‌بیند. سوپرسلر/ادمین می‌توانند با sellerId فیلتر کنند.',
+      'با group فیلتر کن (blog/product/setting/seller/other). سلر معمولی فقط رسانه خودش را می‌بیند.',
   })
   @ApiResponseMeta({
     code: 'MEDIA_LIST',
@@ -102,7 +104,7 @@ export class MediaController {
   @Post('upload')
   @RequireRole(...sellerRoles)
   @UseGuards(MediaThrottlerGuard)
-  @MediaUploadThrottle()
+  //@MediaUploadThrottle()
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -115,14 +117,25 @@ export class MediaController {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary' },
+        group: {
+          type: 'string',
+          enum: [...MEDIA_GROUPS],
+          description: 'blog | product | setting | seller | other',
+        },
+        alt: {
+          type: 'string',
+          description: 'متن جایگزین تصویر (alt)',
+          example: 'عکس محصول دوربین کانن',
+          maxLength: 500,
+        },
       },
-      required: ['file'],
+      required: ['file', 'group'],
     },
   })
   @ApiOperation({
     summary: 'آپلود رسانه به گالری (staging)',
     description:
-      'sellerId از JWT خوانده می‌شود. وضعیت PENDING، is_used=false، expires_at=+72h. محدودیت: حجم فایل، سهمیه روزانه، rate limit.',
+      'فیلد group مسیر فولدر را مشخص می‌کند. برای seller مسیر seller/{sellerId}/ است. sellerId از JWT خوانده می‌شود.',
   })
   @ApiResponseMeta({
     code: 'MEDIA_UPLOADED',
@@ -133,8 +146,9 @@ export class MediaController {
   upload(
     @Req() req: { user: AuthUser },
     @UploadedFile() file: Express.Multer.File,
+    @Body() dto: UploadMediaDto,
   ) {
-    return this.mediaService.upload(req.user, file);
+    return this.mediaService.upload(req.user, file, dto);
   }
 
   @Get(':id')

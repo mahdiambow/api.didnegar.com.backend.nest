@@ -12,9 +12,43 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
-import { MEDIA_STATUSES, type MediaStatus } from '../entities/media-asset.enums.js';
+import {
+  MEDIA_GROUPS,
+  MEDIA_STATUSES,
+  type MediaGroup,
+  type MediaStatus,
+} from '../entities/media-asset.enums.js';
+
+export class UploadMediaDto {
+  @ApiProperty({
+    enum: MEDIA_GROUPS,
+    example: 'seller',
+    description:
+      'گروه سرویس: blog | product | setting | seller | other — مسیر فولدر بر همین اساس است',
+  })
+  @IsIn(MEDIA_GROUPS)
+  group: MediaGroup;
+
+  @ApiPropertyOptional({
+    example: 'عکس محصول دوربین کانن',
+    description: 'متن جایگزین تصویر (alt)',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  alt?: string;
+}
 
 export class ListMediaAssetsDto {
+  @ApiPropertyOptional({
+    enum: MEDIA_GROUPS,
+    description: 'فیلتر بر اساس گروه سرویس',
+  })
+  @IsOptional()
+  @IsIn(MEDIA_GROUPS)
+  group?: MediaGroup;
+
   @ApiPropertyOptional({
     description: 'فقط برای سوپرسلر/ادمین؛ سلر معمولی همیشه خودش فیلتر می‌شود',
   })
@@ -85,6 +119,9 @@ export class MediaAssetResponseDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
 
+  @ApiProperty({ enum: MEDIA_GROUPS })
+  group: MediaGroup;
+
   @ApiProperty({ format: 'uuid' })
   sellerId: string;
 
@@ -96,6 +133,13 @@ export class MediaAssetResponseDto {
 
   @ApiProperty()
   originalName: string;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 'عکس محصول دوربین کانن',
+    description: 'متن جایگزین تصویر (alt)',
+  })
+  alt: string | null;
 
   @ApiProperty()
   mimeType: string;
@@ -121,7 +165,7 @@ export class MediaAssetResponseDto {
   @ApiProperty({
     description: 'آدرس عمومی فایل (staging یا gallery)',
     example:
-      'http://localhost:3000/media-files/staging/5b05c695-b30f-43ff-9522-637a5574f7c8/8b596745-761a-477a-bbe8-2e9dd9a440f1.jpg',
+      'http://localhost:3000/media-files/staging/seller/5b05c695-.../8b596745-....jpg',
   })
   url: string;
 

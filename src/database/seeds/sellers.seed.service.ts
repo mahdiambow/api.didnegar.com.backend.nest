@@ -59,14 +59,26 @@ export class SellersSeedService {
       );
     }
 
-    await this.userRepo
-      .createQueryBuilder()
-      .update(User)
-      .set({ sellerId: seller.id })
-      .where('username IN (:...usernames)', {
-        usernames: [...SELLER_LINKED_USERNAMES],
-      })
-      .execute();
+    const linkResult = await this.userRepo.query(
+      `
+      UPDATE users
+      SET sellerId = ?
+      WHERE username IN (?, ?, ?, ?)
+      `,
+      [seller.id, ...SELLER_LINKED_USERNAMES],
+    );
+    const affected =
+      typeof linkResult?.affectedRows === 'number'
+        ? linkResult.affectedRows
+        : Array.isArray(linkResult)
+          ? (linkResult as Array<{ affectedRows?: number }>)[0]
+              ?.affectedRows
+          : undefined;
+    if (affected === 0) {
+      throw new Error(
+        `Seller seed: no users linked to ${SEED_SELLER.slug}. Expected usernames: ${SELLER_LINKED_USERNAMES.join(', ')}`,
+      );
+    }
 
     const adminUserId =
       (await this.usersSeedService.findUserIdByUsername('09222222222')) ??
