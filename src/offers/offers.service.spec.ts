@@ -27,7 +27,7 @@ const item = {
   stock: 10,
   stockStatus: 'instock',
 };
-const input = { sellerId, items: [item] };
+const input = { items: [item] };
 
 function setup(patch = {}) {
   const offer = {
@@ -88,11 +88,19 @@ describe('seller offers', () => {
     expect(() => assertOfferAccess(user, 'another-seller')).toThrow();
   });
 
-  it('does not write when a seller requests another seller offer', async () => {
+  it('rejects create when jwt has no sellerId', async () => {
     const { service, repo } = setup();
     await expect(
-      service.create(user, { ...input, sellerId: 'another' }),
+      service.create(
+        { ...user, sellerId: null },
+        { items: [item] },
+      ),
     ).rejects.toMatchObject({ status: 403 });
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+
+  it('does not write when a seller updates another seller offer', async () => {
+    const { service, repo } = setup();
     await expect(
       service.update({ ...user, sellerId: 'another' }, 'offer', { price: 1 }),
     ).rejects.toMatchObject({ status: 403 });
@@ -102,7 +110,6 @@ describe('seller offers', () => {
   it('creates multiple offers in one request', async () => {
     const { service, repo } = setup();
     const result = await service.create(user, {
-      sellerId,
       items: [
         item,
         {
@@ -120,7 +127,6 @@ describe('seller offers', () => {
   it('updates product catalog fields when product patch is provided', async () => {
     const { service, productsService } = setup();
     await service.create(user, {
-      sellerId,
       items: [
         {
           ...item,
@@ -171,7 +177,6 @@ describe('seller offers', () => {
     const { service } = setup();
     await expect(
       service.create(user, {
-        sellerId,
         items: [item, { ...item, productId: productId2 }],
       }),
     ).rejects.toMatchObject({
@@ -186,7 +191,7 @@ describe('seller offers', () => {
     expect(
       (
         await validate(
-          plainToInstance(CreateSellerOffersDto, { sellerId, items: [] }),
+          plainToInstance(CreateSellerOffersDto, { items: [] }),
         )
       ).length,
     ).toBeGreaterThan(0);

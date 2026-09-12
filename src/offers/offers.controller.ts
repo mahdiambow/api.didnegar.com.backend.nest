@@ -91,7 +91,7 @@ export class OffersController {
   @ApiOperation({
     summary: 'ایجاد یک یا چند پیشنهاد فروش',
     description:
-      'با آرایه items چند محصول را یکجا قیمت‌گذاری کنید. فیلد اختیاری product روی هر آیتم همه فیلدهای کاتالوگ همان محصول را آپدیت می‌کند.',
+      'sellerId از JWT خوانده می‌شود. با آرایه items چند محصول را یکجا قیمت‌گذاری کنید. فیلد اختیاری product روی هر آیتم فیلدهای کاتالوگ همان محصول را آپدیت می‌کند.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_CREATED',

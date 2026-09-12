@@ -121,8 +121,17 @@ export class OffersService {
   }
 
   async create(user: AuthUser, dto: CreateSellerOffersDto) {
-    assertOfferAccess(user, dto.sellerId);
-    if (!(await this.sellers.existsBy({ id: dto.sellerId })))
+    const sellerId = user.sellerId;
+    if (!sellerId) {
+      throw new ApiException(
+        'SELLER_REQUIRED',
+        'فروشنده در توکن احراز هویت مشخص نشده است',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    assertOfferAccess(user, sellerId);
+    if (!(await this.sellers.existsBy({ id: sellerId })))
       throw new ApiException(
         'SELLER_NOT_FOUND',
         'فروشنده یافت نشد',
@@ -163,7 +172,7 @@ export class OffersService {
 
     const created = [];
     for (const item of dto.items) {
-      created.push(await this.createOne(dto.sellerId, item, productMap));
+      created.push(await this.createOne(sellerId, item, productMap));
     }
     return created;
   }

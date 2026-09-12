@@ -91,15 +91,11 @@ export class SellerOfferItemDto {
   product?: SellerOfferProductPatchDto;
 }
 
-/** ثبت یک یا چند پیشنهاد فروش برای یک فروشنده */
+/** ثبت یک یا چند پیشنهاد فروش برای فروشنده لاگین‌شده */
 export class CreateSellerOffersDto {
-  @ApiProperty()
-  @IsUUID()
-  sellerId: string;
-
   @ApiProperty({
     type: [SellerOfferItemDto],
-    description: 'آرایه پیشنهادها برای محصولات مختلف',
+    description: 'آرایه پیشنهادها برای محصولات مختلف — sellerId از JWT خوانده می‌شود',
   })
   @IsArray()
   @ArrayMinSize(1)
