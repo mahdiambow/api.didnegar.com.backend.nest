@@ -21,6 +21,15 @@ const SEED_USERS = [
     email: 'superadmin@didnegar.com',
   },
   {
+    username: '09393341873',
+    roleSlug: DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+    extraRoleSlugs: [DEFAULT_ROLE_SLUGS.SUPER_SELLER] as const,
+    displayName: 'Super Admin',
+    firstName: 'مدیر',
+    lastName: 'سیستم',
+    email: 'superadmin2@didnegar.com',
+  },
+  {
     username: '09111111111',
     roleSlug: DEFAULT_ROLE_SLUGS.ADMIN,
     displayName: 'ادمین پلتفرم',
@@ -90,7 +99,13 @@ export class UsersSeedService {
         where: { username: userSeed.username },
       });
       if (existing) {
+        existing.roleId = role.id;
         existing.extraRoleIds = extraRoleIds;
+        existing.displayName = userSeed.displayName;
+        existing.firstName = userSeed.firstName;
+        existing.lastName = userSeed.lastName;
+        existing.email = userSeed.email;
+        existing.isActive = true;
         await this.userRepo.save(existing);
 
         if ('sellerKey' in userSeed && userSeed.sellerKey) {
