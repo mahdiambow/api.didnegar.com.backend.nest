@@ -7,7 +7,6 @@ import {
   toProductAttributeResponse,
 } from './product-variant-response.dto.js';
 import { PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE } from './product-variant.examples.js';
-import { Brand } from '../entities/brand.entity.js';
 import { Product } from '../entities/product.entity.js';
 import type {
   ProductImageData,
@@ -16,7 +15,11 @@ import type {
   ProductShippingMethodData,
   ProductTableInfoItem,
 } from '../entities/product.entity.js';
-import { BRAND_EXAMPLES, BRAND_RESPONSE_EXAMPLE } from './brand.examples.js';
+import {
+  BrandResponseDto,
+  toBrandResponse,
+} from '../../brands/dto/brand-response.dto.js';
+import { BRAND_EXAMPLES, BRAND_RESPONSE_EXAMPLE } from '../../brands/dto/brand.examples.js';
 import {
   ProductImageDto,
   ProductKeyValDto,
@@ -25,28 +28,7 @@ import {
   ProductTableInfoDto,
 } from './product-fields.dto.js';
 
-export class BrandResponseDto {
-  @ApiProperty()
-  id: string;
-
-  @ApiProperty()
-  name: string;
-
-  @ApiProperty()
-  slug: string;
-
-  @ApiPropertyOptional({ nullable: true })
-  description: string | null;
-
-  @ApiProperty()
-  isActive: boolean;
-
-  @ApiProperty()
-  createdAt: Date;
-
-  @ApiProperty()
-  updatedAt: Date;
-}
+export { BrandResponseDto, toBrandResponse };
 
 export class ProductResponseDto {
   @ApiProperty()
@@ -250,18 +232,6 @@ export class ProductResponseDto {
     description: 'product-attributeهای populate‌شده',
   })
   variants?: ProductAttributeResponseDto[];
-}
-
-export function toBrandResponse(brand: Brand): BrandResponseDto {
-  return {
-    id: brand.id,
-    name: brand.name,
-    slug: brand.slug,
-    description: brand.description,
-    isActive: brand.isActive,
-    createdAt: brand.createdAt,
-    updatedAt: brand.updatedAt,
-  };
 }
 
 function normalizeImage(image: Product['image']): ProductImageData {

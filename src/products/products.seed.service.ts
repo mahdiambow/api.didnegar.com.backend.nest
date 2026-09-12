@@ -2,24 +2,102 @@ import { DataSource } from 'typeorm';
 import { SellerOffer } from '../offers/entities/seller-offer.entity.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
 import { Injectable } from '@nestjs/common';
-import { BrandRepository } from './repositories/brand.repository.js';
+import { BrandRepository } from '../brands/repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
 import { ProductStockRepository } from './repositories/product-stock.repository.js';
 
 const FAKE_BRANDS = [
-  { slug: 'sony', name: 'سونی', legacyId: 101, description: 'دوربین و تجهیزات تصویر' },
-  { slug: 'canon', name: 'کانن', legacyId: 102, description: 'دوربین و لنز عکاسی' },
-  { slug: 'nikon', name: 'نیکون', legacyId: 103, description: 'دوربین DSLR و بدون آینه' },
-  { slug: 'dji', name: 'دی‌جی‌آی', legacyId: 104, description: 'گیمبال و دوربین اکشن' },
-  { slug: 'godox', name: 'گودکس', legacyId: 105, description: 'فلاش و نورپردازی' },
-  { slug: 'aputure', name: 'آپیوچر', legacyId: 106, description: 'نور ثابت LED' },
-  { slug: 'rode', name: 'رود', legacyId: 107, description: 'میکروفون و تجهیزات صدا' },
-  { slug: 'zoom', name: 'زوم', legacyId: 108, description: 'رکوردر صدا' },
-  { slug: 'manfrotto', name: 'مانفروتو', legacyId: 109, description: 'سه پایه و تجهیزات جانبی' },
-  { slug: 'blackmagic', name: 'بلک‌مجیک', legacyId: 110, description: 'دوربین سینمایی' },
-  { slug: 'gopro', name: 'گوپرو', legacyId: 111, description: 'دوربین اکشن' },
-  { slug: 'sennheiser', name: 'سنهایزر', legacyId: 112, description: 'میکروفون حرفه‌ای' },
-  { slug: 'neewer', name: 'نیور', legacyId: 113, description: 'بک‌گراند و تجهیزات استودیو' },
+  {
+    slug: 'sony',
+    name: 'سونی',
+    nameEn: 'Sony',
+    legacyId: 101,
+    seoDescription: 'دوربین و تجهیزات تصویر',
+  },
+  {
+    slug: 'canon',
+    name: 'کانن',
+    nameEn: 'Canon',
+    legacyId: 102,
+    seoDescription: 'دوربین و لنز عکاسی',
+  },
+  {
+    slug: 'nikon',
+    name: 'نیکون',
+    nameEn: 'Nikon',
+    legacyId: 103,
+    seoDescription: 'دوربین DSLR و بدون آینه',
+  },
+  {
+    slug: 'dji',
+    name: 'دی‌جی‌آی',
+    nameEn: 'DJI',
+    legacyId: 104,
+    seoDescription: 'گیمبال و دوربین اکشن',
+  },
+  {
+    slug: 'godox',
+    name: 'گودکس',
+    nameEn: 'Godox',
+    legacyId: 105,
+    seoDescription: 'فلاش و نورپردازی',
+  },
+  {
+    slug: 'aputure',
+    name: 'آپیوچر',
+    nameEn: 'Aputure',
+    legacyId: 106,
+    seoDescription: 'نور ثابت LED',
+  },
+  {
+    slug: 'rode',
+    name: 'رود',
+    nameEn: 'Rode',
+    legacyId: 107,
+    seoDescription: 'میکروفون و تجهیزات صدا',
+  },
+  {
+    slug: 'zoom',
+    name: 'زوم',
+    nameEn: 'Zoom',
+    legacyId: 108,
+    seoDescription: 'رکوردر صدا',
+  },
+  {
+    slug: 'manfrotto',
+    name: 'مانفروتو',
+    nameEn: 'Manfrotto',
+    legacyId: 109,
+    seoDescription: 'سه پایه و تجهیزات جانبی',
+  },
+  {
+    slug: 'blackmagic',
+    name: 'بلک‌مجیک',
+    nameEn: 'Blackmagic',
+    legacyId: 110,
+    seoDescription: 'دوربین سینمایی',
+  },
+  {
+    slug: 'gopro',
+    name: 'گوپرو',
+    nameEn: 'GoPro',
+    legacyId: 111,
+    seoDescription: 'دوربین اکشن',
+  },
+  {
+    slug: 'sennheiser',
+    name: 'سنهایزر',
+    nameEn: 'Sennheiser',
+    legacyId: 112,
+    seoDescription: 'میکروفون حرفه‌ای',
+  },
+  {
+    slug: 'neewer',
+    name: 'نیور',
+    nameEn: 'Neewer',
+    legacyId: 113,
+    seoDescription: 'بک‌گراند و تجهیزات استودیو',
+  },
 ] as const;
 
 const FAKE_PRODUCTS = [
@@ -240,9 +318,10 @@ export class ProductsSeedService {
         this.brandRepository.create({
           slug: brand.slug,
           name: brand.name,
+          nameEn: brand.nameEn,
           legacyId: brand.legacyId,
           legacyTable: 'brands',
-          description: brand.description,
+          seoDescription: brand.seoDescription,
           isActive: true,
         }),
       );

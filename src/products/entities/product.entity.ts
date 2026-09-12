@@ -10,7 +10,7 @@ import {
   Index,
   OneToMany,
 } from 'typeorm';
-import type { Brand } from './brand.entity.js';
+import type { Brand } from '../../brands/entities/brand.entity.js';
 import type { ProductCategory } from '../../categories/entities/product-category.entity.js';
 import type { ProductVariant } from './product-variant.entity.js';
 import type { ProductStock } from './product-stock.entity.js';

@@ -7,7 +7,7 @@ import { ProductWritableFieldsDto } from './product-fields.dto.js';
 export class CreateProductDto extends ProductWritableFieldsDto {
   @ApiPropertyOptional({
     example: BRAND_EXAMPLES.brandId,
-    description: 'شناسه برند از قبل ساخته‌شده — GET /products/brands',
+    description: 'شناسه برند از قبل ساخته‌شده — GET /brands',
   })
   @IsOptional()
   @IsUUID('4')

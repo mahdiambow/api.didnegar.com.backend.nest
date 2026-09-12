@@ -13,7 +13,7 @@ import { Seller } from '../sellers/entities/seller.entity.js';
 import { Product } from '../products/entities/product.entity.js';
 import { ProductStock } from '../products/entities/product-stock.entity.js';
 import { ProductRepository } from '../products/repositories/product.repository.js';
-import { BrandRepository } from '../products/repositories/brand.repository.js';
+import { BrandRepository } from '../brands/repositories/brand.repository.js';
 import { CategoriesService } from '../categories/categories.service.js';
 import { toProductEntityData } from '../products/dto/product-fields.dto.js';
 import { SellerOffer } from '../offers/entities/seller-offer.entity.js';

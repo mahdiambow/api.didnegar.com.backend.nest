@@ -17,7 +17,7 @@ import {
   toBrandResponse,
   toProductResponse,
 } from './dto/product-response.dto.js';
-import { BrandRepository } from './repositories/brand.repository.js';
+import { BrandRepository } from '../brands/repositories/brand.repository.js';
 import { ProductRepository } from './repositories/product.repository.js';
 import { ProductStockRepository } from './repositories/product-stock.repository.js';
 

@@ -14,6 +14,7 @@ import { PaymentsModule } from './payments/payments.module.js';
 import { ShippingModule } from './shipping/shipping.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { AttributesModule } from './attributes/attributes.module.js';
+import { BrandsModule } from './brands/brands.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { MediaModule } from './media/media.module.js';
 import { DatabaseSeedModule } from './database/database.seed.module.js';
@@ -39,6 +40,7 @@ import { DatabaseSeedModule } from './database/database.seed.module.js';
     SellersModule,
     LocationsModule,
     ProductsModule,
+    BrandsModule,
     OffersModule,
     OfferProductsModule,
     OrdersModule,

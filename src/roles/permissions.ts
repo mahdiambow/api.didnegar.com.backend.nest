@@ -78,6 +78,12 @@ export const PERMISSIONS = {
     update: 'attributes:update',
     delete: 'attributes:delete',
   },
+  brands: {
+    read: 'brands:read',
+    create: 'brands:create',
+    update: 'brands:update',
+    delete: 'brands:delete',
+  },
   media: {
     read: 'media:read',
     upload: 'media:upload',
@@ -345,6 +351,26 @@ export const PERMISSION_DEFINITIONS = [
     group: 'attributes',
   },
   {
+    key: PERMISSIONS.brands.read,
+    label: 'مشاهده برندها',
+    group: 'brands',
+  },
+  {
+    key: PERMISSIONS.brands.create,
+    label: 'ایجاد برند',
+    group: 'brands',
+  },
+  {
+    key: PERMISSIONS.brands.update,
+    label: 'ویرایش برند',
+    group: 'brands',
+  },
+  {
+    key: PERMISSIONS.brands.delete,
+    label: 'حذف برند',
+    group: 'brands',
+  },
+  {
     key: PERMISSIONS.media.read,
     label: 'مشاهده گالری رسانه',
     group: 'media',
@@ -421,6 +447,10 @@ const SELLER_PERMISSIONS: Permission[] = [
   PERMISSIONS.shipping.read,
   PERMISSIONS.categories.read,
   PERMISSIONS.attributes.read,
+  PERMISSIONS.brands.read,
+  PERMISSIONS.brands.create,
+  PERMISSIONS.brands.update,
+  PERMISSIONS.brands.delete,
   PERMISSIONS.media.read,
   PERMISSIONS.media.upload,
   PERMISSIONS.media.delete,
