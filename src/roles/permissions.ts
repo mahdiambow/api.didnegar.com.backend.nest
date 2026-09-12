@@ -78,6 +78,12 @@ export const PERMISSIONS = {
     update: 'attributes:update',
     delete: 'attributes:delete',
   },
+  media: {
+    read: 'media:read',
+    upload: 'media:upload',
+    review: 'media:review',
+    delete: 'media:delete',
+  },
 } as const;
 
 export const LOCATION_PERMISSIONS = PERMISSIONS.locations;
@@ -338,6 +344,26 @@ export const PERMISSION_DEFINITIONS = [
     label: 'حذف ویژگی',
     group: 'attributes',
   },
+  {
+    key: PERMISSIONS.media.read,
+    label: 'مشاهده گالری رسانه',
+    group: 'media',
+  },
+  {
+    key: PERMISSIONS.media.upload,
+    label: 'آپلود رسانه',
+    group: 'media',
+  },
+  {
+    key: PERMISSIONS.media.review,
+    label: 'تأیید/رد رسانه',
+    group: 'media',
+  },
+  {
+    key: PERMISSIONS.media.delete,
+    label: 'حذف رسانه',
+    group: 'media',
+  },
 ] as const satisfies ReadonlyArray<{
   key: string;
   label: string;
@@ -395,6 +421,9 @@ const SELLER_PERMISSIONS: Permission[] = [
   PERMISSIONS.shipping.read,
   PERMISSIONS.categories.read,
   PERMISSIONS.attributes.read,
+  PERMISSIONS.media.read,
+  PERMISSIONS.media.upload,
+  PERMISSIONS.media.delete,
 ];
 
 export const DEFAULT_ROLE_PERMISSIONS: Record<

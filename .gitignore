@@ -47,6 +47,9 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Uploaded media (staging + gallery)
+/storage/
+
 # Runtime data
 pids
 *.pid

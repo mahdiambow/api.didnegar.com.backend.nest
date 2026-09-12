@@ -11,6 +11,7 @@ import { PermissionsGuard } from './guards/permissions.guard.js';
 import { RoleGuard } from './guards/role.guard.js';
 import { AuthThrottlerGuard } from './guards/auth-throttler.guard.js';
 import { authThrottler } from './config/auth.config.js';
+import { mediaConfig } from '../media/media.config.js';
 import { UserRepository } from './repositories/user.repository.js';
 import { RefreshTokenRepository } from './repositories/refresh-token.repository.js';
 import { User } from './entities/user.entity.js';
@@ -33,6 +34,7 @@ import { RolesModule } from '../roles/roles.module.js';
         authThrottler.otpSend,
         authThrottler.otpVerify,
         authThrottler.login,
+        mediaConfig.uploadRate,
       ],
       errorMessage: 'تعداد درخواست بیش از حد مجاز است. لطفاً کمی بعد تلاش کنید',
     }),
@@ -59,6 +61,7 @@ import { RolesModule } from '../roles/roles.module.js';
     RoleGuard,
     UserRepository,
     RefreshTokenRepository,
+    ThrottlerModule,
   ],
 })
 export class AuthModule {}

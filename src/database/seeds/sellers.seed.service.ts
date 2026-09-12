@@ -5,11 +5,14 @@ import { User } from '../../auth/entities/user.entity.js';
 import { SellerRepository } from '../../sellers/repositories/seller.repository.js';
 import { SellerContractRepository } from '../../sellers/repositories/seller-contract.repository.js';
 import { BusinessType, SellerStatus } from '../../sellers/entities/seller.enums.js';
-import { UsersSeedService } from './users.seed.service.js';
+import {
+  SEED_DEFAULT_SELLER_SLUG,
+  UsersSeedService,
+} from './users.seed.service.js';
 
 const SEED_SELLER = {
-  key: 'didnegar-shop',
-  slug: 'didnegar-shop',
+  key: SEED_DEFAULT_SELLER_SLUG,
+  slug: SEED_DEFAULT_SELLER_SLUG,
   name: 'فروشگاه دیدنگار',
   businessName: 'شرکت دیدنگار',
   email: 'shop@didnegar.com',
@@ -18,6 +21,14 @@ const SEED_SELLER = {
   city: 'تهران',
   postalCode: '1234567890',
 } as const;
+
+/** شماره‌هایی که JWT.sellerId باید پر باشد */
+const SELLER_LINKED_USERNAMES = [
+  '09363078987',
+  '09393341873',
+  '09222222222',
+  '09444444444',
+] as const;
 
 @Injectable()
 export class SellersSeedService {
@@ -48,14 +59,18 @@ export class SellersSeedService {
       );
     }
 
-    const sellerUserId = this.usersSeedService.getSellerUserId(SEED_SELLER.key);
-    if (sellerUserId) {
-      await this.userRepo.update(sellerUserId, { sellerId: seller.id });
-    }
+    await this.userRepo
+      .createQueryBuilder()
+      .update(User)
+      .set({ sellerId: seller.id })
+      .where('username IN (:...usernames)', {
+        usernames: [...SELLER_LINKED_USERNAMES],
+      })
+      .execute();
 
     const adminUserId =
-      sellerUserId ??
-      (await this.usersSeedService.findUserIdByUsername('09222222222'));
+      (await this.usersSeedService.findUserIdByUsername('09222222222')) ??
+      this.usersSeedService.getSellerUserId(SEED_SELLER.key);
 
     const contract = await this.sellerContractRepository.findLatestBySellerId(
       seller.id,

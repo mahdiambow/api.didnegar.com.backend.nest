@@ -10,6 +10,9 @@ import { DEFAULT_ROLE_SLUGS } from '../../roles/permissions.js';
 
 const DEFAULT_PASSWORD = process.env.SEED_DEFAULT_PASSWORD ?? 'Admin@1234';
 
+/** فروشگاه پیش‌فرض seed — به سوپرادمین‌ها هم لینک می‌شود تا JWT.sellerId خالی نباشد */
+export const SEED_DEFAULT_SELLER_SLUG = 'didnegar-shop';
+
 const SEED_USERS = [
   {
     username: '09363078987',
@@ -19,6 +22,7 @@ const SEED_USERS = [
     firstName: 'مدیر',
     lastName: 'سیستم',
     email: 'superadmin@didnegar.com',
+    sellerKey: SEED_DEFAULT_SELLER_SLUG,
   },
   {
     username: '09393341873',
@@ -28,6 +32,7 @@ const SEED_USERS = [
     firstName: 'مدیر',
     lastName: 'سیستم',
     email: 'superadmin2@didnegar.com',
+    sellerKey: SEED_DEFAULT_SELLER_SLUG,
   },
   {
     username: '09111111111',
@@ -44,7 +49,7 @@ const SEED_USERS = [
     firstName: 'مدیر',
     lastName: 'فروشگاه',
     email: 'seller@didnegar.com',
-    sellerKey: 'didnegar-shop',
+    sellerKey: SEED_DEFAULT_SELLER_SLUG,
   },
   {
     username: '09444444444',
@@ -53,6 +58,7 @@ const SEED_USERS = [
     firstName: 'سوپر',
     lastName: 'فروشنده',
     email: 'superseller@didnegar.com',
+    sellerKey: SEED_DEFAULT_SELLER_SLUG,
   },
   {
     username: '09333333333',

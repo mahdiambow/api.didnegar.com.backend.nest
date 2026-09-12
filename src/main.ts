@@ -62,6 +62,18 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api', app, document);
 
+  const { mediaConfig } = await import('./media/media.config.js');
+  const express = await import('express');
+  const { resolve } = await import('node:path');
+  app.use(
+    '/media-files/staging',
+    express.default.static(resolve(mediaConfig.stagingRoot)),
+  );
+  app.use(
+    '/media-files/gallery',
+    express.default.static(resolve(mediaConfig.galleryRoot)),
+  );
+
   await app.listen(Number(process.env.PORT) || 3000);
 }
 
