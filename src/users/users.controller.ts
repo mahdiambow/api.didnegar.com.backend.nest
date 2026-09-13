@@ -54,7 +54,11 @@ export class UsersController {
     code: 'USERS_FOUND',
     message: 'Users retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست کاربران با pagination' })
+  @ApiOperation({
+    summary: 'لیست کاربران با pagination',
+    description:
+      'فیلتر اختیاری search روی username / displayName / email / firstName / lastName',
+  })
   @ApiOkResponse({ type: UsersPaginatedApiResponseDto })
   findAll(@Req() req: { user: AuthUser }, @Query() query: ListUsersQueryDto) {
     return this.usersService.findAll(req.user, query);

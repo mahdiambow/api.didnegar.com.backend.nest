@@ -24,6 +24,9 @@ import {
 import {
   CreateProductCategoryDto,
   UpdateProductCategoryDto,
+  ListParentCategoriesQueryDto,
+  ListCategoriesQueryDto,
+  ListSubCategoriesQueryDto,
   toParentCategoryResponse,
   toCategoryResponse,
   toSubCategoryResponse,
@@ -41,10 +44,14 @@ export class CategoriesService {
     private readonly productRepository: ProductRepository,
   ) {}
 
-  findAllParentCategories() {
-    return this.parentCategoryRepository
-      .findAll()
-      .then((items) => items.map(toParentCategoryResponse));
+  async findAllParentCategories(query: ListParentCategoriesQueryDto = {}) {
+    const items = await this.parentCategoryRepository.findFiltered({
+      search: query.search,
+      name: query.name,
+      slug: query.slug,
+      isActive: query.isActive,
+    });
+    return items.map(toParentCategoryResponse);
   }
 
   async findParentCategory(id: string) {
@@ -130,10 +137,20 @@ export class CategoriesService {
     return {};
   }
 
-  findAllCategories(parentCategoryId?: string) {
-    return this.categoryRepository
-      .findAll(parentCategoryId)
-      .then((items) => items.map((item) => toCategoryResponse(item, true)));
+  async findAllCategories(query: ListCategoriesQueryDto = {}) {
+    if (query.parentCategoryId) {
+      await this.assertParentCategoryExists(query.parentCategoryId);
+    }
+
+    const items = await this.categoryRepository.findFiltered({
+      parentCategoryId: query.parentCategoryId,
+      search: query.search,
+      name: query.name,
+      slug: query.slug,
+      isActive: query.isActive,
+    });
+
+    return items.map((item) => toCategoryResponse(item, true));
   }
 
   async findCategory(id: string) {
@@ -217,18 +234,23 @@ export class CategoriesService {
     return {};
   }
 
-  async findSubCategories(filters: {
-    categoryId?: string;
-    parentCategoryId?: string;
-  } = {}) {
-    if (filters.categoryId) {
-      await this.assertCategoryExists(filters.categoryId);
+  async findSubCategories(query: ListSubCategoriesQueryDto = {}) {
+    if (query.categoryId) {
+      await this.assertCategoryExists(query.categoryId);
     }
-    if (filters.parentCategoryId) {
-      await this.assertParentCategoryExists(filters.parentCategoryId);
+    if (query.parentCategoryId) {
+      await this.assertParentCategoryExists(query.parentCategoryId);
     }
 
-    const items = await this.subCategoryRepository.findAll(filters);
+    const items = await this.subCategoryRepository.findFiltered({
+      categoryId: query.categoryId,
+      parentCategoryId: query.parentCategoryId,
+      search: query.search,
+      name: query.name,
+      slug: query.slug,
+      isActive: query.isActive,
+    });
+
     return items.map((item) => toSubCategoryResponse(item, true));
   }
 
@@ -244,8 +266,11 @@ export class CategoriesService {
     return toSubCategoryResponse(subCategory, true);
   }
 
-  async findSubCategoriesByCategory(categoryId: string) {
-    return this.findSubCategories({ categoryId });
+  async findSubCategoriesByCategory(
+    categoryId: string,
+    query: ListSubCategoriesQueryDto = {},
+  ) {
+    return this.findSubCategories({ ...query, categoryId });
   }
 
   async createSubCategory(dto: CreateSubCategoryDto) {

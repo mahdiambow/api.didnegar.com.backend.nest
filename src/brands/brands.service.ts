@@ -1,20 +1,36 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ApiException } from '../common/exceptions/api.exception.js';
+import {
+  getPaginationParams,
+  paginatedList,
+} from '../common/response/helpers/paginated-response.helper.js';
 import { BrandRepository } from './repositories/brand.repository.js';
 import {
   CreateBrandDto,
   UpdateBrandDto,
   toBrandResponse,
 } from './dto/brand-response.dto.js';
+import type { ListBrandsQueryDto } from './dto/list-brands-query.dto.js';
 
 @Injectable()
 export class BrandsService {
   constructor(private readonly brandRepository: BrandRepository) {}
 
-  findAll() {
-    return this.brandRepository
-      .findAll()
-      .then((brands) => brands.map(toBrandResponse));
+  async findAll(query: ListBrandsQueryDto) {
+    const { page, limit, offset } = getPaginationParams(query);
+    const [items, total] = await this.brandRepository.findPaginated(
+      offset,
+      limit,
+      {
+        search: query.search,
+        name: query.name,
+        nameEn: query.nameEn,
+        slug: query.slug,
+        isActive: query.isActive,
+      },
+    );
+
+    return paginatedList(items.map(toBrandResponse), page, limit, total);
   }
 
   findAllActive() {

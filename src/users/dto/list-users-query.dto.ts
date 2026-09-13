@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ListUsersQueryDto {
@@ -12,4 +12,13 @@ export class ListUsersQueryDto {
   @IsOptional()
   @Type(() => Number)
   limit?: number;
+
+  @ApiPropertyOptional({
+    example: '0936',
+    description: 'جستجو روی username / displayName / email / firstName / lastName',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  search?: string;
 }

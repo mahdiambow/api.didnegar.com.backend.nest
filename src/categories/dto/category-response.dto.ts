@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsOptional, IsUUID } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { Category } from '../entities/category.entity.js';
 import { ParentCategory } from '../entities/parent-category.entity.js';
 import { SubCategory } from '../entities/sub-category.entity.js';
@@ -13,6 +19,12 @@ import {
   SUB_CATEGORY_RESPONSE_EXAMPLE,
 } from './category.examples.js';
 import { ProductCategoryLinkDto } from './product-category-link.dto.js';
+
+function toOptionalBoolean({ value }: { value: unknown }) {
+  if (value === 'true' || value === '1') return true;
+  if (value === 'false' || value === '0') return false;
+  return value;
+}
 
 export class CreateProductCategoryDto extends ProductCategoryLinkDto {
   @ApiProperty({
@@ -54,6 +66,35 @@ export class ListProductCategoriesQueryDto {
   limit?: number;
 }
 
+export class ListParentCategoriesQueryDto {
+  @ApiPropertyOptional({
+    example: 'دیجیتال',
+    description: 'جستجو در name / nameEn / slug',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  search?: string;
+
+  @ApiPropertyOptional({ example: 'کالای دیجیتال' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'digital' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  slug?: string;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Transform(toOptionalBoolean)
+  @IsBoolean()
+  isActive?: boolean;
+}
+
 export class ListCategoriesQueryDto {
   @ApiPropertyOptional({
     example: CATEGORY_EXAMPLES.parentCategoryId,
@@ -62,6 +103,33 @@ export class ListCategoriesQueryDto {
   @IsOptional()
   @IsUUID()
   parentCategoryId?: string;
+
+  @ApiPropertyOptional({
+    example: 'موبایل',
+    description: 'جستجو در name / nameEn / slug',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  search?: string;
+
+  @ApiPropertyOptional({ example: 'موبایل' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'mobile' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  slug?: string;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Transform(toOptionalBoolean)
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class ListSubCategoriesQueryDto {
@@ -80,6 +148,33 @@ export class ListSubCategoriesQueryDto {
   @IsOptional()
   @IsUUID()
   parentCategoryId?: string;
+
+  @ApiPropertyOptional({
+    example: 'گوشی',
+    description: 'جستجو در name / nameEn / slug',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  search?: string;
+
+  @ApiPropertyOptional({ example: 'گوشی سامسونگ' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'samsung-phones' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  slug?: string;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @Transform(toOptionalBoolean)
+  @IsBoolean()
+  isActive?: boolean;
 }
 
 export class ParentCategoryResponseDto {
