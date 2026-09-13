@@ -29,6 +29,7 @@ import { DatabaseSeedModule } from './database/database.seed.module.js';
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
+      charset: 'utf8mb4',
       autoLoadEntities: true,
       migrations: ['dist/database/migrations/*.js'],
       migrationsRun: true,
