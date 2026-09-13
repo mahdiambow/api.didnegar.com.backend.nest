@@ -31,7 +31,15 @@ export class MediaStorageService {
   }
 
   publicUrl(location: MediaStorageLocation, relativePath: string): string {
-    const normalized = relativePath.split('\\').join('/');
+    const normalized = relativePath.split('\\').join('/').replace(/^\/+/, '');
+    if (/^https?:\/\//i.test(normalized)) {
+      return normalized;
+    }
+    // Legacy WP uploads (YYYY/MM/...) are served under MEDIA_PUBLIC_BASE_URL root
+    // — same convention as category/product image paths from the dump.
+    if (/^\d{4}\/\d{2}\//.test(normalized)) {
+      return `${mediaConfig.publicBaseUrl}/${normalized}`;
+    }
     // When public base already ends with /media and roots are media/staging,
     // URL is {base}/{location}/{relative}
     return `${mediaConfig.publicBaseUrl}/${location}/${normalized}`;

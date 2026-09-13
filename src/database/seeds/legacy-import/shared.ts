@@ -109,6 +109,17 @@ export function normalizeSlug(slug: string, fallback: string): string {
   return (base || fallback).slice(0, 200);
 }
 
+/** Absolute URL when possible; relative dump paths prefixed with MEDIA_PUBLIC_BASE_URL. */
+export function toMediaUrl(path: string | null | undefined): string | null {
+  if (path == null) return null;
+  const trimmed = String(path).trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed.slice(0, 2048);
+  const base = (process.env.MEDIA_PUBLIC_BASE_URL || '').replace(/\/$/, '');
+  if (!base) return trimmed.slice(0, 2048);
+  return `${base}/${trimmed.replace(/^\//, '')}`.slice(0, 2048);
+}
+
 export function splitFaEn(name: string): { name: string; nameEn: string | null } {
   const matched = name.match(/^(.+?)\s*[-–—]\s*([A-Za-z0-9+&./'\s-]{2,})$/u);
   if (!matched) return { name: name.slice(0, 255), nameEn: null };
