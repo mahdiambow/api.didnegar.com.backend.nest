@@ -575,6 +575,11 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     await queryRunner.query(`
       CREATE TABLE \`footer_settings\` (
         \`id\` SMALLINT NOT NULL DEFAULT 1,
+        \`logoUrl\` VARCHAR(2048) NULL,
+        \`logoText\` VARCHAR(200) NULL,
+        \`menuLinks\` JSON NOT NULL DEFAULT ('[]'),
+        \`enamadUrls\` JSON NOT NULL DEFAULT ('[]'),
+        \`aboutUs\` JSON NULL,
         \`address\` TEXT NOT NULL,
         \`phoneNumber\` VARCHAR(50) NOT NULL,
         \`email\` VARCHAR(254) NOT NULL,
