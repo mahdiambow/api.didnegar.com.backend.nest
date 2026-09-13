@@ -256,6 +256,23 @@ export class OffersService {
     } else if (dto.approvalStatus === 'approved') {
       offer.approvalStatus = 'approved';
       offer.rejectionReason = null;
+      // تأیید آفر → محصول لینک‌شده هم تأیید و publish می‌شود
+      const product =
+        offer.product ??
+        (await this.products.findOneBy({ id: offer.productId }));
+      if (!product) {
+        throw new ApiException(
+          'PRODUCT_NOT_FOUND',
+          'محصول این پیشنهاد یافت نشد',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      product.approvalStatus = 'approved';
+      product.rejectionReason = null;
+      if (product.status !== 'publish') {
+        product.status = 'publish';
+      }
+      await this.products.save(product);
     } else {
       offer.approvalStatus = 'pending';
       offer.rejectionReason = null;

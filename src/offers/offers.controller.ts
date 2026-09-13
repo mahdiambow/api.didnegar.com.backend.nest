@@ -101,6 +101,8 @@ export class OffersController {
   )
   @ApiOperation({
     summary: 'تأیید / رد / بازگرداندن به انتظار پیشنهاد فروش (فقط ادمین)',
+    description:
+      'با `approved` شدن آفر، محصول لینک‌شده (`productId`) هم `approved` و در صورت نیاز `publish` می‌شود.',
   })
   @ApiResponseMeta({
     code: 'OFFER_REVIEWED',
