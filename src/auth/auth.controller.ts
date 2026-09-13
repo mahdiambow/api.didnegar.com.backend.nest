@@ -35,8 +35,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login-or-signup')
+  @OtpSendThrottle()
   @UseGuards(AuthThrottlerGuard)
- // @OtpSendThrottle()    
   @ApiResponseMeta({
     code: 'OTP_SENT',
     message: 'OTP sent successfully',
@@ -50,7 +50,7 @@ export class AuthController {
   }
 
   @Post('verify-otp')
- // @OtpVerifyThrottle()
+  @OtpVerifyThrottle()
   @UseGuards(AuthThrottlerGuard)
   @ApiResponseMeta({
     code: 'OTP_VERIFIED',
@@ -69,7 +69,7 @@ export class AuthController {
   }
 
   @Post('login-with-password')
-  //@LoginThrottle()
+  @LoginThrottle()
   @UseGuards(AuthThrottlerGuard)
   @ApiResponseMeta({
     code: 'LOGIN_SUCCESS',

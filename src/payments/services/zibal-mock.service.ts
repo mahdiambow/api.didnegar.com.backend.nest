@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
+import { ConfigService } from '../../config/config.service.js';
 import type {
   PaymentGatewayAdapter,
   PaymentRequestResult,
@@ -10,8 +11,11 @@ import type {
 export class ZibalMockService implements PaymentGatewayAdapter {
   readonly gateway = 'zibal' as const;
 
-  private readonly startBaseUrl =
-    process.env.ZIBAL_START_URL ?? 'https://gateway.zibal.ir/start';
+  private readonly startBaseUrl: string;
+
+  constructor(config: ConfigService) {
+    this.startBaseUrl = config.get('ZIBAL_START_URL');
+  }
 
   requestPayment(
     amount: number,

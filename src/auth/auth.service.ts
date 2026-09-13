@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
 import { ApiException } from '../common/exceptions/api.exception.js';
+import { ConfigService } from '../config/config.service.js';
 import { JwtPayload } from './interfaces/jwt-payload.interface.js';
 import { toUserResponse } from './dto/user-response.dto.js';
 import { RolesSeedService } from '../roles/roles.seed.service.js';
@@ -19,10 +20,8 @@ import type { User } from './entities/user.entity.js';
 
 @Injectable()
 export class AuthService {
-  private readonly isProduction = process.env.NODE_ENV === 'production';
-  private readonly devOtpCode = process.env.OTP_STATIC_CODE ?? '123456';
-
   constructor(
+    private readonly config: ConfigService,
     private readonly userRepository: UserRepository,
     private readonly refreshTokenRepository: RefreshTokenRepository,
     private readonly jwtService: JwtService,
@@ -44,9 +43,9 @@ export class AuthService {
       );
     }
 
-    const code = this.isProduction
+    const code = this.config.get('NODE_ENV') === 'production'
       ? this.generateRandomOtpCode()
-      : this.devOtpCode;
+      : this.config.get('OTP_STATIC_CODE');
 
     const hashedCode = await bcrypt.hash(code, 10);
 
@@ -55,12 +54,12 @@ export class AuthService {
       otpExpiresAt: new Date(Date.now() + otpTtlMs()),
     });
 
-    if (this.isProduction) {
+    if (this.config.get('NODE_ENV') === 'production') {
       await this.sendOtpSms(mobile, code);
     }
 
     return {
-      ...(this.isProduction ? {} : { code }),
+      ...(this.config.get('NODE_ENV') === 'production' ? {} : { code }),
       isNewUser: !user.password,
       expiresIn: authConfig.otpTtlMinutes * 60,
     };

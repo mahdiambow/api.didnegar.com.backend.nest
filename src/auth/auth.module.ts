@@ -18,6 +18,7 @@ import { User } from './entities/user.entity.js';
 import { UserProfile } from './entities/user-profile.entity.js';
 import { UserAddress } from './entities/user-address.entity.js';
 import { RefreshToken } from './entities/refresh-token.entity.js';
+import { ConfigService } from '../config/config.service.js';
 import { RolesModule } from '../roles/roles.module.js';
 
 @Module({
@@ -39,8 +40,12 @@ import { RolesModule } from '../roles/roles.module.js';
       errorMessage: 'تعداد درخواست بیش از حد مجاز است. لطفاً کمی بعد تلاش کنید',
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET ?? 'dev-secret',
+    JwtModule.registerAsync({
+      imports: [],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get('JWT_SECRET'),
+      }),
     }),
   ],
   controllers: [AuthController, AuthTestController],
