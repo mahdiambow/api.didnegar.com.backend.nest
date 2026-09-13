@@ -8,6 +8,7 @@ export interface ProductFilters {
   approvalStatus?: string;
   isActive?: boolean;
   brandId?: string;
+  search?: string;
   name?: string;
   categoryId?: string;
   subCategoryId?: string;
@@ -66,6 +67,18 @@ export class ProductRepository {
 
     if (filters.brandId) {
       qb.andWhere('product.brandId = :brandId', { brandId: filters.brandId });
+    }
+
+    if (filters.search?.trim()) {
+      const search = `%${filters.search.trim()}%`;
+      qb.andWhere(
+        `(product.name LIKE :search
+          OR product.subtitle LIKE :search
+          OR product.slug LIKE :search
+          OR product.sku LIKE :search
+          OR product.shortDescription LIKE :search)`,
+        { search },
+      );
     }
 
     if (filters.name) {
@@ -143,6 +156,18 @@ export class ProductRepository {
 
     if (filters.brandId) {
       qb.andWhere('product.brandId = :brandId', { brandId: filters.brandId });
+    }
+
+    if (filters.search?.trim()) {
+      const search = `%${filters.search.trim()}%`;
+      qb.andWhere(
+        `(product.name LIKE :search
+          OR product.subtitle LIKE :search
+          OR product.slug LIKE :search
+          OR product.sku LIKE :search
+          OR product.shortDescription LIKE :search)`,
+        { search },
+      );
     }
 
     if (filters.name) {
