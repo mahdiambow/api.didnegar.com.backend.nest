@@ -26,6 +26,8 @@ export function mapHttpStatusToErrorCode(status: number): string {
       return 'CONFLICT';
     case HttpStatus.UNPROCESSABLE_ENTITY:
       return 'VALIDATION_ERROR';
+    case HttpStatus.TOO_MANY_REQUESTS:
+      return 'TOO_MANY_REQUESTS';
     default:
       return 'INTERNAL_SERVER_ERROR';
   }
