@@ -30,6 +30,12 @@ export class ParentCategory {
   @Column({ type: 'varchar', length: 200 })
   slug: string;
 
+  @Column({ type: 'varchar', length: 2048, nullable: true })
+  icon: string | null;
+
+  @Column({ type: 'varchar', length: 2048, nullable: true })
+  image: string | null;
+
   @Column({ type: 'int', default: 0 })
   sort: number;
 

@@ -49,6 +49,26 @@ export class CreateCategoryDto {
   @Matches(/^[a-z0-9-]+$/)
   slug: string;
 
+  @ApiPropertyOptional({
+    example: 'https://cdn.example.com/categories/mobile-icon.svg',
+    description: 'URL آیکون',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  icon?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'https://cdn.example.com/categories/mobile.jpg',
+    description: 'URL تصویر',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  image?: string | null;
+
   @ApiPropertyOptional({ example: 0, default: 0, description: 'ترتیب نمایش' })
   @IsOptional()
   @IsInt()
@@ -89,6 +109,24 @@ export class UpdateCategoryDto {
   @MaxLength(200)
   @Matches(/^[a-z0-9-]+$/)
   slug?: string;
+
+  @ApiPropertyOptional({
+    example: 'https://cdn.example.com/categories/mobile-icon.svg',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  icon?: string | null;
+
+  @ApiPropertyOptional({
+    example: 'https://cdn.example.com/categories/mobile.jpg',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  image?: string | null;
 
   @ApiPropertyOptional({ example: 1, description: 'ترتیب نمایش' })
   @IsOptional()

@@ -12,6 +12,7 @@ export default new DataSource({
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
+  charset: 'utf8mb4',
   entities: [join(__dirname, '../**/*.entity.js')],
   migrations: [join(__dirname, 'migrations/*.js')],
 });

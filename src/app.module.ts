@@ -35,6 +35,7 @@ import { DatabaseSeedModule } from './database/database.seed.module.js';
         username: config.get('DB_USERNAME'),
         password: config.get('DB_PASSWORD'),
         database: config.get('DB_DATABASE'),
+        charset: 'utf8mb4',
         autoLoadEntities: true,
         migrations: ['dist/database/migrations/*.js'],
         migrationsRun: true,

@@ -103,4 +103,34 @@ describe('footer settings', () => {
     expect(await validate(plainToInstance(UpdateFooterDto, {}))).toEqual([]);
     expect(await validate(plainToInstance(CreateFooterDto, input))).toEqual([]);
   });
+
+  it('accepts logo and nested menu links', async () => {
+    const dto = plainToInstance(CreateFooterDto, {
+      ...input,
+      logoUrl: 'https://cdn.example.com/logo.svg',
+      logoText: 'دیدنگار',
+      menuLinks: [
+        {
+          title: 'خدمات',
+          url: '/services',
+          subMenu: [{ title: 'گارانتی', url: '/services/warranty' }],
+        },
+        { title: 'درباره ما', url: '/about', subMenu: [] },
+      ],
+    });
+    expect(await validate(dto)).toEqual([]);
+  });
+
+  it('rejects menu links without title', async () => {
+    expect(
+      (
+        await validate(
+          plainToInstance(CreateFooterDto, {
+            ...input,
+            menuLinks: [{ title: '', url: '/x', subMenu: [] }],
+          }),
+        )
+      ).length,
+    ).toBeGreaterThan(0);
+  });
 });

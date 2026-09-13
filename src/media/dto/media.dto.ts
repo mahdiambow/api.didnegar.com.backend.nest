@@ -12,6 +12,8 @@ import {
   Min,
   ValidateIf,
 } from 'class-validator';
+import { UserResponseDto } from '../../auth/dto/user-response.dto.js';
+import { SellerResponseDto } from '../../sellers/dto/seller-response.dto.js';
 import {
   MEDIA_GROUPS,
   MEDIA_STATUSES,
@@ -134,6 +136,20 @@ export class MediaAssetResponseDto {
 
   @ApiProperty({ format: 'uuid' })
   uploadedByUserId: string;
+
+  @ApiPropertyOptional({
+    type: SellerResponseDto,
+    nullable: true,
+    description: 'فروشنده — populate از sellerId',
+  })
+  seller?: SellerResponseDto | null;
+
+  @ApiPropertyOptional({
+    type: UserResponseDto,
+    nullable: true,
+    description: 'کاربر آپلودکننده — populate از uploadedByUserId',
+  })
+  uploadedByUser?: UserResponseDto | null;
 
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   productId: string | null;

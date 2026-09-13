@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
 
@@ -40,6 +40,15 @@ export class ListProductsQueryDto {
   @IsOptional()
   @IsUUID()
   brandId?: string;
+
+  @ApiPropertyOptional({
+    example: 'canon',
+    description: 'جستجو در name / subtitle / slug / sku / shortDescription',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  search?: string;
 
   @ApiPropertyOptional({ example: 'گوشی' })
   @IsOptional()

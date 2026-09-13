@@ -36,14 +36,38 @@ export class SettingsService {
         HttpStatus.NOT_FOUND,
       );
     }
-    return footer;
+    return {
+      ...footer,
+      logoUrl: footer.logoUrl ?? null,
+      logoText: footer.logoText ?? null,
+      menuLinks: Array.isArray(footer.menuLinks) ? footer.menuLinks : [],
+      enamadUrls: Array.isArray(footer.enamadUrls) ? footer.enamadUrls : [],
+      aboutUs: footer.aboutUs ?? null,
+    };
   }
 
   async createFooter(dto: CreateFooterDto) {
     try {
-      await this.footerRepository.insert({ ...dto, id: 1 });
+      await this.footerRepository.insert({
+        id: 1,
+        logoUrl: dto.logoUrl ?? null,
+        logoText: dto.logoText ?? null,
+        menuLinks: dto.menuLinks ?? [],
+        enamadUrls: dto.enamadUrls ?? [],
+        aboutUs: dto.aboutUs ?? null,
+        address: dto.address,
+        phoneNumber: dto.phoneNumber,
+        email: dto.email,
+        workingHours: dto.workingHours,
+        instagram: dto.instagram ?? null,
+        whatsapp: dto.whatsapp ?? null,
+        telegram: dto.telegram ?? null,
+        bale: dto.bale ?? null,
+        rubika: dto.rubika ?? null,
+      });
     } catch (error) {
-      if ((error as { code?: string }).code === '23505') {
+      const code = String((error as { code?: string | number }).code ?? '');
+      if (code === '23505' || code === 'ER_DUP_ENTRY' || code === '1062') {
         throw new ApiException(
           'FOOTER_ALREADY_EXISTS',
           'تنظیمات فوتر از قبل وجود دارد',

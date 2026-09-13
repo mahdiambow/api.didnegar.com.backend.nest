@@ -45,6 +45,7 @@ export class ProductsService {
     approvalStatus?: string;
     isActive?: boolean;
     brandId?: string;
+    search?: string;
     name?: string;
     categoryId?: string;
     subCategoryId?: string;
@@ -58,6 +59,7 @@ export class ProductsService {
         approvalStatus: query.approvalStatus,
         isActive: query.isActive,
         brandId: query.brandId,
+        search: query.search,
         name: query.name,
         categoryId: query.categoryId,
         subCategoryId: query.subCategoryId,

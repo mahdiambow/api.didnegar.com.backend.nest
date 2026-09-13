@@ -5,6 +5,8 @@ import { randomUUID } from 'node:crypto';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { AuthUser } from '../auth/types/auth-user.type.js';
 import { userHasRole } from '../auth/types/auth-user.type.js';
+import { toUserResponse } from '../auth/dto/user-response.dto.js';
+import { UserRepository } from '../auth/repositories/user.repository.js';
 import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
 import {
   getPaginationParams,
@@ -12,6 +14,8 @@ import {
 } from '../common/response/helpers/paginated-response.helper.js';
 import { Product } from '../products/entities/product.entity.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
+import { SellerRepository } from '../sellers/repositories/seller.repository.js';
+import { toSellerResponse } from '../sellers/dto/seller-response.dto.js';
 import { MediaAsset } from './entities/media-asset.entity.js';
 import { mediaConfig } from './media.config.js';
 import { MediaStorageService } from './media.storage.service.js';
@@ -96,15 +100,25 @@ export class MediaService {
     private readonly sellers: Repository<Seller>,
     @InjectRepository(Product)
     private readonly products: Repository<Product>,
+    private readonly sellerRepository: SellerRepository,
+    private readonly userRepository: UserRepository,
     private readonly storage: MediaStorageService,
   ) {}
 
-  toResponse(asset: MediaAsset): MediaAssetResponseDto {
+  toResponse(
+    asset: MediaAsset,
+    populated: {
+      seller?: MediaAssetResponseDto['seller'];
+      uploadedByUser?: MediaAssetResponseDto['uploadedByUser'];
+    } = {},
+  ): MediaAssetResponseDto {
     return {
       id: asset.id,
       group: asset.group,
       sellerId: asset.sellerId,
       uploadedByUserId: asset.uploadedByUserId,
+      seller: populated.seller ?? null,
+      uploadedByUser: populated.uploadedByUser ?? null,
       productId: asset.productId,
       originalName: asset.originalName,
       alt: asset.alt,
@@ -119,6 +133,43 @@ export class MediaService {
       createdAt: asset.createdAt,
       updatedAt: asset.updatedAt,
     };
+  }
+
+  private async toEnrichedResponses(
+    assets: MediaAsset[],
+  ): Promise<MediaAssetResponseDto[]> {
+    const sellerIds = [
+      ...new Set(assets.map((asset) => asset.sellerId).filter(Boolean)),
+    ];
+    const userIds = [
+      ...new Set(
+        assets.map((asset) => asset.uploadedByUserId).filter(Boolean),
+      ),
+    ];
+
+    const [sellers, users] = await Promise.all([
+      this.sellerRepository.findByIds(sellerIds),
+      this.userRepository.findByIds(userIds),
+    ]);
+
+    const sellerMap = new Map(
+      sellers.map((seller) => [seller.id, toSellerResponse(seller)]),
+    );
+    const userMap = new Map(
+      users.map((user) => [user.id, toUserResponse(user)]),
+    );
+
+    return assets.map((asset) =>
+      this.toResponse(asset, {
+        seller: sellerMap.get(asset.sellerId) ?? null,
+        uploadedByUser: userMap.get(asset.uploadedByUserId) ?? null,
+      }),
+    );
+  }
+
+  private async toEnrichedResponse(asset: MediaAsset) {
+    const [response] = await this.toEnrichedResponses([asset]);
+    return response;
   }
 
   private requireSellerId(user: AuthUser): string {
@@ -168,7 +219,12 @@ export class MediaService {
       .take(limit)
       .getManyAndCount();
 
-    return paginatedList(items.map((item) => this.toResponse(item)), page, limit, total);
+    return paginatedList(
+      await this.toEnrichedResponses(items),
+      page,
+      limit,
+      total,
+    );
   }
 
   async getEntity(id: string): Promise<MediaAsset> {
@@ -186,7 +242,7 @@ export class MediaService {
   async findOne(user: AuthUser, id: string) {
     const asset = await this.getEntity(id);
     assertMediaAccess(user, asset.sellerId);
-    return this.toResponse(asset);
+    return this.toEnrichedResponse(asset);
   }
 
   async upload(
@@ -290,7 +346,7 @@ export class MediaService {
 
     await this.media.save(asset);
     this.logger.log(`upload ok id=${asset.id} path=${relativePath}`);
-    return this.toResponse(asset);
+    return this.toEnrichedResponse(asset);
   }
 
   async review(user: AuthUser, id: string, dto: ReviewMediaAssetDto) {
@@ -305,7 +361,7 @@ export class MediaService {
     const asset = await this.getEntity(id);
 
     if (asset.status === 'approved' && dto.status === 'approved') {
-      return this.toResponse(asset);
+      return this.toEnrichedResponse(asset);
     }
 
     if (asset.isUsed && dto.status === 'rejected') {
@@ -333,7 +389,7 @@ export class MediaService {
     }
 
     await this.media.save(asset);
-    return this.toResponse(asset);
+    return this.toEnrichedResponse(asset);
   }
 
   async attach(user: AuthUser, id: string, dto: AttachMediaAssetDto) {
@@ -360,7 +416,7 @@ export class MediaService {
     asset.isUsed = true;
     asset.expiresAt = null;
     await this.media.save(asset);
-    return this.toResponse(asset);
+    return this.toEnrichedResponse(asset);
   }
 
   async detach(user: AuthUser, id: string) {
@@ -373,7 +429,7 @@ export class MediaService {
       asset.expiresAt = null;
     }
     await this.media.save(asset);
-    return this.toResponse(asset);
+    return this.toEnrichedResponse(asset);
   }
 
   async remove(user: AuthUser, id: string) {

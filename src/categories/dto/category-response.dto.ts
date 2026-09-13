@@ -193,6 +193,20 @@ export class ParentCategoryResponseDto {
   @ApiProperty({ example: PARENT_CATEGORY_RESPONSE_EXAMPLE.slug })
   slug: string;
 
+  @ApiPropertyOptional({
+    example: PARENT_CATEGORY_RESPONSE_EXAMPLE.icon,
+    nullable: true,
+    description: 'URL آیکون',
+  })
+  icon: string | null;
+
+  @ApiPropertyOptional({
+    example: PARENT_CATEGORY_RESPONSE_EXAMPLE.image,
+    nullable: true,
+    description: 'URL تصویر',
+  })
+  image: string | null;
+
   @ApiProperty({ example: 0 })
   sort: number;
 
@@ -221,6 +235,20 @@ export class CategoryResponseDto {
 
   @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.slug })
   slug: string;
+
+  @ApiPropertyOptional({
+    example: CATEGORY_RESPONSE_EXAMPLE.icon,
+    nullable: true,
+    description: 'URL آیکون',
+  })
+  icon: string | null;
+
+  @ApiPropertyOptional({
+    example: CATEGORY_RESPONSE_EXAMPLE.image,
+    nullable: true,
+    description: 'URL تصویر',
+  })
+  image: string | null;
 
   @ApiProperty({ example: 0 })
   sort: number;
@@ -262,6 +290,20 @@ export class SubCategoryResponseDto {
 
   @ApiProperty({ example: SUB_CATEGORY_RESPONSE_EXAMPLE.slug })
   slug: string;
+
+  @ApiPropertyOptional({
+    example: SUB_CATEGORY_RESPONSE_EXAMPLE.icon,
+    nullable: true,
+    description: 'URL آیکون',
+  })
+  icon: string | null;
+
+  @ApiPropertyOptional({
+    example: SUB_CATEGORY_RESPONSE_EXAMPLE.image,
+    nullable: true,
+    description: 'URL تصویر',
+  })
+  image: string | null;
 
   @ApiProperty({ example: 0 })
   sort: number;
@@ -340,6 +382,8 @@ export function toParentCategoryResponse(
     name: parent.name,
     nameEn: parent.nameEn ?? null,
     slug: parent.slug,
+    icon: parent.icon ?? null,
+    image: parent.image ?? null,
     sort: parent.sort ?? 0,
     isActive: parent.isActive ?? true,
     createdAt: parent.createdAt,
@@ -356,12 +400,15 @@ export function toCategoryResponse(
     name: category.name,
     nameEn: category.nameEn ?? null,
     slug: category.slug,
+    icon: category.icon ?? null,
+    image: category.image ?? null,
     sort: category.sort ?? 0,
     isActive: category.isActive ?? true,
     createdAt: category.createdAt,
-    parentCategory: category.parentCategory
-      ? toParentCategoryResponse(category.parentCategory)
-      : undefined,
+    parentCategory:
+      includeParent && category.parentCategory
+        ? toParentCategoryResponse(category.parentCategory)
+        : undefined,
   };
 }
 
@@ -383,6 +430,8 @@ export function toSubCategoryResponse(
     name: subCategory.name,
     nameEn: subCategory.nameEn ?? null,
     slug: subCategory.slug,
+    icon: subCategory.icon ?? null,
+    image: subCategory.image ?? null,
     sort: subCategory.sort ?? 0,
     isActive: subCategory.isActive ?? true,
     createdAt: subCategory.createdAt,

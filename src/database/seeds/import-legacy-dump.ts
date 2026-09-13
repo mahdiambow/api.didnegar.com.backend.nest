@@ -12,14 +12,13 @@
  *   npm run db:import:legacy -- addresses
  *   npm run db:import:legacy -- orders
  *   npm run db:import:legacy -- payments
+ *   npm run db:import:legacy -- media
  *   npm run db:import:legacy -- all
- *
- * Media is NOT imported by default (Nest media_assets ≠ legacy media).
- * Only if explicitly needed: npm run db:import:legacy -- media
  *
  * Skipped (no Nest table / incompatible): reviews, attribute_values rows,
  * product_variant_* rows, order_item_options, companies, customers (map only).
  * Note: product.attributeIds IS filled from variant→attribute_values links.
+ * Media rows map into media_assets (metadata + public URL path; files stay on CDN/SFTP).
  */
 import type { RowDataPacket } from 'mysql2/promise';
 import {
@@ -35,6 +34,7 @@ import {
   splitFaEn,
   stripHtml,
   targetDb,
+  toMediaUrl,
   type StepContext,
 } from './legacy-import/shared.js';
 
@@ -49,12 +49,10 @@ const STEPS = [
   'addresses',
   'orders',
   'payments',
+  'media',
 ] as const;
 
-/** Optional — not included in `all` (Nest media pipeline differs from legacy `media`). */
-const OPTIONAL_STEPS = ['media'] as const;
-
-type StepName = (typeof STEPS)[number] | (typeof OPTIONAL_STEPS)[number] | 'all';
+type StepName = (typeof STEPS)[number] | 'all';
 
 async function importLocations(ctx: StepContext) {
   const { conn, source, target } = ctx;
@@ -299,8 +297,8 @@ async function importCategories(ctx: StepContext) {
     parentId = newId();
     await conn.execute(
       `INSERT INTO \`${target}\`.parent_categories
-       (id, legacyId, legacyTable, name, nameEn, slug, sort, isActive)
-       VALUES (?, NULL, 'import', ?, 'Legacy Import', ?, 0, 1)`,
+       (id, legacyId, legacyTable, name, nameEn, slug, icon, image, sort, isActive)
+       VALUES (?, NULL, 'import', ?, 'Legacy Import', ?, NULL, NULL, 0, 1)`,
       [parentId, 'دسته‌های مهاجرت‌شده', parentSlug],
     );
   }
@@ -308,14 +306,19 @@ async function importCategories(ctx: StepContext) {
 
   let catIns = 0;
   let catUpd = 0;
+  let catWithImage = 0;
   const [legacyCats] = await conn.query<RowDataPacket[]>(
-    `SELECT id, legacyId, legacyTable, name, slug FROM \`${source}\`.categories ORDER BY legacyId`,
+    `SELECT id, legacyId, legacyTable, name, slug, image
+     FROM \`${source}\`.categories ORDER BY legacyId`,
   );
   for (const row of legacyCats) {
     const legacyId = row.legacyId != null ? Number(row.legacyId) : null;
     const legacyTable = row.legacyTable ? String(row.legacyTable) : 'categories';
     const { name, nameEn } = splitFaEn(String(row.name || ''));
     let slug = normalizeSlug(String(row.slug || ''), `cat-${legacyId ?? row.id}`);
+    const image = toMediaUrl(row.image != null ? String(row.image) : null);
+    const icon = null;
+    if (image) catWithImage += 1;
     if (!name) continue;
 
     let nestId: string | undefined;
@@ -343,18 +346,19 @@ async function importCategories(ctx: StepContext) {
       nestId = newId();
       await conn.execute(
         `INSERT INTO \`${target}\`.categories
-         (id, parentCategoryId, legacyId, legacyTable, name, nameEn, slug, sort, isActive)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1)`,
-        [nestId, parentId, legacyId, legacyTable, name, nameEn, slug],
+         (id, parentCategoryId, legacyId, legacyTable, name, nameEn, slug, icon, image, sort, isActive)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)`,
+        [nestId, parentId, legacyId, legacyTable, name, nameEn, slug, icon, image],
       );
       catIns += 1;
     } else {
       await conn.execute(
         `UPDATE \`${target}\`.categories
          SET parentCategoryId = ?, name = ?, nameEn = ?, slug = ?,
+             icon = ?, image = ?,
              legacyId = ?, legacyTable = ?, isActive = 1
          WHERE id = ?`,
-        [parentId, name, nameEn, slug, legacyId, legacyTable, nestId],
+        [parentId, name, nameEn, slug, icon, image, legacyId, legacyTable, nestId],
       );
       catUpd += 1;
     }
@@ -364,8 +368,9 @@ async function importCategories(ctx: StepContext) {
   const categoryMap = await loadMap(conn, target, 'categories');
   let subIns = 0;
   let subUpd = 0;
+  let subWithImage = 0;
   const [legacySubs] = await conn.query<RowDataPacket[]>(
-    `SELECT id, legacyId, legacyTable, categoryId, name, slug, position
+    `SELECT id, legacyId, legacyTable, categoryId, name, slug, position, image
      FROM \`${source}\`.sub_categories ORDER BY legacyId`,
   );
   for (const row of legacySubs) {
@@ -376,6 +381,9 @@ async function importCategories(ctx: StepContext) {
     const { name, nameEn } = splitFaEn(String(row.name || ''));
     let slug = normalizeSlug(String(row.slug || ''), `sub-${legacyId ?? row.id}`);
     const sort = Number(row.position ?? 0) || 0;
+    const image = toMediaUrl(row.image != null ? String(row.image) : null);
+    const icon = null;
+    if (image) subWithImage += 1;
     if (!name) continue;
 
     let nestId: string | undefined;
@@ -397,18 +405,41 @@ async function importCategories(ctx: StepContext) {
       nestId = newId();
       await conn.execute(
         `INSERT INTO \`${target}\`.sub_categories
-         (id, categoryId, legacyId, legacyTable, name, nameEn, slug, sort, isActive)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-        [nestId, nestCategoryId, legacyId, legacyTable, name, nameEn, slug, sort],
+         (id, categoryId, legacyId, legacyTable, name, nameEn, slug, icon, image, sort, isActive)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [
+          nestId,
+          nestCategoryId,
+          legacyId,
+          legacyTable,
+          name,
+          nameEn,
+          slug,
+          icon,
+          image,
+          sort,
+        ],
       );
       subIns += 1;
     } else {
       await conn.execute(
         `UPDATE \`${target}\`.sub_categories
          SET categoryId = ?, name = ?, nameEn = ?, slug = ?, sort = ?,
+             icon = ?, image = ?,
              legacyId = ?, legacyTable = ?, isActive = 1
          WHERE id = ?`,
-        [nestCategoryId, name, nameEn, slug, sort, legacyId, legacyTable, nestId],
+        [
+          nestCategoryId,
+          name,
+          nameEn,
+          slug,
+          sort,
+          icon,
+          image,
+          legacyId,
+          legacyTable,
+          nestId,
+        ],
       );
       subUpd += 1;
     }
@@ -419,8 +450,10 @@ async function importCategories(ctx: StepContext) {
     parentId,
     categoriesInserted: catIns,
     categoriesUpdated: catUpd,
+    categoriesWithImage: catWithImage,
     subInserted: subIns,
     subUpdated: subUpd,
+    subWithImage,
   });
 }
 
@@ -1158,7 +1191,9 @@ async function importMedia(ctx: StepContext) {
   );
   const uploaderId = adminRows[0]?.id as string | undefined;
   if (!sellerId || !uploaderId) {
-    throw new Error('Need didnegar-shop seller and 09363078987 user for media import');
+    throw new Error(
+      'Need didnegar-shop seller and 09363078987 user for media import',
+    );
   }
 
   let inserted = 0;
@@ -1169,62 +1204,119 @@ async function importMedia(ctx: StepContext) {
 
   for (;;) {
     const [rows] = await conn.query<RowDataPacket[]>(
-      `SELECT id, filename, mimeType, title, altText, url
+      `SELECT id, filename, mimeType, title, altText
        FROM \`${source}\`.media
-       ORDER BY createdAt
+       ORDER BY createdAt, id
        LIMIT ${batchSize} OFFSET ${offset}`,
     );
     if (!rows.length) break;
 
+    const valueSql: string[] = [];
+    const params: Array<string | number | null> = [];
+    const mapSql: string[] = [];
+    const mapParams: string[] = [];
+
     for (const row of rows) {
-      if (existing.has(String(row.id))) {
+      const legacyKey = String(row.id);
+      if (existing.has(legacyKey)) {
         skipped += 1;
         continue;
       }
-      const originalName = String(row.filename || row.title || `media-${row.id}`).slice(
+
+      const filename = String(row.filename || '').replace(/^\/+/, '').trim();
+      const relativePath = (filename || `legacy/${legacyKey}`).slice(0, 500);
+      const originalName = (
+        relativePath.split('/').pop() ||
+        String(row.title || `media-${legacyKey}`)
+      ).slice(0, 255);
+      const mimeType = String(row.mimeType || 'application/octet-stream').slice(
         0,
-        255,
+        100,
       );
-      const mimeType = String(row.mimeType || 'application/octet-stream').slice(0, 100);
-      const url = String(row.url || '');
-      const relativePath = (
-        url.replace(/^https?:\/\/[^/]+\/?/i, '') || `legacy/${row.id}`
-      ).slice(0, 500);
+      const alt = row.altText ? String(row.altText).slice(0, 500) : null;
+      const group = mimeType.startsWith('image/')
+        ? 'product'
+        : mimeType.startsWith('video/')
+          ? 'other'
+          : 'other';
       const nestId = newId();
+
+      valueSql.push(
+        '(?, ?, ?, ?, NULL, ?, ?, ?, 0, ?, \'gallery\', \'approved\', 1, NULL)',
+      );
+      params.push(
+        nestId,
+        group,
+        sellerId,
+        uploaderId,
+        originalName,
+        alt,
+        mimeType,
+        relativePath,
+      );
+
+      mapSql.push('(?, ?, ?)');
+      mapParams.push('media_assets', legacyKey, nestId);
+      existing.set(legacyKey, nestId);
+    }
+
+    if (valueSql.length) {
       try {
         await conn.execute(
           `INSERT INTO \`${target}\`.media_assets
            (\`id\`, \`group\`, sellerId, uploadedByUserId, productId, originalName, alt,
             mimeType, sizeBytes, relativePath, storageLocation, status, isUsed, expiresAt)
-           VALUES (?, 'other', ?, ?, NULL, ?, ?, ?, 0, ?, 'gallery', 'approved', 1, NULL)`,
-          [
-            nestId,
-            sellerId,
-            uploaderId,
-            originalName,
-            row.altText ? String(row.altText).slice(0, 500) : null,
-            mimeType,
-            relativePath,
-          ],
+           VALUES ${valueSql.join(',')}`,
+          params,
         );
-        await putMap(conn, target, 'media_assets', String(row.id), nestId);
-        existing.set(String(row.id), nestId);
-        inserted += 1;
-      } catch {
-        skipped += 1;
+        await conn.execute(
+          `INSERT INTO \`${target}\`.legacy_id_map (entity, legacy_ulid, nest_uuid)
+           VALUES ${mapSql.join(',')}
+           ON DUPLICATE KEY UPDATE nest_uuid = VALUES(nest_uuid)`,
+          mapParams,
+        );
+        inserted += valueSql.length;
+      } catch (error) {
+        // Fallback row-by-row if a batch fails (rare)
+        for (let i = 0; i < valueSql.length; i += 1) {
+          const sliceParams = params.slice(i * 8, i * 8 + 8);
+          const nestId = sliceParams[0] as string;
+          const legacyKey = mapParams[i * 3 + 1];
+          try {
+            await conn.execute(
+              `INSERT INTO \`${target}\`.media_assets
+               (\`id\`, \`group\`, sellerId, uploadedByUserId, productId, originalName, alt,
+                mimeType, sizeBytes, relativePath, storageLocation, status, isUsed, expiresAt)
+               VALUES (?, ?, ?, ?, NULL, ?, ?, ?, 0, ?, 'gallery', 'approved', 1, NULL)`,
+              sliceParams,
+            );
+            await putMap(conn, target, 'media_assets', legacyKey, nestId);
+            inserted += 1;
+          } catch {
+            existing.delete(legacyKey);
+            skipped += 1;
+          }
+        }
+        console.warn(
+          `media batch fallback at offset=${offset}: ${String(
+            (error as Error).message || error,
+          ).slice(0, 200)}`,
+        );
       }
     }
 
     offset += rows.length;
-    console.log(`media progress: offset=${offset} inserted=${inserted}`);
+    console.log(
+      `media progress: offset=${offset} inserted=${inserted} skipped=${skipped}`,
+    );
     if (rows.length < batchSize) break;
   }
 
-  logStep('media', { inserted, skipped });
+  logStep('media', { inserted, skipped, sourceOffset: offset });
 }
 
 const runners: Record<
-  (typeof STEPS)[number] | (typeof OPTIONAL_STEPS)[number],
+  (typeof STEPS)[number],
   (ctx: StepContext) => Promise<void>
 > = {
   locations: importLocations,
@@ -1242,17 +1334,16 @@ const runners: Record<
 
 async function main() {
   const stepArg = (process.argv[2] || 'all') as StepName;
-  const allNames = [...STEPS, ...OPTIONAL_STEPS] as const;
   const selected =
     stepArg === 'all'
       ? [...STEPS]
-      : (allNames as readonly string[]).includes(stepArg)
-        ? [stepArg as (typeof STEPS)[number] | (typeof OPTIONAL_STEPS)[number]]
+      : (STEPS as readonly string[]).includes(stepArg)
+        ? [stepArg as (typeof STEPS)[number]]
         : null;
 
   if (!selected) {
     console.error(
-      `Unknown step "${stepArg}". Use one of: all, ${STEPS.join(', ')} (optional: ${OPTIONAL_STEPS.join(', ')})`,
+      `Unknown step "${stepArg}". Use one of: all, ${STEPS.join(', ')}`,
     );
     process.exit(1);
   }

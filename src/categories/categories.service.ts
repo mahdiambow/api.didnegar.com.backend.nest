@@ -80,6 +80,8 @@ export class CategoriesService {
       this.parentCategoryRepository.create({
         ...dto,
         nameEn: dto.nameEn ?? null,
+        icon: dto.icon ?? null,
+        image: dto.image ?? null,
         sort: dto.sort ?? 0,
         isActive: dto.isActive ?? true,
       }),
@@ -181,6 +183,8 @@ export class CategoriesService {
       this.categoryRepository.create({
         ...dto,
         nameEn: dto.nameEn ?? null,
+        icon: dto.icon ?? null,
+        image: dto.image ?? null,
         sort: dto.sort ?? 0,
         isActive: dto.isActive ?? true,
       }),
@@ -292,6 +296,8 @@ export class CategoriesService {
       this.subCategoryRepository.create({
         ...dto,
         nameEn: dto.nameEn ?? null,
+        icon: dto.icon ?? null,
+        image: dto.image ?? null,
         sort: dto.sort ?? 0,
         isActive: dto.isActive ?? true,
       }),
