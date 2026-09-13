@@ -42,6 +42,7 @@
     "@nestjs/swagger": "^12.0.1",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^12.0.1",
+    "@scalar/nestjs-api-reference": "^1.2.18",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -78,6 +79,10 @@
     "vitest": "^4.1.2"
   },
   "overrides": {
-    "ora": "5.4.1"
+    "ora": "5.4.1",
+    "@nestjs/throttler": {
+      "@nestjs/common": "$@nestjs/common",
+      "@nestjs/core": "$@nestjs/core"
+    }
   }
 }

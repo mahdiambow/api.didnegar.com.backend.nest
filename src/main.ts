@@ -6,6 +6,7 @@ async function bootstrap() {
   const { NestFactory, Reflector } = await import('@nestjs/core');
   const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
   const { AppModule } = await import('./app.module.js');
+  const { apiReference } = await import('@scalar/nestjs-api-reference');
   const { TransformInterceptor } = await import(
     './common/interceptors/transform.interceptor.js'
   );
@@ -30,6 +31,7 @@ async function bootstrap() {
               styleSrc: [`'self'`, `'unsafe-inline'`],
               scriptSrc: [`'self'`],
               imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
+              fontSrc: [`'self'`, 'https://fonts.gstatic.com'],
               connectSrc: [`'self'`],
               // Support direct HTTP access; HTTPS is configured at the proxy.
               upgradeInsecureRequests: null,
@@ -67,6 +69,15 @@ async function bootstrap() {
     },
     customSiteTitle: 'Didnegar API',
   });
+
+  // Scalar API Reference — modern alternative to Swagger UI
+  app.use(
+    '/reference',
+    apiReference({
+      content: document,
+      theme: 'purple',
+    }),
+  );
 
   const { mediaConfig } = await import('./media/media.config.js');
   if (!mediaConfig.sftp.enabled) {
