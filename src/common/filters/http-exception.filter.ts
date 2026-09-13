@@ -58,14 +58,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
       }
     }
 
-    if (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN) {
+    if (status >= 500) {
+      this.logger.error(
+        `${request.method} ${request.url} → ${status} ${body.code}: ${body.message}`,
+        exception instanceof Error ? exception.stack : String(exception),
+      );
+    } else if (status >= 400) {
       this.logger.warn(
         `${request.method} ${request.url} → ${status} ${body.code}: ${body.message}`,
-      );
-    } else if (!(exception instanceof ApiException) && status >= 500) {
-      this.logger.error(
-        `${request.method} ${request.url} → ${status}`,
-        exception instanceof Error ? exception.stack : String(exception),
       );
     }
 
