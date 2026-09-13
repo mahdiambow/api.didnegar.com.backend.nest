@@ -1,5 +1,4 @@
 import { OffersModule } from './offers/offers.module.js';
-import { OfferProductsModule } from './offer-products/offer-products.module.js';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module.js';
 import { ConfigService } from './config/config.service.js';
@@ -52,7 +51,6 @@ import { UlidSubscriber } from './common/id/ulid.subscriber.js';
     ProductsModule,
     BrandsModule,
     OffersModule,
-    OfferProductsModule,
     OrdersModule,
     PaymentsModule,
     ShippingModule,

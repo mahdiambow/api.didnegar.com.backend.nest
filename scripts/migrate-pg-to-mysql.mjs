@@ -44,7 +44,6 @@ const TABLES = [
   'product_categories',
   'shipping_methods',
   'seller_offers',
-  'offer_products',
   'orders',
   'order_items',
   'payments',

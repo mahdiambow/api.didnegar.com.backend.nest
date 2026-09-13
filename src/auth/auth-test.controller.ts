@@ -86,7 +86,7 @@ export class AuthTestController {
   })
   @ApiOperation({
     summary:
-      'تست super-seller — تأیید offer-product؛ کاربر 09363078987 هر دو نقش را دارد',
+      'تست super-seller — تأیید seller-offer؛ کاربر 09363078987 هر دو نقش را دارد',
   })
   @ApiOkResponse({ type: AuthTestApiResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
