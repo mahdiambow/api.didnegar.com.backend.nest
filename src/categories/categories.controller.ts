@@ -40,6 +40,7 @@ import {
   CreateProductCategoryDto,
   UpdateProductCategoryDto,
   ListProductCategoriesQueryDto,
+  ListParentCategoriesQueryDto,
   ListCategoriesQueryDto,
   ListSubCategoriesQueryDto,
 } from './dto/category-response.dto.js';
@@ -53,11 +54,29 @@ const ParentCategoryApiResponseDto = createSuccessResponseDto(
   },
 );
 
+const ParentCategoriesListApiResponseDto = createSuccessResponseDto(
+  ParentCategoryResponseDto,
+  {
+    code: 'PARENT_CATEGORIES_FOUND',
+    message: 'Parent categories retrieved successfully',
+    name: 'ParentCategoriesList',
+  },
+);
+
 const CategoryApiResponseDto = createSuccessResponseDto(CategoryResponseDto, {
   code: 'CATEGORY_FOUND',
   message: 'Category retrieved successfully',
   name: 'Category',
 });
+
+const CategoriesListApiResponseDto = createSuccessResponseDto(
+  CategoryResponseDto,
+  {
+    code: 'CATEGORIES_FOUND',
+    message: 'Categories retrieved successfully',
+    name: 'CategoriesList',
+  },
+);
 
 const SubCategoryApiResponseDto = createSuccessResponseDto(
   SubCategoryResponseDto,
@@ -65,6 +84,15 @@ const SubCategoryApiResponseDto = createSuccessResponseDto(
     code: 'SUB_CATEGORY_FOUND',
     message: 'Sub category retrieved successfully',
     name: 'SubCategory',
+  },
+);
+
+const SubCategoriesListApiResponseDto = createSuccessResponseDto(
+  SubCategoryResponseDto,
+  {
+    code: 'SUB_CATEGORIES_FOUND',
+    message: 'Sub categories retrieved successfully',
+    name: 'SubCategoriesList',
   },
 );
 
@@ -99,14 +127,26 @@ export class ParentCategoriesController {
     message: 'Parent categories retrieved successfully',
   })
   @ApiOperation({ summary: 'لیست parent category ها (سطح ۱)' })
-  findAll() {
-    return this.categoriesService.findAllParentCategories();
+  @ApiOkResponse({ type: ParentCategoriesListApiResponseDto })
+  findAll(@Query() query: ListParentCategoriesQueryDto) {
+    return this.categoriesService.findAllParentCategories(query);
   }
 
   @Get(':parentCategoryId/categories')
+  @ApiResponseMeta({
+    code: 'CATEGORIES_FOUND',
+    message: 'Categories retrieved successfully',
+  })
   @ApiOperation({ summary: 'لیست دسته‌های یک parent category' })
-  findCategories(@Param('parentCategoryId') parentCategoryId: string) {
-    return this.categoriesService.findAllCategories(parentCategoryId);
+  @ApiOkResponse({ type: CategoriesListApiResponseDto })
+  findCategories(
+    @Param('parentCategoryId') parentCategoryId: string,
+    @Query() query: ListCategoriesQueryDto,
+  ) {
+    return this.categoriesService.findAllCategories({
+      ...query,
+      parentCategoryId,
+    });
   }
 
   @Get(':id')
@@ -167,16 +207,28 @@ export class CategoriesController {
   })
   @ApiOperation({
     summary: 'لیست دسته‌بندی‌ها (سطح ۲)',
-    description: 'اختیاری: ?parentCategoryId=...',
+    description: 'اختیاری: ?parentCategoryId=&search=&isActive=',
   })
+  @ApiOkResponse({ type: CategoriesListApiResponseDto })
   findAllCategories(@Query() query: ListCategoriesQueryDto) {
-    return this.categoriesService.findAllCategories(query.parentCategoryId);
+    return this.categoriesService.findAllCategories(query);
   }
 
   @Get(':categoryId/sub-categories')
+  @ApiResponseMeta({
+    code: 'SUB_CATEGORIES_FOUND',
+    message: 'Sub categories retrieved successfully',
+  })
   @ApiOperation({ summary: 'لیست زیردسته‌های یک دسته (سطح ۳)' })
-  findSubCategories(@Param('categoryId') categoryId: string) {
-    return this.categoriesService.findSubCategoriesByCategory(categoryId);
+  @ApiOkResponse({ type: SubCategoriesListApiResponseDto })
+  findSubCategories(
+    @Param('categoryId') categoryId: string,
+    @Query() query: ListSubCategoriesQueryDto,
+  ) {
+    return this.categoriesService.findSubCategoriesByCategory(
+      categoryId,
+      query,
+    );
   }
 
   @Get(':id')
@@ -237,8 +289,9 @@ export class SubCategoriesController {
   })
   @ApiOperation({
     summary: 'لیست زیردسته‌ها (با category و parentCategory)',
-    description: 'فیلتر اختیاری: ?categoryId=... یا ?parentCategoryId=...',
+    description: 'فیلتر اختیاری: ?categoryId= یا ?parentCategoryId= یا ?search=',
   })
+  @ApiOkResponse({ type: SubCategoriesListApiResponseDto })
   findAll(@Query() query: ListSubCategoriesQueryDto) {
     return this.categoriesService.findSubCategories(query);
   }

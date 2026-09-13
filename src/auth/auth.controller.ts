@@ -30,13 +30,13 @@ import {
 } from './decorators/auth-throttle.decorator.js';
 
 @ApiTags('Auth')
-@UseGuards(AuthThrottlerGuard)
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login-or-signup')
-  //@OtpSendThrottle()
+  @UseGuards(AuthThrottlerGuard)
+ // @OtpSendThrottle()    
   @ApiResponseMeta({
     code: 'OTP_SENT',
     message: 'OTP sent successfully',
@@ -50,7 +50,8 @@ export class AuthController {
   }
 
   @Post('verify-otp')
-  //@OtpVerifyThrottle()
+ // @OtpVerifyThrottle()
+  @UseGuards(AuthThrottlerGuard)
   @ApiResponseMeta({
     code: 'OTP_VERIFIED',
     message: 'OTP verified successfully',
@@ -69,6 +70,7 @@ export class AuthController {
 
   @Post('login-with-password')
   //@LoginThrottle()
+  @UseGuards(AuthThrottlerGuard)
   @ApiResponseMeta({
     code: 'LOGIN_SUCCESS',
     message: 'Logged in successfully',
@@ -103,6 +105,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('set-password')
+  @UseGuards(AuthThrottlerGuard)
   @ApiResponseMeta({
     code: 'PASSWORD_SET',
     message: 'Password set successfully',

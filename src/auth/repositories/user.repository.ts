@@ -27,7 +27,11 @@ export class UserRepository {
   findPaginatedForTenant(
     offset: number,
     limit: number,
-    options: { sellerId: string | null; isSuperAdmin: boolean },
+    options: {
+      sellerId: string | null;
+      isSuperAdmin: boolean;
+      search?: string;
+    },
   ) {
     const qb = this.repo
       .createQueryBuilder('user')
@@ -41,6 +45,18 @@ export class UserRepository {
 
     if (!options.isSuperAdmin) {
       qb.andWhere('user.sellerId = :sellerId', { sellerId: options.sellerId });
+    }
+
+    if (options.search?.trim()) {
+      const search = `%${options.search.trim()}%`;
+      qb.andWhere(
+        `(user.username LIKE :search
+          OR user.displayName LIKE :search
+          OR user.email LIKE :search
+          OR user.firstName LIKE :search
+          OR user.lastName LIKE :search)`,
+        { search },
+      );
     }
 
     return qb.getManyAndCount();

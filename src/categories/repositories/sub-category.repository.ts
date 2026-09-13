@@ -3,6 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SubCategory } from '../entities/sub-category.entity.js';
 
+export type SubCategoryFilters = {
+  categoryId?: string;
+  parentCategoryId?: string;
+  search?: string;
+  name?: string;
+  slug?: string;
+  isActive?: boolean;
+};
+
 @Injectable()
 export class SubCategoryRepository {
   constructor(
@@ -41,6 +50,68 @@ export class SubCategoryRepository {
     }
 
     return qb.getMany();
+  }
+
+  findPaginated(
+    offset: number,
+    limit: number,
+    filters: SubCategoryFilters = {},
+  ) {
+    return this.buildFilteredQuery(filters)
+      .skip(offset)
+      .take(limit)
+      .getManyAndCount();
+  }
+
+  findFiltered(filters: SubCategoryFilters = {}) {
+    return this.buildFilteredQuery(filters).getMany();
+  }
+
+  private buildFilteredQuery(filters: SubCategoryFilters = {}) {
+    const qb = this.repo
+      .createQueryBuilder('sub')
+      .leftJoinAndSelect('sub.category', 'category')
+      .leftJoinAndSelect('category.parentCategory', 'parentCategory');
+
+    if (filters.categoryId) {
+      qb.andWhere('sub.categoryId = :categoryId', {
+        categoryId: filters.categoryId,
+      });
+    }
+
+    if (filters.parentCategoryId) {
+      qb.andWhere('category.parentCategoryId = :parentCategoryId', {
+        parentCategoryId: filters.parentCategoryId,
+      });
+    }
+
+    if (filters.isActive !== undefined) {
+      qb.andWhere('sub.isActive = :isActive', {
+        isActive: filters.isActive,
+      });
+    }
+
+    if (filters.search?.trim()) {
+      const search = `%${filters.search.trim()}%`;
+      qb.andWhere(
+        '(sub.name LIKE :search OR sub.nameEn LIKE :search OR sub.slug LIKE :search)',
+        { search },
+      );
+    }
+
+    if (filters.name?.trim()) {
+      qb.andWhere('sub.name LIKE :name', {
+        name: `%${filters.name.trim()}%`,
+      });
+    }
+
+    if (filters.slug?.trim()) {
+      qb.andWhere('sub.slug LIKE :slug', {
+        slug: `%${filters.slug.trim()}%`,
+      });
+    }
+
+    return qb.orderBy('sub.sort', 'ASC').addOrderBy('sub.name', 'ASC');
   }
 
   findByCategoryId(categoryId: string) {

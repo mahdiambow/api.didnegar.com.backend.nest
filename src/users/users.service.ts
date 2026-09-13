@@ -26,7 +26,11 @@ export class UsersService {
 
   async findAll(
     scope: TenantScope,
-    query: { page?: string | number; limit?: string | number },
+    query: {
+      page?: string | number;
+      limit?: string | number;
+      search?: string;
+    },
   ) {
     const { page, limit, offset } = getPaginationParams(query);
     const [items, total] = await this.userRepository.findPaginatedForTenant(
@@ -35,6 +39,7 @@ export class UsersService {
       {
         sellerId: scope.sellerId,
         isSuperAdmin: isSuperAdmin(scope),
+        search: query.search,
       },
     );
 

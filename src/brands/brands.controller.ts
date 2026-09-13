@@ -14,10 +14,10 @@ import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
-  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
+import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
@@ -29,6 +29,7 @@ import {
   CreateBrandDto,
   UpdateBrandDto,
 } from './dto/brand-response.dto.js';
+import { ListBrandsQueryDto } from './dto/list-brands-query.dto.js';
 
 const BrandApiResponseDto = createSuccessResponseDto(BrandResponseDto, {
   code: 'BRAND_FOUND',
@@ -36,11 +37,14 @@ const BrandApiResponseDto = createSuccessResponseDto(BrandResponseDto, {
   name: 'Brand',
 });
 
-const BrandsListApiResponseDto = createSuccessResponseDto(BrandResponseDto, {
-  code: 'BRANDS_FOUND',
-  message: 'Brands retrieved successfully',
-  name: 'BrandsList',
-});
+const BrandsPaginatedApiResponseDto = createPaginatedResponseDto(
+  BrandResponseDto,
+  {
+    code: 'BRANDS_FOUND',
+    message: 'Brands retrieved successfully',
+    name: 'Brands',
+  },
+);
 
 @ApiTags('Brands')
 @ApiBearerAuth('access-token')
@@ -55,19 +59,10 @@ export class BrandsController {
     code: 'BRANDS_FOUND',
     message: 'Brands retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست برندها' })
-  @ApiQuery({
-    name: 'activeOnly',
-    required: false,
-    type: Boolean,
-    description: 'فقط برندهای فعال',
-  })
-  @ApiOkResponse({ type: BrandsListApiResponseDto })
-  findAll(@Query('activeOnly') activeOnly?: string) {
-    if (activeOnly === 'true' || activeOnly === '1') {
-      return this.brandsService.findAllActive();
-    }
-    return this.brandsService.findAll();
+  @ApiOperation({ summary: 'لیست برندها با pagination و فیلتر' })
+  @ApiOkResponse({ type: BrandsPaginatedApiResponseDto })
+  findAll(@Query() query: ListBrandsQueryDto) {
+    return this.brandsService.findAll(query);
   }
 
   @Get(':id')
