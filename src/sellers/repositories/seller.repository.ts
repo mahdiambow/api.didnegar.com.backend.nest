@@ -13,6 +13,14 @@ export class SellerRepository {
     return this.repo.findOne({ where: { id } });
   }
 
+  findByIds(ids: string[]) {
+    if (!ids.length) return Promise.resolve([] as Seller[]);
+    return this.repo
+      .createQueryBuilder('seller')
+      .where('seller.id IN (:...ids)', { ids: [...new Set(ids)] })
+      .getMany();
+  }
+
   findBySlug(slug: string) {
     return this.repo.findOne({ where: { slug } });
   }

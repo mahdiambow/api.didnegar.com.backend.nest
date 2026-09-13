@@ -5,6 +5,7 @@ import {
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
 import { CategoriesService } from '../categories/categories.service.js';
+import { AttributeRepository } from '../attributes/repositories/attribute.repository.js';
 import { SellerRepository } from '../sellers/repositories/seller.repository.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import {
@@ -14,10 +15,14 @@ import {
 import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ReviewProductDto } from './dto/review-product.dto.js';
 import {
+  toAttributeResponse,
   toBrandResponse,
   toProductResponse,
+  toSellerResponse,
+  type ProductResponseDto,
 } from './dto/product-response.dto.js';
 import { BrandRepository } from '../brands/repositories/brand.repository.js';
+import { Product } from './entities/product.entity.js';
 import { ProductRepository } from './repositories/product.repository.js';
 import { ProductStockRepository } from './repositories/product-stock.repository.js';
 
@@ -27,6 +32,7 @@ export class ProductsService {
     private readonly productRepository: ProductRepository,
     private readonly productStockRepository: ProductStockRepository,
     private readonly brandRepository: BrandRepository,
+    private readonly attributeRepository: AttributeRepository,
     private readonly sellerRepository: SellerRepository,
     @Inject(forwardRef(() => CategoriesService))
     private readonly categoriesService: CategoriesService,
@@ -60,7 +66,7 @@ export class ProductsService {
     );
 
     return paginatedList(
-      items.map((item) => toProductResponse(item, true)),
+      await this.toEnrichedProductResponses(items),
       page,
       limit,
       total,
@@ -76,7 +82,8 @@ export class ProductsService {
         HttpStatus.NOT_FOUND,
       );
     }
-    return toProductResponse(product, true);
+    const [response] = await this.toEnrichedProductResponses([product]);
+    return response;
   }
 
   async create(dto: CreateProductDto) {
@@ -123,7 +130,8 @@ export class ProductsService {
     );
 
     const loaded = await this.productRepository.findById(product.id, true);
-    return toProductResponse(loaded!, true);
+    const [response] = await this.toEnrichedProductResponses([loaded!]);
+    return response;
   }
 
   async update(id: string, dto: UpdateProductDto) {
@@ -221,7 +229,8 @@ export class ProductsService {
     }
 
     const loaded = await this.productRepository.findById(id, true);
-    return toProductResponse(loaded!, true);
+    const [response] = await this.toEnrichedProductResponses([loaded!]);
+    return response;
   }
 
   async review(id: string, dto: ReviewProductDto) {
@@ -258,7 +267,8 @@ export class ProductsService {
 
     await this.productRepository.save(product);
     const loaded = await this.productRepository.findById(id, true);
-    return toProductResponse(loaded!, true);
+    const [response] = await this.toEnrichedProductResponses([loaded!]);
+    return response;
   }
 
   async remove(id: string) {
@@ -279,6 +289,47 @@ export class ProductsService {
     return this.brandRepository
       .findAllActive()
       .then((brands) => brands.map(toBrandResponse));
+  }
+
+  private async toEnrichedProductResponses(
+    products: Product[],
+  ): Promise<ProductResponseDto[]> {
+    const attributeIds = [
+      ...new Set(products.flatMap((product) => product.attributeIds ?? [])),
+    ];
+    const sellerIds = [
+      ...new Set(
+        products.flatMap((product) =>
+          product.createdBySellerId ? [product.createdBySellerId] : [],
+        ),
+      ),
+    ];
+
+    const [attributes, sellers] = await Promise.all([
+      this.attributeRepository.findByIds(attributeIds),
+      this.sellerRepository.findByIds(sellerIds),
+    ]);
+
+    const attributeMap = new Map(
+      attributes.map((attribute) => [
+        attribute.id,
+        toAttributeResponse(attribute),
+      ]),
+    );
+    const sellerMap = new Map(
+      sellers.map((seller) => [seller.id, toSellerResponse(seller)]),
+    );
+
+    return products.map((product) =>
+      toProductResponse(product, true, {
+        attributes: (product.attributeIds ?? [])
+          .map((id) => attributeMap.get(id))
+          .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+        createdBySeller: product.createdBySellerId
+          ? (sellerMap.get(product.createdBySellerId) ?? null)
+          : null,
+      }),
+    );
   }
 
   private async assertUniqueFields(slug: string, sku: string) {

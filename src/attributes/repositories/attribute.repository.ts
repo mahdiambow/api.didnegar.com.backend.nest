@@ -17,6 +17,14 @@ export class AttributeRepository {
     return this.repo.findOne({ where: { id } });
   }
 
+  findByIds(ids: string[]) {
+    if (!ids.length) return Promise.resolve([] as Attribute[]);
+    return this.repo
+      .createQueryBuilder('attribute')
+      .where('attribute.id IN (:...ids)', { ids: [...new Set(ids)] })
+      .getMany();
+  }
+
   findByName(name: string) {
     return this.repo.findOne({ where: { name } });
   }

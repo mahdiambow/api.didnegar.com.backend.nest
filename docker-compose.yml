@@ -1,3 +1,13 @@
+# Local stack:
+#   cp .env.example .env
+#   docker compose up -d
+# MySQL: localhost:${DB_PORT:-3309}  |  phpMyAdmin: http://localhost:8080
+# API (optional, built image): http://localhost:${PORT:-3000}
+#
+# Nest on the host (recommended for dev):
+#   docker compose up -d migration-mysql phpmyadmin
+#   npm run start:dev
+
 services:
   api:
     image: didnegar-api:latest
@@ -11,13 +21,16 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      # Inside the compose network, use the MySQL service name + internal port
       DB_HOST: migration-mysql
       DB_PORT: 3306
-      DB_USERNAME: ${DB_USERNAME:?Set DB_USERNAME in .env}
-      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
-      DB_DATABASE: ${DB_DATABASE:?Set DB_DATABASE in .env}
+      DB_USERNAME: ${DB_USERNAME:-didnegar}
+      DB_PASSWORD: ${DB_PASSWORD:-didnegar}
+      DB_DATABASE: ${DB_DATABASE:-didnegar}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
-      SEED_ON_STARTUP: "false"
+      SEED_ON_STARTUP: ${SEED_ON_STARTUP:-false}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-12h}
+      SWAGGER_PERSIST_AUTH: ${SWAGGER_PERSIST_AUTH:-false}
     ports:
       - "${PORT:-3000}:3000"
     depends_on:
@@ -34,6 +47,7 @@ services:
       MYSQL_USER: ${DB_USERNAME:-didnegar}
       MYSQL_PASSWORD: ${DB_PASSWORD:-didnegar}
     ports:
+      # Host port for local Nest / clients; container always listens on 3306
       - "${DB_PORT:-3309}:3306"
     volumes:
       - migration_mysql_data:/var/lib/mysql
@@ -67,7 +81,7 @@ services:
       PMA_USER: root
       PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
     ports:
-      - '8080:80'
+      - '${PHPMYADMIN_PORT:-8080}:80'
     depends_on:
       migration-mysql:
         condition: service_healthy

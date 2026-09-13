@@ -17,8 +17,9 @@
  * Media is NOT imported by default (Nest media_assets ≠ legacy media).
  * Only if explicitly needed: npm run db:import:legacy -- media
  *
- * Skipped (no Nest table / incompatible): reviews, attribute_values,
- * product_variant_*, order_item_options, companies, customers (used only as map).
+ * Skipped (no Nest table / incompatible): reviews, attribute_values rows,
+ * product_variant_* rows, order_item_options, companies, customers (map only).
+ * Note: product.attributeIds IS filled from variant→attribute_values links.
  */
 import type { RowDataPacket } from 'mysql2/promise';
 import {
@@ -423,9 +424,48 @@ async function importCategories(ctx: StepContext) {
   });
 }
 
+/** Distinct Nest attribute UUIDs per legacy product ULID (via variants → values). */
+async function loadProductAttributeIds(ctx: StepContext) {
+  const { conn, source, target } = ctx;
+  const attrMap = await loadMap(conn, target, 'attributes');
+  const [rows] = await conn.query<RowDataPacket[]>(
+    `SELECT DISTINCT pv.productId AS productId, av.attributeId AS attributeId
+     FROM \`${source}\`.product_variants pv
+     INNER JOIN \`${source}\`.product_variant_attributes pva
+       ON pva.variantId = pv.id
+     INNER JOIN \`${source}\`.attribute_values av
+       ON av.id = pva.attributeValueId`,
+  );
+
+  const byProduct = new Map<string, Set<string>>();
+  let unmapped = 0;
+  for (const row of rows) {
+    const nestAttrId = attrMap.get(String(row.attributeId));
+    if (!nestAttrId) {
+      unmapped += 1;
+      continue;
+    }
+    const productId = String(row.productId);
+    let set = byProduct.get(productId);
+    if (!set) {
+      set = new Set();
+      byProduct.set(productId, set);
+    }
+    set.add(nestAttrId);
+  }
+
+  const out = new Map<string, string[]>();
+  for (const [productId, ids] of byProduct) {
+    out.set(productId, [...ids]);
+  }
+  return { byProduct: out, linkRows: rows.length, unmapped };
+}
+
 async function importProducts(ctx: StepContext) {
   const { conn, source, target } = ctx;
   const brandMap = await loadMap(conn, target, 'brands');
+  const { byProduct: productAttrIds, linkRows, unmapped } =
+    await loadProductAttributeIds(ctx);
   const [sellerRows] = await conn.query<RowDataPacket[]>(
     `SELECT id FROM \`${target}\`.sellers WHERE slug = 'didnegar-shop' LIMIT 1`,
   );
@@ -434,6 +474,7 @@ async function importProducts(ctx: StepContext) {
   let inserted = 0;
   let updated = 0;
   let stocks = 0;
+  let withAttrs = 0;
 
   const [rows] = await conn.query<RowDataPacket[]>(
     `SELECT * FROM \`${source}\`.products ORDER BY legacyId`,
@@ -462,6 +503,8 @@ async function importProducts(ctx: StepContext) {
         : row.maxPrice != null
           ? Number(row.maxPrice)
           : null;
+    const nestAttributeIds = productAttrIds.get(String(row.id)) ?? [];
+    if (nestAttributeIds.length > 0) withAttrs += 1;
     const image = JSON.stringify({
       featuredImg: row.featuredImage ? String(row.featuredImage) : null,
       gallery: [],
@@ -476,6 +519,7 @@ async function importProducts(ctx: StepContext) {
       minQuantity: 1,
       finalPrice: priceNum,
     });
+    const attributeIdsJson = JSON.stringify(nestAttributeIds);
     const sellerIds = JSON.stringify(sellerId ? [sellerId] : []);
     const stock = Math.max(0, Math.floor(Number(row.stockQuantity ?? 0) || 0));
     const status = String(row.status || 'publish').slice(0, 50);
@@ -522,7 +566,7 @@ async function importProducts(ctx: StepContext) {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, ?, ?, 1, 0,
                  CAST('[]' AS JSON), CAST(? AS JSON), CAST(? AS JSON), CAST('[]' AS JSON),
                  ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                 CAST('[]' AS JSON), CAST(? AS JSON), ?)`,
+                 CAST(? AS JSON), CAST(? AS JSON), ?)`,
         [
           nestId,
           legacyId,
@@ -548,6 +592,7 @@ async function importProducts(ctx: StepContext) {
           row.length ?? null,
           row.width ?? null,
           row.height ?? null,
+          attributeIdsJson,
           sellerIds,
           sellerId,
         ],
@@ -563,6 +608,7 @@ async function importProducts(ctx: StepContext) {
            ratingCount = ?, averageRating = ?, totalSales = ?,
            taxStatus = ?, taxClass = ?, globalUniqueId = ?,
            weight = ?, length = ?, width = ?, height = ?,
+           attributeIds = CAST(? AS JSON),
            sellerIds = CAST(? AS JSON),
            createdBySellerId = COALESCE(createdBySellerId, ?)
          WHERE id = ?`,
@@ -590,6 +636,7 @@ async function importProducts(ctx: StepContext) {
           row.length ?? null,
           row.width ?? null,
           row.height ?? null,
+          attributeIdsJson,
           sellerIds,
           sellerId,
           nestId,
@@ -618,7 +665,15 @@ async function importProducts(ctx: StepContext) {
     }
   }
 
-  logStep('products', { inserted, updated, stocks, source: rows.length });
+  logStep('products', {
+    inserted,
+    updated,
+    stocks,
+    withAttrs,
+    attrLinkRows: linkRows,
+    attrUnmapped: unmapped,
+    source: rows.length,
+  });
 }
 
 async function importProductCategories(ctx: StepContext) {

@@ -21,6 +21,15 @@ import {
 } from '../../brands/dto/brand-response.dto.js';
 import { BRAND_EXAMPLES, BRAND_RESPONSE_EXAMPLE } from '../../brands/dto/brand.examples.js';
 import {
+  AttributeResponseDto,
+  toAttributeResponse,
+} from '../../attributes/dto/attribute-response.dto.js';
+import { ATTRIBUTE_RESPONSE_EXAMPLE } from '../../attributes/dto/attribute.examples.js';
+import {
+  SellerResponseDto,
+  toSellerResponse,
+} from '../../sellers/dto/seller-response.dto.js';
+import {
   ProductImageDto,
   ProductKeyValDto,
   ProductPriceDto,
@@ -29,6 +38,13 @@ import {
 } from './product-fields.dto.js';
 
 export { BrandResponseDto, toBrandResponse };
+export { AttributeResponseDto, toAttributeResponse };
+export { SellerResponseDto, toSellerResponse };
+
+export type ProductPopulatedRelations = {
+  attributes?: AttributeResponseDto[];
+  createdBySeller?: SellerResponseDto | null;
+};
 
 export class ProductResponseDto {
   @ApiProperty()
@@ -213,6 +229,20 @@ export class ProductResponseDto {
   brand?: BrandResponseDto | null;
 
   @ApiPropertyOptional({
+    type: [AttributeResponseDto],
+    example: [ATTRIBUTE_RESPONSE_EXAMPLE],
+    description: 'ویژگی‌های populate‌شده از attributeIds',
+  })
+  attributes?: AttributeResponseDto[];
+
+  @ApiPropertyOptional({
+    type: SellerResponseDto,
+    nullable: true,
+    description: 'فروشندهٔ سازنده — populate از createdBySellerId',
+  })
+  createdBySeller?: SellerResponseDto | null;
+
+  @ApiPropertyOptional({
     type: [String],
     example: [PRODUCT_CATEGORY_RESPONSE_EXAMPLE.subCategoryId],
     description: 'شناسه category/subCategoryهای محصول',
@@ -244,6 +274,7 @@ function normalizeImage(image: Product['image']): ProductImageData {
 export function toProductResponse(
   product: Product,
   includeRelations = false,
+  populated: ProductPopulatedRelations = {},
 ): ProductResponseDto {
   return {
     id: product.id,
@@ -285,7 +316,13 @@ export function toProductResponse(
     brand:
       includeRelations && product.brand
         ? toBrandResponse(product.brand)
-        : undefined,
+        : includeRelations
+          ? null
+          : undefined,
+    attributes: includeRelations ? (populated.attributes ?? []) : undefined,
+    createdBySeller: includeRelations
+      ? (populated.createdBySeller ?? null)
+      : undefined,
     categories:
       includeRelations && product.productCategories
         ? product.productCategories.map(toProductCategoryResponse)
