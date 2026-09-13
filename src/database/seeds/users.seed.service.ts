@@ -2,13 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
+import { ConfigService } from '../../config/config.service.js';
 import { User } from '../../auth/entities/user.entity.js';
 import { UserProfile } from '../../auth/entities/user-profile.entity.js';
 import { UserAddress } from '../../auth/entities/user-address.entity.js';
 import { RoleRepository } from '../../roles/repositories/role.repository.js';
 import { DEFAULT_ROLE_SLUGS } from '../../roles/permissions.js';
-
-const DEFAULT_PASSWORD = process.env.SEED_DEFAULT_PASSWORD ?? 'Admin@1234';
 
 /** فروشگاه پیش‌فرض seed — به سوپرادمین‌ها هم لینک می‌شود تا JWT.sellerId خالی نباشد */
 export const SEED_DEFAULT_SELLER_SLUG = 'didnegar-shop';
@@ -76,6 +75,7 @@ export class UsersSeedService {
   private sellerUserIds = new Map<string, string>();
 
   constructor(
+    private readonly config: ConfigService,
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(UserProfile)
     private readonly profileRepo: Repository<UserProfile>,
@@ -85,7 +85,7 @@ export class UsersSeedService {
   ) {}
 
   async seed() {
-    const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+    const passwordHash = await bcrypt.hash(this.config.get('SEED_DEFAULT_PASSWORD'), 10);
 
     for (const [index, userSeed] of SEED_USERS.entries()) {
       const role = await this.roleRepository.findBySlug(userSeed.roleSlug, null);

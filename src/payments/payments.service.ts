@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { ConfigService } from '../config/config.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import { toShippingMethodResponse } from '../shipping/dto/shipping.dto.js';
 import { OrderRepository } from '../orders/repositories/order.repository.js';
@@ -17,6 +18,7 @@ export class PaymentsService {
   private readonly gateways: Record<PaymentGateway, PaymentGatewayAdapter>;
 
   constructor(
+    private readonly config: ConfigService,
     private readonly orderRepository: OrderRepository,
     private readonly paymentRepository: PaymentRepository,
     zarinpalMockService: ZarinpalMockService,
@@ -121,8 +123,8 @@ export class PaymentsService {
             refId: null,
             callbackUrl:
               gateway === 'zarinpal'
-                ? (process.env.ZARINPAL_CALLBACK_URL ?? null)
-                : (process.env.ZIBAL_CALLBACK_URL ?? null),
+                ? this.config.get('ZARINPAL_CALLBACK_URL')
+                : this.config.get('ZIBAL_CALLBACK_URL'),
           }),
         )
       : await this.paymentRepository.save(
@@ -134,8 +136,8 @@ export class PaymentsService {
             status: 'pending',
             callbackUrl:
               gateway === 'zarinpal'
-                ? (process.env.ZARINPAL_CALLBACK_URL ?? null)
-                : (process.env.ZIBAL_CALLBACK_URL ?? null),
+                ? this.config.get('ZARINPAL_CALLBACK_URL')
+                : this.config.get('ZIBAL_CALLBACK_URL'),
           }),
         );
 

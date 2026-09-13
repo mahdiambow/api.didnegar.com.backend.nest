@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '../config/config.service.js';
 import { RolesSeedService } from '../roles/roles.seed.service.js';
 import { LocationsSeedService } from './seeds/locations.seed.service.js';
 import { UsersSeedService } from './seeds/users.seed.service.js';
@@ -14,6 +15,7 @@ export class DatabaseSeedService implements OnModuleInit {
   private readonly logger = new Logger(DatabaseSeedService.name);
 
   constructor(
+    private readonly config: ConfigService,
     private readonly rolesSeedService: RolesSeedService,
     private readonly locationsSeedService: LocationsSeedService,
     private readonly usersSeedService: UsersSeedService,
@@ -26,7 +28,7 @@ export class DatabaseSeedService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    if (process.env.SEED_ON_STARTUP === 'false') {
+    if (!this.config.getBooleanOptional('SEED_ON_STARTUP', true)) {
       return;
     }
 

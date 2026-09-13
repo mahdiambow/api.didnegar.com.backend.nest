@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import {
   DEFAULT_ROLE_PERMISSIONS,
   DEFAULT_ROLE_SLUGS,
   type DefaultRoleSlug,
 } from './permissions.js';
 import { RoleRepository } from './repositories/role.repository.js';
+import { ApiException } from '../common/exceptions/api.exception.js';
 
 const SYSTEM_ROLE_NAMES: Record<DefaultRoleSlug, string> = {
   [DEFAULT_ROLE_SLUGS.USER]: 'کاربر',
@@ -51,7 +52,11 @@ export class RolesSeedService {
       null,
     );
     if (!role) {
-      throw new Error('Default user role not found');
+      throw new ApiException(
+        'DEFAULT_ROLE_NOT_FOUND',
+        'نقش پیش‌فرض کاربر یافت نشد — ابتدا دیتابیس را seed کنید',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
     return role;
   }

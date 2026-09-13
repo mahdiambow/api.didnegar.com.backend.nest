@@ -1,6 +1,8 @@
 import { OffersModule } from './offers/offers.module.js';
 import { OfferProductsModule } from './offer-products/offer-products.module.js';
 import { Module } from '@nestjs/common';
+import { ConfigModule } from './config/config.module.js';
+import { ConfigService } from './config/config.service.js';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module.js';
@@ -21,18 +23,23 @@ import { DatabaseSeedModule } from './database/database.seed.module.js';
 
 @Module({
   imports: [
+    ConfigModule,
     ScheduleModule.forRoot(),
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_DATABASE,
-      autoLoadEntities: true,
-      migrations: ['dist/database/migrations/*.js'],
-      migrationsRun: true,
-      synchronize: false,
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'mysql' as const,
+        host: config.get('DB_HOST'),
+        port: config.getNumber('DB_PORT'),
+        username: config.get('DB_USERNAME'),
+        password: config.get('DB_PASSWORD'),
+        database: config.get('DB_DATABASE'),
+        autoLoadEntities: true,
+        migrations: ['dist/database/migrations/*.js'],
+        migrationsRun: true,
+        synchronize: false,
+      }),
     }),
     AuthModule,
     RolesModule,

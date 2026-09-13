@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
+import { ConfigService } from '../../config/config.service.js';
 import type {
   PaymentGatewayAdapter,
   PaymentRequestResult,
@@ -10,9 +11,11 @@ import type {
 export class ZarinpalMockService implements PaymentGatewayAdapter {
   readonly gateway = 'zarinpal' as const;
 
-  private readonly sandboxBaseUrl =
-    process.env.ZARINPAL_SANDBOX_URL ??
-    'https://sandbox.zarinpal.com/pg/StartPay';
+  private readonly sandboxBaseUrl: string;
+
+  constructor(config: ConfigService) {
+    this.sandboxBaseUrl = config.get('ZARINPAL_SANDBOX_URL');
+  }
 
   requestPayment(
     amount: number,
