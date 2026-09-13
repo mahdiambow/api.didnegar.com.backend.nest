@@ -14,13 +14,23 @@ export const SEED_DEFAULT_SELLER_SLUG = 'didnegar-shop';
 
 const SEED_USERS = [
   {
-    username: '09363078987',
+    username: '09938999031',
     roleSlug: DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
     extraRoleSlugs: [DEFAULT_ROLE_SLUGS.SUPER_SELLER] as const,
     displayName: 'Super Admin',
     firstName: 'مدیر',
     lastName: 'سیستم',
     email: 'superadmin@didnegar.com',
+    sellerKey: SEED_DEFAULT_SELLER_SLUG,
+  },
+  {
+    username: '09363078987',
+    roleSlug: DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+    extraRoleSlugs: [DEFAULT_ROLE_SLUGS.SUPER_SELLER] as const,
+    displayName: 'Super Admin',
+    firstName: 'مدیر',
+    lastName: 'سیستم',
+    email: 'superadmin-legacy@didnegar.com',
     sellerKey: SEED_DEFAULT_SELLER_SLUG,
   },
   {

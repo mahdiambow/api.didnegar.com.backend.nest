@@ -24,6 +24,7 @@ const SEED_SELLER = {
 
 /** شماره‌هایی که JWT.sellerId باید پر باشد */
 const SELLER_LINKED_USERNAMES = [
+  '09938999031',
   '09363078987',
   '09393341873',
   '09222222222',
@@ -63,7 +64,7 @@ export class SellersSeedService {
       `
       UPDATE users
       SET sellerId = ?
-      WHERE username IN (?, ?, ?, ?)
+      WHERE username IN (${SELLER_LINKED_USERNAMES.map(() => '?').join(', ')})
       `,
       [seller.id, ...SELLER_LINKED_USERNAMES],
     );
