@@ -51,14 +51,14 @@ export class SellerResponseDto {
   updatedAt: Date;
 
   @ApiPropertyOptional({
-    example: '550e8400-e29b-41d4-a716-446655440002',
+    example: '01JEX000000000000000000040',
     nullable: true,
   })
   contractId: string | null;
 
   @ApiProperty({
     type: [String],
-    example: ['550e8400-e29b-41d4-a716-446655440001'],
+    example: ['01JEX000000000000000000030'],
   })
   adminIds: string[];
 

@@ -1,15 +1,16 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsInt, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ShippingMethod } from '../entities/shipping-method.entity.js';
 
 export class ShippingQuoteQueryDto {
   @ApiProperty()
-  @IsUUID()
+  @IsULID()
   offerId: string;
 
   @ApiProperty()
-  @IsUUID()
+  @IsULID()
   shippingMethodId: string;
 
   @ApiPropertyOptional({ example: 1, default: 1 })

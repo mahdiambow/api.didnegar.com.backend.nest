@@ -1,19 +1,12 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import type { User } from './user.entity.js';
 
 @Entity('refresh_tokens')
 export class RefreshToken {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   userId: string;
 
   @Column({ type: 'varchar' })

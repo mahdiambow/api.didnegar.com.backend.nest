@@ -33,9 +33,9 @@ export const authConfig = {
     | `${number}m`
     | `${number}h`
     | `${number}d`,
-  otpSendLimit: Number(process.env.OTP_SEND_LIMIT ?? 1),
-  otpVerifyLimit: Number(process.env.OTP_VERIFY_LIMIT ?? 5),
-  loginLimit: Number(process.env.LOGIN_LIMIT ?? 5),
+  otpSendLimit: Number(process.env.OTP_SEND_LIMIT ?? 100),
+  otpVerifyLimit: Number(process.env.OTP_VERIFY_LIMIT ?? 500),
+  loginLimit: Number(process.env.LOGIN_LIMIT ?? 500),
 } as const;
 
 export function otpTtlMs(): number {

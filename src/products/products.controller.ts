@@ -1,15 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { ParseULIDPipe } from '../common/id/index.js';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -90,7 +80,7 @@ export class ProductsController {
   })
   @ApiOperation({ summary: 'دریافت یک محصول' })
   @ApiOkResponse({ type: ProductApiResponseDto })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.productsService.findOne(id);
   }
 
@@ -125,7 +115,7 @@ export class ProductsController {
   })
   @ApiOkResponse({ type: ProductApiResponseDto })
   review(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
     @Body() dto: ReviewProductDto,
   ) {
     return this.productsService.review(id, dto);
@@ -143,7 +133,7 @@ export class ProductsController {
   })
   @ApiOkResponse({ type: ProductApiResponseDto })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
     @Body() dto: UpdateProductDto,
   ) {
     return this.productsService.update(id, dto);
@@ -155,7 +145,7 @@ export class ProductsController {
     message: 'Product deleted successfully',
   })
   @ApiOperation({ summary: 'حذف محصول' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseULIDPipe) id: string) {
     return this.productsService.remove(id);
   }
 }

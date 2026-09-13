@@ -1,25 +1,15 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-  OneToMany,
-  Index,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, UpdateDateColumn } from 'typeorm';
 import type { Category } from './category.entity.js';
 import type { ProductCategory } from './product-category.entity.js';
 
 @Entity('sub_categories')
 @Index(['categoryId', 'slug'], { unique: true })
 export class SubCategory {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Index()
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   categoryId: string;
 
   @Column({ type: 'bigint', nullable: true })

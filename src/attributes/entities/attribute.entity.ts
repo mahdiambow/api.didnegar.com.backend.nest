@@ -1,16 +1,9 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  Index,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, UpdateDateColumn } from 'typeorm';
 
 @Entity('attributes')
 @Index(['legacyTable', 'legacyId'], { unique: true })
 export class Attribute {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Column({ type: 'bigint' })

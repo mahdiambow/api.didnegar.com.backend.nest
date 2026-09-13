@@ -1,20 +1,12 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsEnum, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  IsArray,
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsString,
-  IsUrl,
-  IsUUID,
-  Max,
-  MaxLength,
-  Min,
-  ValidateNested,
-} from 'class-validator';
+  DEFAULT_LIMIT,
+  DEFAULT_PAGE,
+  MAX_LIMIT,
+} from '../../common/dto/pagination-query.dto.js';
 import { BannerPage, BannerSection } from '../types/banner.enums.js';
 
 export class BannerItemDto {
@@ -62,7 +54,7 @@ export class CreateBannerDto {
     description: 'شناسه دسته‌بندی برای سایدبار؛ صفحه نخست بدون دسته‌بندی است',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   categoryId?: string | null;
 
   @ApiProperty({
@@ -93,29 +85,48 @@ export class ListBannersQueryDto {
   @IsEnum(BannerSection)
   section?: BannerSection;
 
-  @ApiPropertyOptional({ format: 'uuid' })
+  @ApiPropertyOptional({ format: 'ulid' })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   categoryId?: string;
 
-  @ApiPropertyOptional({ default: 1 })
+  @ApiPropertyOptional({
+    default: DEFAULT_PAGE,
+    example: DEFAULT_PAGE,
+    description: 'شماره صفحه (پیش‌فرض ۱) — page برای فیلتر صفحه بنر است',
+  })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return DEFAULT_PAGE;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : DEFAULT_PAGE;
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  pageNumber?: number;
+  pageNumber: number = DEFAULT_PAGE;
 
-  @ApiPropertyOptional({ default: 20, maximum: 100 })
+  @ApiPropertyOptional({
+    default: DEFAULT_LIMIT,
+    example: DEFAULT_LIMIT,
+    maximum: MAX_LIMIT,
+    description: 'تعداد در هر صفحه (پیش‌فرض ۲۰، حداکثر ۱۰۰)',
+  })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return DEFAULT_LIMIT;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : DEFAULT_LIMIT;
+  })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
-  limit?: number;
+  @Max(MAX_LIMIT)
+  limit: number = DEFAULT_LIMIT;
 }
 
 export class BannerResponseDto extends CreateBannerDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({ format: 'ulid' })
   id: string;
 
   @ApiProperty()

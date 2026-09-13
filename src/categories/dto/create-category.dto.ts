@@ -1,16 +1,6 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  Max,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 import { CATEGORY_EXAMPLES } from './category.examples.js';
 
 export class CreateCategoryDto {
@@ -18,7 +8,7 @@ export class CreateCategoryDto {
     example: CATEGORY_EXAMPLES.parentCategoryId,
     description: 'شناسه parent category',
   })
-  @IsUUID()
+  @IsULID()
   parentCategoryId: string;
 
   @ApiProperty({
@@ -88,7 +78,7 @@ export class UpdateCategoryDto {
     description: 'شناسه parent category',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   parentCategoryId?: string;
 
   @ApiPropertyOptional({ example: 'موبایل و تبلت' })

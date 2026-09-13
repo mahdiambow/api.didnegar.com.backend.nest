@@ -1,18 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Query,
-  Req,
-  UploadedFile,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { ParseULIDPipe } from '../common/id/index.js';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
@@ -145,7 +132,7 @@ export class MediaController {
   @ApiOkResponse({ type: MediaApiResponseDto })
   findOne(
     @Req() req: { user: AuthUser },
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
   ) {
     return this.mediaService.findOne(req.user, id);
   }
@@ -164,7 +151,7 @@ export class MediaController {
   @ApiOkResponse({ type: MediaApiResponseDto })
   review(
     @Req() req: { user: AuthUser },
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
     @Body() dto: ReviewMediaAssetDto,
   ) {
     return this.mediaService.review(req.user, id, dto);
@@ -183,7 +170,7 @@ export class MediaController {
   @ApiOkResponse({ type: MediaApiResponseDto })
   attach(
     @Req() req: { user: AuthUser },
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
     @Body() dto: AttachMediaAssetDto,
   ) {
     return this.mediaService.attach(req.user, id, dto);
@@ -199,7 +186,7 @@ export class MediaController {
   @ApiOkResponse({ type: MediaApiResponseDto })
   detach(
     @Req() req: { user: AuthUser },
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
   ) {
     return this.mediaService.detach(req.user, id);
   }
@@ -214,12 +201,12 @@ export class MediaController {
   @ApiOkResponse({
     schema: {
       type: 'object',
-      properties: { id: { type: 'string', format: 'uuid' } },
+      properties: { id: { type: 'string', format: 'ulid' } },
     },
   })
   remove(
     @Req() req: { user: AuthUser },
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
   ) {
     return this.mediaService.remove(req.user, id);
   }

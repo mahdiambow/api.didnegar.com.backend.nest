@@ -1,13 +1,4 @@
-import {
-  Check,
-  Column,
-  CreateDateColumn,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { PrimaryColumn, Check, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
 import type { Category } from '../../categories/entities/category.entity.js';
 import type { BannerItemDto } from '../dto/banner.dto.js';
 import { BannerPage, BannerSection } from '../types/banner.enums.js';
@@ -18,7 +9,7 @@ import { BannerPage, BannerSection } from '../types/banner.enums.js';
   "(`page` = 'home' AND `categoryId` IS NULL AND `section` IN ('main_slider', 'three_images', 'narrow_banner', 'video', 'two_images', 'single_banner')) OR (`page` = 'category_sidebar' AND `categoryId` IS NOT NULL AND `section` = 'sidebar')",
 )
 export class Banner {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Column({ type: 'varchar', length: 30 })
@@ -27,7 +18,7 @@ export class Banner {
   @Column({ type: 'varchar', length: 30 })
   section: BannerSection;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   categoryId: string | null;
 
   @ManyToOne('Category', { onDelete: 'CASCADE' })

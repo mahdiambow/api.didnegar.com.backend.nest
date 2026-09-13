@@ -1,11 +1,6 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsInt,
-  IsOptional,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, Min } from 'class-validator';
 import { CATEGORY_EXAMPLES } from './category.examples.js';
 
 /** فیلدهای جدول product_categories (بدون productId) */
@@ -15,7 +10,7 @@ export class ProductCategoryLinkDto {
     description: 'دسته اصلی — بدون زیردسته',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   categoryId?: string;
 
   @ApiPropertyOptional({
@@ -23,7 +18,7 @@ export class ProductCategoryLinkDto {
     description: 'زیردسته — categoryId از روی آن پر می‌شود',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   subCategoryId?: string;
 
   @ApiPropertyOptional({ example: true, default: false })

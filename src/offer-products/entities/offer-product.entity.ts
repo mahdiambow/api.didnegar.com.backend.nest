@@ -1,14 +1,4 @@
-import {
-  Check,
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { PrimaryColumn, Check, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
 import type { Seller } from '../../sellers/entities/seller.entity.js';
 import type { Product } from '../../products/entities/product.entity.js';
 import type { SellerOffer } from '../../offers/entities/seller-offer.entity.js';
@@ -19,10 +9,10 @@ import type { SellerOffer } from '../../offers/entities/seller-offer.entity.js';
 @Check('CHK_offer_product_price', '`price` >= 0')
 @Check('CHK_offer_product_stock', '`stock` >= 0')
 export class OfferProduct {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   sellerId: string;
 
   @Column({ type: 'varchar', length: 255 })
@@ -38,7 +28,7 @@ export class OfferProduct {
   @Column({ type: 'text', nullable: true })
   shortDescription: string | null;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   brandId: string | null;
 
   @Column({ type: 'json', default: [] })
@@ -96,10 +86,10 @@ export class OfferProduct {
   @Column({ type: 'text', nullable: true })
   rejectionReason: string | null;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   productId: string | null;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   offerId: string | null;
 
   @CreateDateColumn()

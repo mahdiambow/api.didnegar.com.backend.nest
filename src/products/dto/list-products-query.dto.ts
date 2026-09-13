@@ -1,19 +1,11 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { IsULID } from '../../common/id/index.js';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
 
-export class ListProductsQueryDto {
-  @ApiProperty({ example: 1, required: false })
-  @IsOptional()
-  @Type(() => Number)
-  page?: number;
-
-  @ApiProperty({ example: 20, required: false })
-  @IsOptional()
-  @Type(() => Number)
-  limit?: number;
-
+export class ListProductsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ example: 'publish' })
   @IsOptional()
   @IsString()
@@ -38,7 +30,7 @@ export class ListProductsQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   brandId?: string;
 
   @ApiPropertyOptional({
@@ -60,7 +52,7 @@ export class ListProductsQueryDto {
     description: 'فیلتر بر اساس دسته اصلی',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   categoryId?: string;
 
   @ApiPropertyOptional({
@@ -68,6 +60,6 @@ export class ListProductsQueryDto {
     description: 'فیلتر بر اساس زیردسته — مثلاً گوشی',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   subCategoryId?: string;
 }

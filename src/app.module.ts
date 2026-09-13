@@ -20,6 +20,7 @@ import { BrandsModule } from './brands/brands.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { MediaModule } from './media/media.module.js';
 import { DatabaseSeedModule } from './database/database.seed.module.js';
+import { UlidSubscriber } from './common/id/ulid.subscriber.js';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { DatabaseSeedModule } from './database/database.seed.module.js';
         database: config.get('DB_DATABASE'),
         charset: 'utf8mb4',
         autoLoadEntities: true,
+        subscribers: [UlidSubscriber],
         migrations: ['dist/database/migrations/*.js'],
         migrationsRun: true,
         synchronize: false,

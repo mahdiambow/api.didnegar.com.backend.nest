@@ -1,18 +1,10 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-  Index,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, OneToMany, UpdateDateColumn } from 'typeorm';
 import type { Product } from '../../products/entities/product.entity.js';
 
 @Entity('brands')
 @Index(['legacyTable', 'legacyId'], { unique: true })
 export class Brand {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Column({ type: 'bigint' })

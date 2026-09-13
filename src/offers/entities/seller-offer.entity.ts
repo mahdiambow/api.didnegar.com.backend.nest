@@ -1,14 +1,4 @@
-import {
-  Check,
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { PrimaryColumn, Check, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
 import type { Seller } from '../../sellers/entities/seller.entity.js';
 import type { Product } from '../../products/entities/product.entity.js';
 
@@ -19,9 +9,9 @@ import type { Product } from '../../products/entities/product.entity.js';
 @Check('CHK_offer_price', '`price` >= 0')
 @Check('CHK_offer_stock', '`stock` >= 0')
 export class SellerOffer {
-  @PrimaryGeneratedColumn('uuid') id: string;
-  @Column({ type: 'uuid' }) sellerId: string;
-  @Column({ type: 'uuid' }) productId: string;
+  @PrimaryColumn({ type: 'varchar', length: 26 }) id: string;
+  @Column({ type: 'varchar', length: 26 }) sellerId: string;
+  @Column({ type: 'varchar', length: 26 }) productId: string;
   @Column({ type: 'json', default: {} }) attributes: Record<string, string>;
   @Column({ type: 'varchar', length: 100 }) sku: string;
   @Column({ type: 'decimal', precision: 19, scale: 4 }) price: number;

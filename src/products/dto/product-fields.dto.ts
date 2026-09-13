@@ -1,24 +1,7 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  ArrayMaxSize,
-  ArrayUnique,
-  IsArray,
-  IsBoolean,
-  IsDateString,
-  IsIn,
-  IsInt,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  Max,
-  MaxLength,
-  Min,
-  ValidateNested,
-} from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 
 export function isProductAttributesSchema(value: unknown): boolean {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -97,14 +80,14 @@ export class ProductImageDto {
 export class ProductPriceDto {
   @ApiPropertyOptional({
     type: [String],
-    example: ['550e8400-e29b-41d4-a716-446655440060'],
+    example: ['01JEX000000000000000000070'],
     description: 'شناسه ویژگی‌ها / Attribute IDs',
   })
   @IsOptional()
   @IsArray()
   @ArrayUnique()
   @ArrayMaxSize(100)
-  @IsUUID('4', { each: true })
+  @IsULID({ each: true })
   attributeIds?: string[];
 
   @ApiPropertyOptional({ example: 68000000 })
@@ -398,14 +381,14 @@ export class ProductWritableFieldsDto {
 
   @ApiPropertyOptional({
     type: [String],
-    example: ['550e8400-e29b-41d4-a716-446655440060'],
+    example: ['01JEX000000000000000000070'],
     description: 'شناسه ویژگی‌ها (Attribute IDs) — از GET /attributes',
   })
   @IsOptional()
   @IsArray()
   @ArrayUnique()
   @ArrayMaxSize(100)
-  @IsUUID('4', { each: true })
+  @IsULID({ each: true })
   attributeIds?: string[];
 
   @ApiPropertyOptional({

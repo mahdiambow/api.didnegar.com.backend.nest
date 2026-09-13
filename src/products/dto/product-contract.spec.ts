@@ -31,8 +31,8 @@ const general = {
   length: 15,
   width: 7,
   height: 0.8,
-  brandId: '550e8400-e29b-41d4-a716-446655440001',
-  categoryIds: ['550e8400-e29b-41d4-a716-446655440011'],
+  brandId: '01JEX000000000000000000030',
+  categoryIds: ['01JEX000000000000000000080'],
 };
 
 describe('general product contract', () => {

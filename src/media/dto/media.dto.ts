@@ -1,18 +1,9 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
-import {
-  IsBoolean,
-  IsIn,
-  IsInt,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Max,
-  MaxLength,
-  Min,
-  ValidateIf,
-} from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
 import { UserResponseDto } from '../../auth/dto/user-response.dto.js';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { SellerResponseDto } from '../../sellers/dto/seller-response.dto.js';
 import {
   MEDIA_GROUPS,
@@ -49,7 +40,7 @@ export class UploadMediaDto {
   alt?: string;
 }
 
-export class ListMediaAssetsDto {
+export class ListMediaAssetsDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     enum: MEDIA_GROUPS,
     description: 'فیلتر بر اساس گروه سرویس',
@@ -62,12 +53,12 @@ export class ListMediaAssetsDto {
     description: 'فقط برای سوپرسلر/ادمین؛ سلر معمولی همیشه خودش فیلتر می‌شود',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   sellerId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   productId?: string;
 
   @ApiPropertyOptional({ enum: MEDIA_STATUSES })
@@ -82,21 +73,6 @@ export class ListMediaAssetsDto {
   )
   @IsBoolean()
   isUsed?: boolean;
-
-  @ApiPropertyOptional({ default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number;
-
-  @ApiPropertyOptional({ default: 20 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number;
 }
 
 export class ReviewMediaAssetDto {
@@ -119,22 +95,22 @@ export class ReviewMediaAssetDto {
 }
 
 export class AttachMediaAssetDto {
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
+  @ApiProperty({ format: 'ulid' })
+  @IsULID()
   productId: string;
 }
 
 export class MediaAssetResponseDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({ format: 'ulid' })
   id: string;
 
   @ApiProperty({ enum: MEDIA_GROUPS })
   group: MediaGroup;
 
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({ format: 'ulid' })
   sellerId: string;
 
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({ format: 'ulid' })
   uploadedByUserId: string;
 
   @ApiPropertyOptional({
@@ -151,7 +127,7 @@ export class MediaAssetResponseDto {
   })
   uploadedByUser?: UserResponseDto | null;
 
-  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  @ApiPropertyOptional({ format: 'ulid', nullable: true })
   productId: string | null;
 
   @ApiProperty()

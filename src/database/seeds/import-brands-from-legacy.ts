@@ -1,14 +1,15 @@
+import { newId } from '../../common/id/index.js';
 /**
  * Import brands from legacy dump DB (didnegar_new) into Nest DB (didnegar).
  *
- * Keeps Nest UUIDs when a brand already exists (match by legacyId+legacyTable, else slug).
+ * Keeps Nest ULIDs when a brand already exists (match by legacyId+legacyTable, else slug).
  * Maps: logo → logoUrl, description → seoDescription; splits "فارسی - English" when possible.
  *
  * Usage:
  *   SOURCE_DATABASE=didnegar_new npm run db:import:brands
  */
 import 'dotenv/config';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import mysql from 'mysql2/promise';
 
 type LegacyBrand = {
@@ -189,7 +190,7 @@ async function main() {
         continue;
       }
 
-      const id = randomUUID();
+      const id = newId();
       // Deterministic fallback if random somehow collides (extremely unlikely)
       const safeId =
         id ||

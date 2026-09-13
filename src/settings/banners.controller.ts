@@ -1,15 +1,5 @@
-import {
-  Body,
-  Param,
-  ParseUUIDPipe,
-  Query,
-  Controller,
-  Delete,
-  Get,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { ParseULIDPipe } from '../common/id/index.js';
+import { Body, Param, Query, Controller, Delete, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -67,7 +57,7 @@ export class BannersController {
     message: 'Banner settings found successfully',
   })
   @ApiOkResponse({ type: BannerApiResponseDto })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.bannersService.findOne(id);
   }
 
@@ -95,7 +85,7 @@ export class BannersController {
     message: 'Banner settings updated successfully',
   })
   @ApiOkResponse({ type: BannerApiResponseDto })
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBannerDto) {
+  update(@Param('id', ParseULIDPipe) id: string, @Body() dto: UpdateBannerDto) {
     return this.bannersService.update(id, dto);
   }
 
@@ -108,7 +98,7 @@ export class BannersController {
     code: 'BANNER_DELETED',
     message: 'Banner settings deleted successfully',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseULIDPipe) id: string) {
     return this.bannersService.remove(id);
   }
 }

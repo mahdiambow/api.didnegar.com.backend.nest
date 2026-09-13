@@ -1,24 +1,15 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  ManyToOne,
-  OneToMany,
-  JoinColumn,
-  Index,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import type { Country } from './country.entity.js';
 import type { City } from './city.entity.js';
 
 @Entity('states')
 @Index(['countryId', 'code'], { unique: true })
 export class State {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Index()
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   countryId: string;
 
   @Column({ type: 'varchar', length: 255 })

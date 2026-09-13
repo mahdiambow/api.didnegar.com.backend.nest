@@ -1,16 +1,6 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsIn,
-  IsArray,
-  ArrayMinSize,
-  ArrayUnique,
-  ValidateNested,
-  ValidateIf,
-  IsNumber,
-  IsOptional,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsIn, IsArray, ArrayMinSize, ArrayUnique, ValidateNested, ValidateIf, IsNumber, IsOptional, Min } from 'class-validator';
 
 import { Type } from 'class-transformer';
 import { OrderProductDto } from './create-order.dto.js';
@@ -34,7 +24,7 @@ export class UpdateOrderDto {
 
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   shippingMethodId?: string | null;
 
   @ApiPropertyOptional({ example: 65000000 })

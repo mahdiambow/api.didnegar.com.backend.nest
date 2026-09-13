@@ -1,14 +1,6 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  ArrayMinSize,
-  ArrayUnique,
-  IsArray,
-  IsEnum,
-  IsNumber,
-  IsUUID,
-  Max,
-  Min,
-} from 'class-validator';
+import { ArrayMinSize, ArrayUnique, IsArray, IsEnum, IsNumber, Max, Min } from 'class-validator';
 export enum PriceAdjustmentType {
   PERCENTAGE = 'percentage',
   FIXED = 'fixed',
@@ -25,7 +17,7 @@ export class AdjustProductPricesDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayUnique()
-  @IsUUID('all', { each: true })
+  @IsULID({ each: true })
   offerIds: string[];
   @ApiProperty({ enum: PriceAdjustmentType })
   @IsEnum(PriceAdjustmentType)

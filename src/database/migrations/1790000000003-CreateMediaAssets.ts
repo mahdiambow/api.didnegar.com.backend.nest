@@ -10,11 +10,11 @@ export class CreateMediaAssets1790000000003 implements MigrationInterface {
 
     await queryRunner.query(`
       CREATE TABLE \`media_assets\` (
-        \`id\` varchar(36) NOT NULL,
+        \`id\` varchar(26) NOT NULL,
         \`group\` varchar(20) NOT NULL DEFAULT 'other',
-        \`sellerId\` varchar(36) NOT NULL,
-        \`uploadedByUserId\` varchar(36) NOT NULL,
-        \`productId\` varchar(36) NULL,
+        \`sellerId\` varchar(26) NOT NULL,
+        \`uploadedByUserId\` varchar(26) NOT NULL,
+        \`productId\` varchar(26) NULL,
         \`originalName\` varchar(255) NOT NULL,
         \`alt\` varchar(500) NULL,
         \`mimeType\` varchar(100) NOT NULL,

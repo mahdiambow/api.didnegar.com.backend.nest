@@ -1,12 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-  Index,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, OneToMany, UpdateDateColumn } from 'typeorm';
 import { BusinessType, SellerStatus } from './seller.enums.js';
 import type { SellerSettings } from '../types/seller-settings.type.js';
 import type { User } from '../../auth/entities/user.entity.js';
@@ -15,7 +7,7 @@ import type { SellerContract } from './seller-contract.entity.js';
 
 @Entity('sellers')
 export class Seller {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Column({ type: 'varchar', length: 150 })

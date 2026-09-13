@@ -1,3 +1,8 @@
+import {
+  DEFAULT_LIMIT,
+  DEFAULT_PAGE,
+  MAX_LIMIT,
+} from '../../dto/pagination-query.dto.js';
 import type { PaginatedList } from '../interfaces/paginated-list.interface.js';
 import type { ApiPaginatedResponse } from '../interfaces/paginated-list.interface.js';
 import type {
@@ -7,8 +12,11 @@ import type {
 } from '../interfaces/pagination.interface.js';
 
 export function getPaginationParams(query: PaginationQuery): PaginationParams {
-  const page = Math.max(1, Number(query.page) || 1);
-  const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
+  const page = Math.max(1, Number(query.page) || DEFAULT_PAGE);
+  const limit = Math.min(
+    MAX_LIMIT,
+    Math.max(1, Number(query.limit) || DEFAULT_LIMIT),
+  );
   const offset = (page - 1) * limit;
 
   return { page, limit, offset };

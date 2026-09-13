@@ -1,13 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-  Index,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
 import type { Product } from '../../products/entities/product.entity.js';
 import type { Category } from './category.entity.js';
 import type { SubCategory } from './sub-category.entity.js';
@@ -17,19 +8,19 @@ import type { SubCategory } from './sub-category.entity.js';
   unique: true,
 })
 export class ProductCategory {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Index('idx_product_categories_productId')
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   productId: string;
 
   @Index('idx_product_categories_categoryId')
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   categoryId: string | null;
 
   @Index('idx_product_categories_subCategoryId')
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   subCategoryId: string | null;
 
   @Column({ type: 'boolean', default: false })

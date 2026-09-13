@@ -1,27 +1,11 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  ArrayMaxSize,
-  ArrayUnique,
-  IsArray,
-  IsBoolean,
-  IsIn,
-  IsInt,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  Max,
-  MaxLength,
-  Min,
-  ValidateBy,
-} from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateBy } from 'class-validator';
 import { isProductAttributesSchema } from '../../products/dto/product-fields.dto.js';
 
 export class CreateOfferProductDto {
   @ApiProperty()
-  @IsUUID()
+  @IsULID()
   sellerId: string;
 
   @ApiProperty({ example: 'گوشی Galaxy S24' })
@@ -51,7 +35,7 @@ export class CreateOfferProductDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID('4')
+  @IsULID()
   brandId?: string;
 
   @ApiPropertyOptional({ type: [String] })
@@ -59,7 +43,7 @@ export class CreateOfferProductDto {
   @IsArray()
   @ArrayUnique()
   @ArrayMaxSize(50)
-  @IsUUID('4', { each: true })
+  @IsULID({ each: true })
   categoryIds?: string[];
 
   @ApiPropertyOptional({

@@ -1,19 +1,6 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  ArrayUnique,
-  IsArray,
-  IsBoolean,
-  IsEmail,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({ example: '09363078987' })
@@ -25,8 +12,8 @@ export class CreateUserDto {
   @ApiProperty({
     type: [String],
     example: [
-      '550e8400-e29b-41d4-a716-446655440001',
-      '550e8400-e29b-41d4-a716-446655440002',
+      '01JEX000000000000000000030',
+      '01JEX000000000000000000040',
     ],
     description:
       'آرایه شناسه نقش‌ها — اولین آیتم نقش اصلی است، بقیه نقش‌های اضافه (مثلاً super-admin + super-seller)',
@@ -35,15 +22,15 @@ export class CreateUserDto {
   @ArrayMinSize(1)
   @ArrayMaxSize(10)
   @ArrayUnique()
-  @IsUUID('4', { each: true })
+  @IsULID({ each: true })
   roleIds: string[];
 
   @ApiPropertyOptional({
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    example: '01JEX000000000000000000010',
     description: 'برای super-admin یا seller هنگام ساخت ادمین',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   sellerId?: string;
 
   @ApiPropertyOptional({ example: 'user@example.com' })

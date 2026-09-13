@@ -1,15 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToOne,
-  OneToMany,
-  ManyToOne,
-  JoinColumn,
-  Index,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, OneToOne, UpdateDateColumn } from 'typeorm';
 import type { Role } from '../../roles/entities/role.entity.js';
 import type { Seller } from '../../sellers/entities/seller.entity.js';
 import type { UserProfile } from './user-profile.entity.js';
@@ -18,7 +7,7 @@ import type { RefreshToken } from './refresh-token.entity.js';
 
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Column({ type: 'bigint', nullable: true })
@@ -52,14 +41,14 @@ export class User {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   roleId: string;
 
   /** نقش‌های اضافه علاوه بر role اصلی (آرایه uuid) */
   @Column({ type: 'json', default: [] })
   extraRoleIds: string[];
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   sellerId: string | null;
 
   @Column({ type: 'varchar', length: 72, nullable: true, select: false })

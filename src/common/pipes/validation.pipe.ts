@@ -5,6 +5,7 @@ export function createValidationPipe() {
   return new ValidationPipe({
     whitelist: true,
     transform: true,
+    transformOptions: { exposeDefaultValues: true },
     exceptionFactory: (errors) =>
       new UnprocessableEntityException({
         code: 'VALIDATION_ERROR',

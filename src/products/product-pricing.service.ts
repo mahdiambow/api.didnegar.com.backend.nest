@@ -47,8 +47,8 @@ export class ProductPricingService {
     }));
     if (includeExamples)
       sheet.addRow({
-        offerId: '550e8400-e29b-41d4-a716-446655440000',
-        sellerId: '550e8400-e29b-41d4-a716-446655440001',
+        offerId: '01JEX000000000000000000010',
+        sellerId: '01JEX000000000000000000030',
         sku: 'SAM-S24U-256-BLU',
         price: 68000000,
       });

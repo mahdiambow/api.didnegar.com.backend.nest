@@ -10,9 +10,9 @@ import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
 import { ProductStockRepository } from '../products/repositories/product-stock.repository.js';
 
-const offerId = '550e8400-e29b-41d4-a716-446655440000';
-const secondId = '550e8400-e29b-41d4-a716-446655440002';
-const shippingMethodId = '550e8400-e29b-41d4-a716-446655440001';
+const offerId = '01JEX000000000000000000010';
+const secondId = '01JEX000000000000000000040';
+const shippingMethodId = '01JEX000000000000000000030';
 
 function setup(isCod = false) {
   let saved: any;

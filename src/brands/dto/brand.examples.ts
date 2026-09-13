@@ -1,6 +1,6 @@
-/** نمونه UUIDها برای Swagger — فقط مستندات */
+/** نمونه ULIDها برای Swagger — فقط مستندات */
 export const BRAND_EXAMPLES = {
-  brandId: '550e8400-e29b-41d4-a716-446655440001',
+  brandId: '01JBRND0000000000000000001',
   slug: 'samsung',
   name: 'سامسونگ',
   nameEn: 'Samsung',

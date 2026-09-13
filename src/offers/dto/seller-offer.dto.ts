@@ -1,3 +1,4 @@
+import { IsULID } from '../../common/id/index.js';
 import {
   ApiProperty,
   ApiPropertyOptional,
@@ -5,24 +6,8 @@ import {
   PartialType,
 } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  IsArray,
-  IsBoolean,
-  IsIn,
-  IsInt,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Max,
-  MaxLength,
-  Min,
-  ValidateIf,
-  ValidateNested,
-} from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { CreateProductDto } from '../../products/dto/create-product.dto.js';
 
 /** آپدیت فیلدهای کاتالوگ محصول هنگام ثبت/ویرایش آفر (بدون approval) */
@@ -33,7 +18,7 @@ export class SellerOfferProductPatchDto extends PartialType(
 /** یک آیتم پیشنهاد برای یک محصول */
 export class SellerOfferItemDto {
   @ApiProperty()
-  @IsUUID()
+  @IsULID()
   productId: string;
 
   @ApiProperty({ example: 'SAM-S24U-256-BLU', description: 'باید یکتا باشد' })
@@ -110,9 +95,9 @@ export class UpdateSellerOfferDto extends PartialType(
   { skipNullProperties: false },
 ) {}
 
-export class ListSellerOffersDto {
-  @ApiPropertyOptional() @IsOptional() @IsUUID() sellerId?: string;
-  @ApiPropertyOptional() @IsOptional() @IsUUID() productId?: string;
+export class ListSellerOffersDto extends PaginationQueryDto {
+  @ApiPropertyOptional() @IsOptional() @IsULID() sellerId?: string;
+  @ApiPropertyOptional() @IsOptional() @IsULID() productId?: string;
   @ApiPropertyOptional()
   @IsOptional()
   @Transform(({ value }) =>
@@ -124,23 +109,10 @@ export class ListSellerOffersDto {
   @IsOptional()
   @IsIn(['pending', 'approved', 'rejected'])
   approvalStatus?: 'pending' | 'approved' | 'rejected';
-  @ApiPropertyOptional({ default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number;
-  @ApiPropertyOptional({ default: 20 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number;
 }
 
 export class SellerOfferResponseDto extends SellerOfferItemDto {
-  @ApiProperty({ format: 'uuid' })
+  @ApiProperty({ format: 'ulid' })
   offerId: string;
   @ApiProperty()
   sellerId: string;

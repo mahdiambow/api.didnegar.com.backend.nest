@@ -1,18 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
-import { Type } from 'class-transformer';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 
-export class ListUsersQueryDto {
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  page?: number;
-
-  @ApiPropertyOptional({ example: 20 })
-  @IsOptional()
-  @Type(() => Number)
-  limit?: number;
-
+export class ListUsersQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     example: '0936',
     description: 'جستجو روی username / displayName / email / firstName / lastName',

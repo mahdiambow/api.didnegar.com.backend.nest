@@ -1,5 +1,6 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { ALL_PERMISSIONS } from '../permissions.js';
 import { IsPermissionArray } from '../validators/is-permission.validator.js';
 
@@ -30,10 +31,10 @@ export class CreateRoleDto {
   permissions: string[];
 
   @ApiPropertyOptional({
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    example: '01JEX000000000000000000010',
     description: 'فقط super-admin می‌تواند sellerId تعیین کند',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   sellerId?: string;
 }

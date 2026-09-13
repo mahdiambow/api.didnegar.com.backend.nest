@@ -17,7 +17,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- sellers ---
     await queryRunner.query(`
       CREATE TABLE \`sellers\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`name\` VARCHAR(150) NOT NULL,
         \`slug\` VARCHAR(100) NOT NULL,
         \`businessName\` VARCHAR(200) NOT NULL,
@@ -41,12 +41,12 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- roles ---
     await queryRunner.query(`
       CREATE TABLE \`roles\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`slug\` VARCHAR(50) NOT NULL,
         \`name\` VARCHAR(100) NOT NULL,
         \`permissions\` JSON NOT NULL DEFAULT ('[]'),
         \`isSystem\` TINYINT(1) NOT NULL DEFAULT 0,
-        \`sellerId\` CHAR(36) NULL,
+        \`sellerId\` CHAR(26) NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         \`updatedAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         CONSTRAINT \`PK_roles\` PRIMARY KEY (\`id\`),
@@ -57,7 +57,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- users ---
     await queryRunner.query(`
       CREATE TABLE \`users\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`legacyId\` BIGINT NULL,
         \`legacyTable\` VARCHAR(100) NULL,
         \`username\` VARCHAR(20) NOT NULL,
@@ -68,9 +68,9 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
         \`lastName\` VARCHAR(100) NULL,
         \`website\` VARCHAR(255) NULL,
         \`isActive\` TINYINT(1) NOT NULL DEFAULT 1,
-        \`roleId\` CHAR(36) NOT NULL,
+        \`roleId\` CHAR(26) NOT NULL,
         \`extraRoleIds\` JSON NOT NULL DEFAULT ('[]'),
-        \`sellerId\` CHAR(36) NULL,
+        \`sellerId\` CHAR(26) NULL,
         \`otpCode\` VARCHAR(72) NULL,
         \`otpExpiresAt\` DATETIME(6) NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -85,8 +85,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- refresh_tokens ---
     await queryRunner.query(`
       CREATE TABLE \`refresh_tokens\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`userId\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`userId\` CHAR(26) NOT NULL,
         \`tokenHash\` VARCHAR(255) NOT NULL,
         \`expiresAt\` DATETIME(6) NOT NULL,
         \`revoked\` TINYINT(1) NOT NULL DEFAULT 0,
@@ -99,8 +99,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- user_profiles ---
     await queryRunner.query(`
       CREATE TABLE \`user_profiles\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`userId\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`userId\` CHAR(26) NOT NULL,
         \`nationalCode\` VARCHAR(10) NULL,
         \`birthDate\` DATE NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -115,8 +115,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- user_addresses ---
     await queryRunner.query(`
       CREATE TABLE \`user_addresses\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`userId\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`userId\` CHAR(26) NOT NULL,
         \`title\` VARCHAR(100) NOT NULL,
         \`province\` VARCHAR(100) NOT NULL,
         \`city\` VARCHAR(100) NOT NULL,
@@ -140,8 +140,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- seller_contracts ---
     await queryRunner.query(`
       CREATE TABLE \`seller_contracts\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`sellerId\` CHAR(36) NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`sellerId\` CHAR(26) NULL,
         \`sellerName\` VARCHAR(150) NOT NULL,
         \`userIds\` JSON NOT NULL DEFAULT ('[]'),
         \`contractPartyName\` VARCHAR(150) NOT NULL,
@@ -158,7 +158,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- countries ---
     await queryRunner.query(`
       CREATE TABLE \`countries\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`code\` VARCHAR(100) NOT NULL,
         \`name\` VARCHAR(255) NOT NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -170,8 +170,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- states ---
     await queryRunner.query(`
       CREATE TABLE \`states\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`countryId\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`countryId\` CHAR(26) NOT NULL,
         \`code\` VARCHAR(255) NOT NULL,
         \`name\` VARCHAR(255) NOT NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -185,9 +185,9 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- cities ---
     await queryRunner.query(`
       CREATE TABLE \`cities\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`countryId\` CHAR(36) NULL,
-        \`stateId\` CHAR(36) NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`countryId\` CHAR(26) NULL,
+        \`stateId\` CHAR(26) NULL,
         \`name\` VARCHAR(255) NOT NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         CONSTRAINT \`PK_cities\` PRIMARY KEY (\`id\`),
@@ -202,7 +202,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- brands ---
     await queryRunner.query(`
       CREATE TABLE \`brands\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`legacyId\` BIGINT NOT NULL,
         \`legacyTable\` VARCHAR(255) NOT NULL,
         \`name\` VARCHAR(200) NOT NULL,
@@ -223,7 +223,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- parent_categories ---
     await queryRunner.query(`
       CREATE TABLE \`parent_categories\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`legacyId\` BIGINT NULL,
         \`legacyTable\` VARCHAR(255) NULL,
         \`name\` VARCHAR(255) NOT NULL,
@@ -243,8 +243,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- categories ---
     await queryRunner.query(`
       CREATE TABLE \`categories\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`parentCategoryId\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`parentCategoryId\` CHAR(26) NOT NULL,
         \`legacyId\` BIGINT NULL,
         \`legacyTable\` VARCHAR(255) NULL,
         \`name\` VARCHAR(255) NOT NULL,
@@ -266,8 +266,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- sub_categories ---
     await queryRunner.query(`
       CREATE TABLE \`sub_categories\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`categoryId\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`categoryId\` CHAR(26) NOT NULL,
         \`legacyId\` BIGINT NULL,
         \`legacyTable\` VARCHAR(255) NULL,
         \`name\` VARCHAR(255) NOT NULL,
@@ -289,7 +289,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- attributes ---
     await queryRunner.query(`
       CREATE TABLE \`attributes\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`legacyId\` BIGINT NOT NULL,
         \`legacyTable\` VARCHAR(255) NOT NULL,
         \`name\` VARCHAR(200) NOT NULL,
@@ -306,7 +306,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- shipping_methods ---
     await queryRunner.query(`
       CREATE TABLE \`shipping_methods\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`slug\` VARCHAR(100) NOT NULL,
         \`name\` VARCHAR(255) NOT NULL,
         \`price\` DECIMAL(19,4) NOT NULL DEFAULT 0,
@@ -323,7 +323,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- products ---
     await queryRunner.query(`
       CREATE TABLE \`products\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`legacyId\` BIGINT NOT NULL,
         \`legacyTable\` VARCHAR(255) NOT NULL,
         \`name\` VARCHAR(255) NOT NULL,
@@ -336,7 +336,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
         \`status\` VARCHAR(50) NOT NULL DEFAULT 'publish',
         \`approvalStatus\` VARCHAR(20) NOT NULL DEFAULT 'pending',
         \`rejectionReason\` TEXT NULL,
-        \`brandId\` CHAR(36) NULL,
+        \`brandId\` CHAR(26) NULL,
         \`isVirtual\` TINYINT(1) NOT NULL DEFAULT 0,
         \`isDownloadable\` TINYINT(1) NOT NULL DEFAULT 0,
         \`isActive\` TINYINT(1) NOT NULL DEFAULT 1,
@@ -358,7 +358,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
         \`height\` DECIMAL(10,2) NULL,
         \`attributeIds\` JSON NOT NULL DEFAULT ('[]'),
         \`sellerIds\` JSON NOT NULL DEFAULT ('[]'),
-        \`createdBySellerId\` CHAR(36) NULL,
+        \`createdBySellerId\` CHAR(26) NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         \`updatedAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         CONSTRAINT \`PK_products\` PRIMARY KEY (\`id\`),
@@ -376,8 +376,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- product_stocks ---
     await queryRunner.query(`
       CREATE TABLE \`product_stocks\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`productId\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`productId\` CHAR(26) NOT NULL,
         \`stock\` INT NOT NULL DEFAULT 0,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         \`updatedAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -391,8 +391,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- product_variants ---
     await queryRunner.query(`
       CREATE TABLE \`product_variants\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`product_id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`product_id\` CHAR(26) NOT NULL,
         CONSTRAINT \`PK_product_variants\` PRIMARY KEY (\`id\`),
         INDEX \`IDX_product_variants_product_id\` (\`product_id\`),
         CONSTRAINT \`FK_product_variants_product_id\` FOREIGN KEY (\`product_id\`) REFERENCES \`products\`(\`id\`) ON DELETE CASCADE ON UPDATE RESTRICT
@@ -402,10 +402,10 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- product_categories ---
     await queryRunner.query(`
       CREATE TABLE \`product_categories\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`productId\` CHAR(36) NOT NULL,
-        \`categoryId\` CHAR(36) NULL,
-        \`subCategoryId\` CHAR(36) NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`productId\` CHAR(26) NOT NULL,
+        \`categoryId\` CHAR(26) NULL,
+        \`subCategoryId\` CHAR(26) NULL,
         \`isPrimary\` TINYINT(1) NOT NULL DEFAULT 0,
         \`position\` INT NOT NULL DEFAULT 0,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -424,9 +424,9 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- seller_offers ---
     await queryRunner.query(`
       CREATE TABLE \`seller_offers\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`sellerId\` CHAR(36) NOT NULL,
-        \`productId\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`sellerId\` CHAR(26) NOT NULL,
+        \`productId\` CHAR(26) NOT NULL,
         \`attributes\` JSON NOT NULL DEFAULT ('{}'),
         \`sku\` VARCHAR(100) NOT NULL,
         \`price\` DECIMAL(19,4) NOT NULL,
@@ -455,13 +455,13 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- offer_products ---
     await queryRunner.query(`
       CREATE TABLE \`offer_products\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`sellerId\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`sellerId\` CHAR(26) NOT NULL,
         \`name\` VARCHAR(255) NOT NULL,
         \`slug\` VARCHAR(200) NOT NULL,
         \`description\` TEXT NULL,
         \`shortDescription\` TEXT NULL,
-        \`brandId\` CHAR(36) NULL,
+        \`brandId\` CHAR(26) NULL,
         \`categoryIds\` JSON NOT NULL DEFAULT ('[]'),
         \`attributes\` JSON NOT NULL DEFAULT ('{}'),
         \`isVirtual\` TINYINT(1) NOT NULL DEFAULT 0,
@@ -480,8 +480,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
         \`isOnSale\` TINYINT(1) NOT NULL DEFAULT 0,
         \`approvalStatus\` VARCHAR(20) NOT NULL DEFAULT 'pending',
         \`rejectionReason\` TEXT NULL,
-        \`productId\` CHAR(36) NULL,
-        \`offerId\` CHAR(36) NULL,
+        \`productId\` CHAR(26) NULL,
+        \`offerId\` CHAR(26) NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         \`updatedAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         CONSTRAINT \`PK_offer_products\` PRIMARY KEY (\`id\`),
@@ -499,9 +499,9 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- orders ---
     await queryRunner.query(`
       CREATE TABLE \`orders\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`userId\` CHAR(36) NOT NULL,
-        \`shippingMethodId\` CHAR(36) NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`userId\` CHAR(26) NOT NULL,
+        \`shippingMethodId\` CHAR(26) NULL,
         \`subtotal\` DECIMAL(19,4) NOT NULL,
         \`shippingAmount\` DECIMAL(19,4) NOT NULL DEFAULT 0,
         \`amount\` DECIMAL(19,4) NOT NULL,
@@ -517,12 +517,12 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- order_items ---
     await queryRunner.query(`
       CREATE TABLE \`order_items\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`orderId\` CHAR(36) NOT NULL,
-        \`productId\` CHAR(36) NOT NULL,
-        \`offerId\` CHAR(36) NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`orderId\` CHAR(26) NOT NULL,
+        \`productId\` CHAR(26) NOT NULL,
+        \`offerId\` CHAR(26) NULL,
         \`attributes\` JSON NOT NULL DEFAULT ('{}'),
-        \`sellerId\` CHAR(36) NULL,
+        \`sellerId\` CHAR(26) NULL,
         \`sku\` VARCHAR(100) NULL,
         \`quantity\` INT NOT NULL,
         \`unitPrice\` DECIMAL(19,4) NOT NULL,
@@ -536,8 +536,8 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- payments ---
     await queryRunner.query(`
       CREATE TABLE \`payments\` (
-        \`id\` CHAR(36) NOT NULL,
-        \`orderId\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
+        \`orderId\` CHAR(26) NOT NULL,
         \`gateway\` VARCHAR(20) NOT NULL DEFAULT 'zarinpal',
         \`authority\` VARCHAR(100) NOT NULL,
         \`refId\` VARCHAR(100) NULL,
@@ -600,10 +600,10 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // Partial unique indexes (PG WHERE) approximated with functional unique indexes (MariaDB).
     await queryRunner.query(`
       CREATE TABLE \`banners\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`page\` VARCHAR(30) NOT NULL,
         \`section\` VARCHAR(30) NOT NULL,
-        \`categoryId\` CHAR(36) NULL,
+        \`categoryId\` CHAR(26) NULL,
         \`items\` JSON NOT NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         \`updatedAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
@@ -655,7 +655,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     // --- contact_messages ---
     await queryRunner.query(`
       CREATE TABLE \`contact_messages\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`name\` VARCHAR(150) NOT NULL,
         \`email\` VARCHAR(254) NULL,
         \`phoneNumber\` VARCHAR(50) NULL,

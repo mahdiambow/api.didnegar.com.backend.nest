@@ -1,32 +1,26 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { PrimaryColumn, Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import type { Order } from '../../payments/entities/order.entity.js';
 import type { SellerOffer } from '../../offers/entities/seller-offer.entity.js';
 import type { Product } from '../../products/entities/product.entity.js';
 
 @Entity('order_items')
 export class OrderItem {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   orderId: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   productId: string;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   offerId: string | null;
 
   @Column({ type: 'json', default: {} })
   attributes: Record<string, string>;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   sellerId: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })

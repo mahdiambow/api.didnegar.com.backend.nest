@@ -1,5 +1,6 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMaxSize, ArrayUnique, IsArray, IsOptional, IsUUID } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsOptional } from 'class-validator';
 import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
 import { BRAND_EXAMPLES } from './brand.examples.js';
 import { ProductWritableFieldsDto } from './product-fields.dto.js';
@@ -10,14 +11,14 @@ export class CreateProductDto extends ProductWritableFieldsDto {
     description: 'شناسه برند از قبل ساخته‌شده — GET /brands',
   })
   @IsOptional()
-  @IsUUID('4')
+  @IsULID()
   brandId?: string;
 
   @ApiPropertyOptional({
     type: [String],
     example: [
-      '550e8400-e29b-41d4-a716-446655440002',
-      '550e8400-e29b-41d4-a716-446655440003',
+      '01JEX000000000000000000040',
+      '01JEX000000000000000000050',
     ],
     description: 'آرایه شناسه فروشنده‌های مرتبط با محصول',
   })
@@ -25,7 +26,7 @@ export class CreateProductDto extends ProductWritableFieldsDto {
   @IsArray()
   @ArrayUnique()
   @ArrayMaxSize(50)
-  @IsUUID('4', { each: true })
+  @IsULID({ each: true })
   sellerIds?: string[];
 
   @ApiPropertyOptional({
@@ -36,6 +37,6 @@ export class CreateProductDto extends ProductWritableFieldsDto {
   })
   @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsULID({ each: true })
   categoryIds?: string[];
 }

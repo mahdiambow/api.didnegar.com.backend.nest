@@ -1,5 +1,5 @@
+import { newId } from '../../../common/id/index.js';
 import 'dotenv/config';
-import { randomUUID } from 'node:crypto';
 import mysql, { type Connection, type RowDataPacket } from 'mysql2/promise';
 
 export function env(name: string, fallback?: string): string {
@@ -31,14 +31,20 @@ export async function ensureIdMap(conn: Connection, target: string) {
   await conn.query(`
     CREATE TABLE IF NOT EXISTS \`${target}\`.legacy_id_map (
       entity VARCHAR(64) NOT NULL,
-      legacy_ulid VARCHAR(36) NOT NULL,
-      nest_uuid CHAR(36) NOT NULL,
+      legacy_ulid VARCHAR(26) NOT NULL,
+      nest_uuid CHAR(26) NOT NULL,
       updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
         ON UPDATE CURRENT_TIMESTAMP(6),
       PRIMARY KEY (entity, legacy_ulid),
       UNIQUE KEY uq_legacy_id_map_nest (entity, nest_uuid)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  // ارتقا از نسخهٔ قبلی CHAR(36)
+  await conn.query(`
+    ALTER TABLE \`${target}\`.legacy_id_map
+      MODIFY legacy_ulid VARCHAR(26) NOT NULL,
+      MODIFY nest_uuid CHAR(26) NOT NULL
+  `).catch(() => undefined);
 }
 
 export async function putMap(
@@ -129,9 +135,7 @@ export function splitFaEn(name: string): { name: string; nameEn: string | null }
   };
 }
 
-export function newId() {
-  return randomUUID();
-}
+export { newId };
 
 export function chunk<T>(items: T[], size: number): T[][] {
   const out: T[][] = [];

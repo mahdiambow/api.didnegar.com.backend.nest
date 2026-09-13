@@ -1,20 +1,13 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  Index,
-} from 'typeorm';
+import { PrimaryColumn, Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import type { Product } from './product.entity.js';
 
 @Entity('product_variants')
 export class ProductVariant {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Index()
-  @Column({ name: 'product_id', type: 'uuid' })
+  @Column({ name: 'product_id', type: 'varchar', length: 26 })
   productId: string;
 
   @ManyToOne('Product', 'variants', { onDelete: 'CASCADE' })

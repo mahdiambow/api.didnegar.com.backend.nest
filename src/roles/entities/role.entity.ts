@@ -1,19 +1,10 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, UpdateDateColumn } from 'typeorm';
 import type { User } from '../../auth/entities/user.entity.js';
 import type { Seller } from '../../sellers/entities/seller.entity.js';
 
 @Entity('roles')
 export class Role {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Column({ type: 'varchar', length: 50 })
@@ -28,7 +19,7 @@ export class Role {
   @Column({ type: 'boolean', default: false })
   isSystem: boolean;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   sellerId: string | null;
 
   @CreateDateColumn()

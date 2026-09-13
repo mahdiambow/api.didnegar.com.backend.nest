@@ -1,17 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
-  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
-  Max,
   MaxLength,
-  Min,
   ValidateIf,
 } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 
 export class CreateContactMessageDto {
   @ApiProperty({ example: 'علی رضایی' })
@@ -81,7 +79,7 @@ export class UpdateContactMessageDto {
   reply?: string | null;
 }
 
-export class ListContactMessagesQueryDto {
+export class ListContactMessagesQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ example: true })
   @IsOptional()
   @Transform(({ value }) =>
@@ -89,21 +87,6 @@ export class ListContactMessagesQueryDto {
   )
   @IsBoolean()
   isRead?: boolean;
-
-  @ApiPropertyOptional({ default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number;
-
-  @ApiPropertyOptional({ default: 20 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number;
 }
 
 export class ContactMessageResponseDto {

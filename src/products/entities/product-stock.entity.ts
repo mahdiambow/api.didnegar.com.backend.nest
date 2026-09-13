@@ -1,24 +1,14 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToOne,
-  JoinColumn,
-  Index,
-  Check,
-} from 'typeorm';
+import { PrimaryColumn, Check, Column, CreateDateColumn, Entity, Index, JoinColumn, OneToOne, UpdateDateColumn } from 'typeorm';
 import type { Product } from './product.entity.js';
 
 @Entity('product_stocks')
 @Check('CHK_product_stock', '`stock` >= 0')
 export class ProductStock {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Index({ unique: true })
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   productId: string;
 
   @Column({ type: 'int', default: 0 })

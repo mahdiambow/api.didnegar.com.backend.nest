@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '../entities/role.entity.js';
 
 export class RoleResponseDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiProperty({ example: '01JEX000000000000000000010' })
   id: string;
 
   @ApiProperty({
@@ -21,7 +21,7 @@ export class RoleResponseDto {
   isSystem: boolean;
 
   @ApiPropertyOptional({
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    example: '01JEX000000000000000000010',
     nullable: true,
   })
   sellerId: string | null;

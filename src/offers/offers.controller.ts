@@ -1,16 +1,5 @@
-import {
-  Body,
-  Req,
-  Param,
-  ParseUUIDPipe,
-  Query,
-  Controller,
-  Delete,
-  Get,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { ParseULIDPipe } from '../common/id/index.js';
+import { Body, Req, Param, Query, Controller, Delete, Get, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -75,7 +64,7 @@ export class OffersController {
     message: 'Seller offer found successfully',
   })
   @ApiOkResponse({ type: OfferApiResponseDto })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.offersService.findOne(id);
   }
 
@@ -119,7 +108,7 @@ export class OffersController {
   })
   @ApiOkResponse({ type: OfferApiResponseDto })
   review(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
     @Body() dto: ReviewSellerOfferDto,
   ) {
     return this.offersService.review(id, dto);
@@ -145,7 +134,7 @@ export class OffersController {
   @ApiOkResponse({ type: OfferApiResponseDto })
   update(
     @Req() req: { user: AuthUser },
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
     @Body() dto: UpdateSellerOfferDto,
   ) {
     return this.offersService.update(req.user, id, dto);
@@ -167,7 +156,7 @@ export class OffersController {
   })
   remove(
     @Req() req: { user: AuthUser },
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
   ) {
     return this.offersService.remove(req.user, id);
   }

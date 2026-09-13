@@ -8,7 +8,7 @@ export class ValidateTokenDataDto {
   @ApiProperty({ example: false })
   refreshed: boolean;
 
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiProperty({ example: '01JEX000000000000000000010' })
   userId: string;
 
   @ApiProperty({

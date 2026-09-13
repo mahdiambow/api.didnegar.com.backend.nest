@@ -1,15 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { ParseULIDPipe } from '../common/id/index.js';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -94,7 +84,7 @@ export class ContactMessagesController {
     message: 'Contact message found successfully',
   })
   @ApiOkResponse({ type: ContactMessageApiResponseDto })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.contactMessagesService.findOne(id);
   }
 
@@ -111,7 +101,7 @@ export class ContactMessagesController {
   })
   @ApiOkResponse({ type: ContactMessageApiResponseDto })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
     @Body() dto: UpdateContactMessageDto,
   ) {
     return this.contactMessagesService.update(id, dto);
@@ -126,7 +116,7 @@ export class ContactMessagesController {
     code: 'CONTACT_MESSAGE_DELETED',
     message: 'Contact message deleted successfully',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseULIDPipe) id: string) {
     return this.contactMessagesService.remove(id);
   }
 }

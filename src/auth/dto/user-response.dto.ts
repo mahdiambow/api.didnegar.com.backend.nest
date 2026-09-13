@@ -6,7 +6,7 @@ import type { Role } from '../../roles/entities/role.entity.js';
 import { resolveUserRoles } from '../types/auth-user.type.js';
 
 export class UserRoleSummaryDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiProperty({ example: '01JEX000000000000000000010' })
   id: string;
 
   @ApiProperty({
@@ -21,7 +21,7 @@ export class UserRoleSummaryDto {
 }
 
 export class UserSellerSummaryDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiProperty({ example: '01JEX000000000000000000010' })
   id: string;
 
   @ApiProperty({ example: 'my-shop' })
@@ -32,7 +32,7 @@ export class UserSellerSummaryDto {
 }
 
 export class UserProfileResponseDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiProperty({ example: '01JEX000000000000000000010' })
   id: string;
 
   @ApiPropertyOptional({ example: '0012345678', nullable: true })
@@ -43,7 +43,7 @@ export class UserProfileResponseDto {
 }
 
 export class UserAddressResponseDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiProperty({ example: '01JEX000000000000000000010' })
   id: string;
 
   @ApiProperty({ example: 'منزل' })
@@ -87,7 +87,7 @@ export class UserAddressResponseDto {
 }
 
 export class UserResponseDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiProperty({ example: '01JEX000000000000000000010' })
   id: string;
 
   @ApiProperty({
@@ -120,8 +120,8 @@ export class UserResponseDto {
   @ApiProperty({
     type: [String],
     example: [
-      '550e8400-e29b-41d4-a716-446655440001',
-      '550e8400-e29b-41d4-a716-446655440002',
+      '01JEX000000000000000000030',
+      '01JEX000000000000000000040',
     ],
     description: 'شناسه همه نقش‌ها — اولین مورد نقش اصلی است',
   })

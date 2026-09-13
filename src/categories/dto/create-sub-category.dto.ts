@@ -1,16 +1,6 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  Max,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 import { CATEGORY_EXAMPLES } from './category.examples.js';
 
 export class CreateSubCategoryDto {
@@ -18,7 +8,7 @@ export class CreateSubCategoryDto {
     example: CATEGORY_EXAMPLES.categoryId,
     description: 'شناسه دسته والد',
   })
-  @IsUUID()
+  @IsULID()
   categoryId: string;
 
   @ApiProperty({

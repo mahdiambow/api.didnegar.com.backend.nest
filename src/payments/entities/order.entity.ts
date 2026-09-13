@@ -1,14 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-  OneToOne,
-  OneToMany,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, UpdateDateColumn } from 'typeorm';
 import type { User } from '../../auth/entities/user.entity.js';
 import type { OrderItem } from '../../orders/entities/order-item.entity.js';
 import type { Payment } from './payment.entity.js';
@@ -18,13 +8,13 @@ export type OrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled';
 
 @Entity('orders')
 export class Order {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   userId: string;
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   shippingMethodId: string | null;
 
   @Column({ type: 'decimal', precision: 19, scale: 4 })

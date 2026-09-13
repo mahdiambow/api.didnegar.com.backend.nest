@@ -1,15 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  OneToOne,
-  JoinColumn,
-  Index,
-  OneToMany,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, OneToOne, UpdateDateColumn } from 'typeorm';
 import type { Brand } from '../../brands/entities/brand.entity.js';
 import type { ProductCategory } from '../../categories/entities/product-category.entity.js';
 import type { ProductVariant } from './product-variant.entity.js';
@@ -50,7 +39,7 @@ export type ProductShippingMethodData = {
 @Entity('products')
 @Index(['legacyTable', 'legacyId'], { unique: true })
 export class Product {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Column({ type: 'bigint' })
@@ -95,7 +84,7 @@ export class Product {
   rejectionReason: string | null;
 
   @Index()
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   brandId: string | null;
 
   @Column({ type: 'boolean', default: false })
@@ -164,7 +153,7 @@ export class Product {
   @Column({ type: 'json', default: [] })
   sellerIds: string[];
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   createdBySellerId: string | null;
 
   @CreateDateColumn()

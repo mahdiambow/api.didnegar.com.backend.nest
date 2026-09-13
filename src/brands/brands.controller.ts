@@ -1,15 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { ParseULIDPipe } from '../common/id/index.js';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -73,7 +63,7 @@ export class BrandsController {
   })
   @ApiOperation({ summary: 'دریافت یک برند' })
   @ApiOkResponse({ type: BrandApiResponseDto })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.brandsService.findOne(id);
   }
 
@@ -98,7 +88,7 @@ export class BrandsController {
   @ApiOperation({ summary: 'ویرایش برند' })
   @ApiOkResponse({ type: BrandApiResponseDto })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
     @Body() dto: UpdateBrandDto,
   ) {
     return this.brandsService.update(id, dto);
@@ -111,7 +101,7 @@ export class BrandsController {
     message: 'Brand deleted successfully',
   })
   @ApiOperation({ summary: 'حذف برند' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseULIDPipe) id: string) {
     return this.brandsService.remove(id);
   }
 }

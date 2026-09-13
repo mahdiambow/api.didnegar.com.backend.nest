@@ -1,14 +1,5 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { ParseULIDPipe } from '../common/id/index.js';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -70,7 +61,7 @@ export class AttributesController {
   })
   @ApiOperation({ summary: 'دریافت یک ویژگی' })
   @ApiOkResponse({ type: AttributeApiResponseDto })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.attributesService.findAttribute(id);
   }
 
@@ -95,7 +86,7 @@ export class AttributesController {
   @ApiOperation({ summary: 'ویرایش ویژگی' })
   @ApiOkResponse({ type: AttributeApiResponseDto })
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseULIDPipe) id: string,
     @Body() dto: UpdateAttributeDto,
   ) {
     return this.attributesService.updateAttribute(id, dto);
@@ -108,7 +99,7 @@ export class AttributesController {
     message: 'Attribute deleted successfully',
   })
   @ApiOperation({ summary: 'حذف ویژگی' })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseULIDPipe) id: string) {
     return this.attributesService.removeAttribute(id);
   }
 }

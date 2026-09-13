@@ -130,7 +130,7 @@ export class ProductResponseDto {
     type: ProductPriceDto,
     nullable: true,
     example: {
-      attributeIds: ['550e8400-e29b-41d4-a716-446655440060'],
+      attributeIds: ['01JEX000000000000000000070'],
       price: 68000000,
       discountPercentage: 10,
       discountAmount: 2000000,
@@ -196,21 +196,21 @@ export class ProductResponseDto {
 
   @ApiProperty({
     type: [String],
-    example: ['550e8400-e29b-41d4-a716-446655440060'],
+    example: ['01JEX000000000000000000070'],
     description: 'شناسه ویژگی‌های محصول (Attribute IDs)',
   })
   attributeIds: string[];
 
   @ApiProperty({
     type: [String],
-    example: ['550e8400-e29b-41d4-a716-446655440002'],
+    example: ['01JEX000000000000000000040'],
     description: 'آرایه شناسه فروشنده‌های مرتبط با محصول',
   })
   sellerIds: string[];
 
   @ApiPropertyOptional({
     nullable: true,
-    example: '550e8400-e29b-41d4-a716-446655440002',
+    example: '01JEX000000000000000000040',
     description: 'فروشنده‌ای که محصول را اول ثبت کرده',
   })
   createdBySellerId: string | null;

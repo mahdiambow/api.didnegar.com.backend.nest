@@ -16,9 +16,9 @@ import {
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
 
-const sellerId = '550e8400-e29b-41d4-a716-446655440001';
-const productId = '550e8400-e29b-41d4-a716-446655440002';
-const productId2 = '550e8400-e29b-41d4-a716-446655440003';
+const sellerId = '01JEX000000000000000000030';
+const productId = '01JEX000000000000000000040';
+const productId2 = '01JEX000000000000000000050';
 const user = { sub: 'user', role: 'seller', roles: ['seller'], sellerId };
 const item = {
   productId,

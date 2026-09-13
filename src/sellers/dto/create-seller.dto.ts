@@ -1,15 +1,6 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsArray,
-  IsEmail,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  MaxLength,
-} from 'class-validator';
+import { IsArray, IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 import { BusinessType, SellerStatus } from '../entities/seller.enums.js';
 
 export class CreateSellerDto {
@@ -85,20 +76,20 @@ export class CreateSellerDto {
   status?: SellerStatus;
 
   @ApiPropertyOptional({
-    example: 'fa52fea1-7b87-46a7-b578-ce8d2f98c294',
+    example: '01JEX000000000000000000130',
     description: 'UUID قرارداد از قبل ثبت‌شده — به seller لینک می‌شود',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   contractId?: string;
 
   @ApiPropertyOptional({
     type: [String],
-    example: ['550e8400-e29b-41d4-a716-446655440001'],
+    example: ['01JEX000000000000000000030'],
     description: 'لیست UUID ادمین‌های فروشنده',
   })
   @IsOptional()
   @IsArray()
-  @IsUUID('4', { each: true })
+  @IsULID({ each: true })
   admins?: string[];
 }

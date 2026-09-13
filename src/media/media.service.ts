@@ -1,7 +1,7 @@
+import { newId } from '../common/id/index.js';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
-import { randomUUID } from 'node:crypto';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { AuthUser } from '../auth/types/auth-user.type.js';
 import { userHasRole } from '../auth/types/auth-user.type.js';
@@ -305,7 +305,7 @@ export class MediaService {
       );
     }
 
-    const id = randomUUID();
+    const id = newId();
     const relativePath = this.storage.buildRelativePath(
       group,
       sellerId,

@@ -1,10 +1,10 @@
-/** نمونه UUIDها برای Swagger — فقط مستندات */
+/** نمونه ULIDها برای Swagger — فقط مستندات */
 export const CATEGORY_EXAMPLES = {
-  parentCategoryId: '550e8400-e29b-41d4-a716-446655440009',
-  categoryId: '550e8400-e29b-41d4-a716-446655440010',
-  subCategoryId: '550e8400-e29b-41d4-a716-446655440011',
-  productId: '550e8400-e29b-41d4-a716-446655440000',
-  productCategoryId: '550e8400-e29b-41d4-a716-446655440020',
+  parentCategoryId: '01JEX000000000000000000090',
+  categoryId: '01JEX000000000000000000100',
+  subCategoryId: '01JEX000000000000000000080',
+  productId: '01JEX000000000000000000010',
+  productCategoryId: '01JEX000000000000000000110',
   createdAt: '2026-09-02T10:00:00.000Z',
 } as const;
 

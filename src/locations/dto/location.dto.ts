@@ -1,35 +1,26 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 
-export class ListLocationsQueryDto {
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  page?: number;
-
-  @ApiPropertyOptional({ example: 20 })
-  @IsOptional()
-  @Type(() => Number)
-  limit?: number;
-}
+export class ListLocationsQueryDto extends PaginationQueryDto {}
 
 export class ListStatesQueryDto extends ListLocationsQueryDto {
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiPropertyOptional({ example: '01JEX000000000000000000010' })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   countryId?: string;
 }
 
 export class ListCitiesQueryDto extends ListLocationsQueryDto {
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiPropertyOptional({ example: '01JEX000000000000000000010' })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   countryId?: string;
 
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440001' })
+  @ApiPropertyOptional({ example: '01JEX000000000000000000030' })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   stateId?: string;
 
   @ApiPropertyOptional({ example: 'تهران' })
@@ -68,8 +59,8 @@ export class UpdateCountryDto {
 }
 
 export class CreateStateDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
-  @IsUUID()
+  @ApiProperty({ example: '01JEX000000000000000000010' })
+  @IsULID()
   countryId: string;
 
   @ApiProperty({ example: 'TEH' })
@@ -86,9 +77,9 @@ export class CreateStateDto {
 }
 
 export class UpdateStateDto {
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiPropertyOptional({ example: '01JEX000000000000000000010' })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   countryId?: string;
 
   @ApiPropertyOptional({ example: 'TEH' })
@@ -105,14 +96,14 @@ export class UpdateStateDto {
 }
 
 export class CreateCityDto {
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiPropertyOptional({ example: '01JEX000000000000000000010' })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   countryId?: string;
 
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440001' })
+  @ApiPropertyOptional({ example: '01JEX000000000000000000030' })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   stateId?: string;
 
   @ApiProperty({ example: 'تهران' })
@@ -123,14 +114,14 @@ export class CreateCityDto {
 }
 
 export class UpdateCityDto {
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440000' })
+  @ApiPropertyOptional({ example: '01JEX000000000000000000010' })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   countryId?: string | null;
 
-  @ApiPropertyOptional({ example: '550e8400-e29b-41d4-a716-446655440001' })
+  @ApiPropertyOptional({ example: '01JEX000000000000000000030' })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   stateId?: string | null;
 
   @ApiPropertyOptional({ example: 'تهران' })

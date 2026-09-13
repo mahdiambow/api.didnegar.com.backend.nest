@@ -1,5 +1,5 @@
 export const ATTRIBUTE_EXAMPLES = {
-  attributeId: '550e8400-e29b-41d4-a716-446655440060',
+  attributeId: '01JEX000000000000000000070',
   createdAt: '2026-09-02T10:00:00.000Z',
 } as const;
 

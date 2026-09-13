@@ -1,12 +1,8 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsOptional,
-  IsString,
-  IsUUID,
-  MaxLength,
-} from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { Category } from '../entities/category.entity.js';
 import { ParentCategory } from '../entities/parent-category.entity.js';
 import { SubCategory } from '../entities/sub-category.entity.js';
@@ -31,7 +27,7 @@ export class CreateProductCategoryDto extends ProductCategoryLinkDto {
     example: CATEGORY_EXAMPLES.productId,
     description: 'شناسه محصول',
   })
-  @IsUUID()
+  @IsULID()
   productId: string;
 }
 
@@ -39,31 +35,21 @@ export class UpdateProductCategoryDto extends PartialType(
   ProductCategoryLinkDto,
 ) {}
 
-export class ListProductCategoriesQueryDto {
+export class ListProductCategoriesQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ example: CATEGORY_EXAMPLES.productId })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   productId?: string;
 
   @ApiPropertyOptional({ example: CATEGORY_EXAMPLES.categoryId })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   categoryId?: string;
 
   @ApiPropertyOptional({ example: CATEGORY_EXAMPLES.subCategoryId })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   subCategoryId?: string;
-
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  page?: number;
-
-  @ApiPropertyOptional({ example: 20 })
-  @IsOptional()
-  @Type(() => Number)
-  limit?: number;
 }
 
 export class ListParentCategoriesQueryDto {
@@ -101,7 +87,7 @@ export class ListCategoriesQueryDto {
     description: 'فیلتر بر اساس parent category',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   parentCategoryId?: string;
 
   @ApiPropertyOptional({
@@ -138,7 +124,7 @@ export class ListSubCategoriesQueryDto {
     description: 'فیلتر بر اساس category',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   categoryId?: string;
 
   @ApiPropertyOptional({
@@ -146,7 +132,7 @@ export class ListSubCategoriesQueryDto {
     description: 'فیلتر بر اساس parent category',
   })
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   parentCategoryId?: string;
 
   @ApiPropertyOptional({

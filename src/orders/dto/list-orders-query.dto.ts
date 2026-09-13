@@ -1,20 +1,11 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsUUID } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsIn, IsOptional } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 
 const ORDER_STATUSES = ['pending', 'paid', 'failed', 'cancelled'] as const;
 
-export class ListOrdersQueryDto {
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  page?: number;
-
-  @ApiPropertyOptional({ example: 20 })
-  @IsOptional()
-  @Type(() => Number)
-  limit?: number;
-
+export class ListOrdersQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: ORDER_STATUSES })
   @IsOptional()
   @IsIn(ORDER_STATUSES)
@@ -22,6 +13,6 @@ export class ListOrdersQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUUID()
+  @IsULID()
   userId?: string;
 }

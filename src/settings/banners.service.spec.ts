@@ -9,7 +9,7 @@ import { Category } from '../categories/entities/category.entity.js';
 import { CreateBannerDto, UpdateBannerDto } from './dto/banner.dto.js';
 import { BannerPage, BannerSection } from './types/banner.enums.js';
 
-const categoryId = '550e8400-e29b-41d4-a716-446655440000';
+const categoryId = '01JEX000000000000000000010';
 const items = (count: number) =>
   Array.from({ length: count }, (_, i) => ({
     mediaUrl: `https://example.com/${i}.jpg`,

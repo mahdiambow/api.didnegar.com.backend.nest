@@ -1,13 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
 import type { Seller } from '../../sellers/entities/seller.entity.js';
 import type { Product } from '../../products/entities/product.entity.js';
 import type { User } from '../../auth/entities/user.entity.js';
@@ -19,7 +10,7 @@ import type {
 
 @Entity('media_assets')
 export class MediaAsset {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
   @Index()
@@ -27,14 +18,14 @@ export class MediaAsset {
   group: MediaGroup;
 
   @Index()
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   sellerId: string;
 
   @ManyToOne('Seller', { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'sellerId' })
   seller: Seller;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'varchar', length: 26 })
   uploadedByUserId: string;
 
   @ManyToOne('User', { onDelete: 'RESTRICT' })
@@ -42,7 +33,7 @@ export class MediaAsset {
   uploadedBy: User;
 
   @Index()
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
   productId: string | null;
 
   @ManyToOne('Product', { onDelete: 'SET NULL', nullable: true })

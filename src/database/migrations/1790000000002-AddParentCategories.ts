@@ -6,7 +6,7 @@ export class AddParentCategories1790000000002 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS \`parent_categories\` (
-        \`id\` CHAR(36) NOT NULL,
+        \`id\` CHAR(26) NOT NULL,
         \`legacyId\` BIGINT NULL,
         \`legacyTable\` VARCHAR(255) NULL,
         \`name\` VARCHAR(255) NOT NULL,
@@ -27,7 +27,7 @@ export class AddParentCategories1790000000002 implements MigrationInterface {
 
     let parentId = parents[0]?.id;
     if (!parentId) {
-      parentId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+      parentId = '01JEX000000000000000000020';
       await queryRunner.query(
         `
         INSERT INTO \`parent_categories\`
@@ -44,7 +44,7 @@ export class AddParentCategories1790000000002 implements MigrationInterface {
     if (categoryCols.length === 0) {
       await queryRunner.query(`
         ALTER TABLE \`categories\`
-        ADD COLUMN \`parentCategoryId\` CHAR(36) NULL AFTER \`id\`
+        ADD COLUMN \`parentCategoryId\` CHAR(26) NULL AFTER \`id\`
       `);
     }
 
@@ -59,7 +59,7 @@ export class AddParentCategories1790000000002 implements MigrationInterface {
 
     await queryRunner.query(`
       ALTER TABLE \`categories\`
-      MODIFY \`parentCategoryId\` CHAR(36) NOT NULL
+      MODIFY \`parentCategoryId\` CHAR(26) NOT NULL
     `);
 
     const parentIndex: Array<{ Key_name: string }> = await queryRunner.query(`

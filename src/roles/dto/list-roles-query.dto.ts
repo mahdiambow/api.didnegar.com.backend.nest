@@ -1,15 +1,3 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional } from 'class-validator';
-import { Type } from 'class-transformer';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 
-export class ListRolesQueryDto {
-  @ApiProperty({ example: 1, required: false })
-  @IsOptional()
-  @Type(() => Number)
-  page?: number;
-
-  @ApiProperty({ example: 20, required: false })
-  @IsOptional()
-  @Type(() => Number)
-  limit?: number;
-}
+export class ListRolesQueryDto extends PaginationQueryDto {}

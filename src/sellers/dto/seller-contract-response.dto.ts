@@ -13,7 +13,7 @@ export class SellerContractResponseDto {
 
   @ApiProperty({
     type: [String],
-    example: ['5a4083a7-9b1a-4c07-8321-e9c5545993f8'],
+    example: ['01JEX000000000000000000120'],
   })
   userIds: string[];
 
