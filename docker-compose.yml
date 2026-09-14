@@ -10,15 +10,9 @@
 #   docker compose up -d migration-mysql phpmyadmin
 #   npm run start:dev
 #
-# Server DB setup (one command from host — creates DBs, loads dump, migrate, import, seed):
-#   LEGACY_DUMP_PATH=/path/to/didnegar_new.sql sudo bash scripts/db-setup-prod.sh
-#
-# If didnegar_new already has data:
-#   sudo bash scripts/db-setup-prod.sh
-#   # or:
+# DB setup (یک فایل Node — داخل کانتینر api):
+#   در .env بگذار: LEGACY_DUMP_PATH=/dumps/didnegar_new.sql
 #   sudo docker compose exec api npm run db:setup:prod
-#
-# Requires SOURCE_DATABASE in .env (legacy dump DB, e.g. didnegar_new).
 
 services:
   api:
@@ -40,6 +34,8 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-didnegar}
       DB_DATABASE: ${DB_DATABASE:-didnegar}
       SOURCE_DATABASE: ${SOURCE_DATABASE:-didnegar_new}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      LEGACY_DUMP_PATH: ${LEGACY_DUMP_PATH:-}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       SEED_ON_STARTUP: ${SEED_ON_STARTUP:-false}
       ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-12h}
