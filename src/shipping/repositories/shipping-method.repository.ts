@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ShippingMethod } from '../entities/shipping-method.entity.js';
 
 @Injectable()
@@ -16,6 +16,11 @@ export class ShippingMethodRepository {
 
   findByIdAny(id: string) {
     return this.repo.findOne({ where: { id } });
+  }
+
+  findByIds(ids: string[]) {
+    if (!ids.length) return Promise.resolve([] as ShippingMethod[]);
+    return this.repo.find({ where: { id: In(ids) } });
   }
 
   findBySlug(slug: string) {
@@ -58,6 +63,14 @@ export class ShippingMethodRepository {
       .createQueryBuilder()
       .from('orders', 'order')
       .where('order.shippingMethodId = :shippingMethodId', { shippingMethodId })
+      .getCount();
+  }
+
+  countProductsByShippingMethodId(shippingMethodId: string) {
+    return this.repo.manager
+      .createQueryBuilder()
+      .from('products', 'product')
+      .where('product.shippingMethodId = :shippingMethodId', { shippingMethodId })
       .getCount();
   }
 }

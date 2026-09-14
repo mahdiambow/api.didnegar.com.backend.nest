@@ -12,7 +12,6 @@ import type {
   ProductImageData,
   ProductPriceData,
   ProductSeoItem,
-  ProductShippingMethodData,
   ProductTableInfoItem,
 } from '../entities/product.entity.js';
 import {
@@ -33,9 +32,12 @@ import {
   ProductImageDto,
   ProductKeyValDto,
   ProductPriceDto,
-  ProductShippingMethodDto,
   ProductTableInfoDto,
 } from './product-fields.dto.js';
+import {
+  ShippingMethodResponseDto,
+  toShippingMethodResponse,
+} from '../../shipping/dto/shipping.dto.js';
 
 export { BrandResponseDto, toBrandResponse };
 export { AttributeResponseDto, toAttributeResponse };
@@ -44,6 +46,7 @@ export { SellerResponseDto, toSellerResponse };
 export type ProductPopulatedRelations = {
   attributes?: AttributeResponseDto[];
   createdBySeller?: SellerResponseDto | null;
+  shippingMethod?: ShippingMethodResponseDto | null;
 };
 
 export class ProductResponseDto {
@@ -145,18 +148,18 @@ export class ProductResponseDto {
   price: ProductPriceData[];
 
   @ApiPropertyOptional({
-    type: ProductShippingMethodDto,
+    example: '01JEX000000000000000000030',
     nullable: true,
-    example: {
-      slug: 'tipax-cod',
-      name: 'تیپاکس (پس کرایه)',
-      price: 75000,
-      isCod: true,
-      isActive: true,
-      sortOrder: 0,
-    },
+    description: 'شناسه روش ارسال',
   })
-  shippingMethod: ProductShippingMethodData | null;
+  shippingMethodId: string | null;
+
+  @ApiPropertyOptional({
+    type: ShippingMethodResponseDto,
+    nullable: true,
+    description: 'جزئیات روش ارسال (از روی shippingMethodId)',
+  })
+  shippingMethod: ShippingMethodResponseDto | null;
 
   @ApiProperty({
     type: [ProductTableInfoDto],
@@ -308,7 +311,13 @@ export function toProductResponse(
     seo: product.seo ?? [],
     image: normalizeImage(product.image),
     price: normalizePriceResponse(product.price),
-    shippingMethod: product.shippingMethod ?? null,
+    shippingMethodId: product.shippingMethodId ?? null,
+    shippingMethod: includeRelations
+      ? (populated.shippingMethod ??
+        (product.shippingMethod
+          ? toShippingMethodResponse(product.shippingMethod)
+          : null))
+      : null,
     tableInfo: product.tableInfo ?? [],
     ratingCount: product.ratingCount,
     averageRating: Number(product.averageRating),

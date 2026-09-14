@@ -22,6 +22,8 @@ import {
   type ProductResponseDto,
 } from './dto/product-response.dto.js';
 import { BrandRepository } from '../brands/repositories/brand.repository.js';
+import { ShippingMethodRepository } from '../shipping/repositories/shipping-method.repository.js';
+import { toShippingMethodResponse } from '../shipping/dto/shipping.dto.js';
 import { Product } from './entities/product.entity.js';
 import { ProductRepository } from './repositories/product.repository.js';
 import { ProductStockRepository } from './repositories/product-stock.repository.js';
@@ -36,6 +38,7 @@ export class ProductsService {
     private readonly sellerRepository: SellerRepository,
     @Inject(forwardRef(() => CategoriesService))
     private readonly categoriesService: CategoriesService,
+    private readonly shippingMethodRepository: ShippingMethodRepository,
   ) {}
 
   async findAll(query: {
@@ -94,6 +97,9 @@ export class ProductsService {
     await this.assertUniqueFields(productData.slug, productData.sku);
     if (productData.brandId) {
       await this.assertBrandExists(productData.brandId);
+    }
+    if (productData.shippingMethodId) {
+      await this.assertShippingMethodExists(productData.shippingMethodId);
     }
     await this.assertSellersExist(sellerIds);
 
@@ -194,6 +200,11 @@ export class ProductsService {
 
     if (productData.brandId) {
       await this.assertBrandExists(productData.brandId);
+    }
+    if (productData.shippingMethodId !== undefined) {
+      if (productData.shippingMethodId) {
+        await this.assertShippingMethodExists(productData.shippingMethodId);
+      }
     }
     await this.assertSellersExist(sellerIds);
 
@@ -322,10 +333,18 @@ export class ProductsService {
         ),
       ),
     ];
+    const shippingMethodIds = [
+      ...new Set(
+        products.flatMap((product) =>
+          product.shippingMethodId ? [product.shippingMethodId] : [],
+        ),
+      ),
+    ];
 
-    const [attributes, sellers] = await Promise.all([
+    const [attributes, sellers, shippingMethods] = await Promise.all([
       this.attributeRepository.findByIds(attributeIds),
       this.sellerRepository.findByIds(sellerIds),
+      this.shippingMethodRepository.findByIds(shippingMethodIds),
     ]);
 
     const attributeMap = new Map(
@@ -337,6 +356,12 @@ export class ProductsService {
     const sellerMap = new Map(
       sellers.map((seller) => [seller.id, toSellerResponse(seller)]),
     );
+    const shippingMethodMap = new Map(
+      shippingMethods.map((method) => [
+        method.id,
+        toShippingMethodResponse(method),
+      ]),
+    );
 
     return products.map((product) =>
       toProductResponse(product, true, {
@@ -345,6 +370,9 @@ export class ProductsService {
           .filter((item): item is NonNullable<typeof item> => Boolean(item)),
         createdBySeller: product.createdBySellerId
           ? (sellerMap.get(product.createdBySellerId) ?? null)
+          : null,
+        shippingMethod: product.shippingMethodId
+          ? (shippingMethodMap.get(product.shippingMethodId) ?? null)
           : null,
       }),
     );
@@ -409,6 +437,18 @@ export class ProductsService {
         'BRAND_INACTIVE',
         'برند غیرفعال است',
         HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  private async assertShippingMethodExists(shippingMethodId: string) {
+    const method =
+      await this.shippingMethodRepository.findByIdAny(shippingMethodId);
+    if (!method) {
+      throw new ApiException(
+        'SHIPPING_METHOD_NOT_FOUND',
+        'روش ارسال یافت نشد',
+        HttpStatus.NOT_FOUND,
       );
     }
   }

@@ -160,44 +160,6 @@ export class ProductTableInfoDto {
   items: ProductKeyValDto[];
 }
 
-export class ProductShippingMethodDto {
-  @ApiProperty({ example: 'tipax-cod' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  @Matches(/^[a-z0-9-]+$/, {
-    message: 'slug فقط می‌تواند شامل حروف کوچک، عدد و - باشد',
-  })
-  slug: string;
-
-  @ApiProperty({ example: 'تیپاکس (پس کرایه)' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
-  name: string;
-
-  @ApiProperty({ example: 75000 })
-  @IsNumber()
-  @Min(0)
-  price: number;
-
-  @ApiPropertyOptional({ default: true })
-  @IsOptional()
-  @IsBoolean()
-  isCod?: boolean;
-
-  @ApiPropertyOptional({ default: true })
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
-
-  @ApiPropertyOptional({ default: 0 })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  sortOrder?: number;
-}
-
 /** فیلدهای قابل نوشتن جدول `products` (مطابق schema) */
 export class ProductWritableFieldsDto {
   @ApiProperty({ example: 'گوشی Galaxy S24' })
@@ -329,20 +291,13 @@ export class ProductWritableFieldsDto {
   price?: ProductPriceDto[] | null;
 
   @ApiPropertyOptional({
-    type: ProductShippingMethodDto,
-    example: {
-      slug: 'tipax-cod',
-      name: 'تیپاکس (پس کرایه)',
-      price: 75000,
-      isCod: true,
-      isActive: true,
-      sortOrder: 0,
-    },
+    example: '01M2DDFYSFH1D4XA602NCZ44PF',
+    description: 'شناسه ULID روش ارسال — GET /shipping',
+    nullable: true,
   })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => ProductShippingMethodDto)
-  shippingMethod?: ProductShippingMethodDto | null;
+  @IsULID()
+  shippingMethodId?: string | null;
 
   @ApiPropertyOptional({
     type: [ProductTableInfoDto],
@@ -435,26 +390,12 @@ export type ProductWritableData = Omit<
   name: string;
   slug: string;
   brandId?: string | null;
+  shippingMethodId?: string | null;
   attributeIds?: string[];
   sellerIds?: string[];
   approvalStatus?: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string | null;
 };
-
-function normalizeShippingMethod(
-  method: ProductShippingMethodDto | null | undefined,
-): Record<string, unknown> | null {
-  if (method === undefined) return undefined as unknown as null;
-  if (method === null) return null;
-  return {
-    slug: method.slug,
-    name: method.name,
-    price: method.price,
-    isCod: method.isCod ?? true,
-    isActive: method.isActive ?? true,
-    sortOrder: method.sortOrder ?? 0,
-  };
-}
 
 function normalizePriceItem(
   price: ProductPriceDto,
@@ -494,7 +435,6 @@ export function toProductEntityData(
   const sellerIds = [...new Set(dto.sellerIds ?? [])];
   const approvalStatus = dto.approvalStatus ?? 'pending';
   const price = normalizePrices(dto.price);
-  const shippingMethod = normalizeShippingMethod(dto.shippingMethod);
 
   return {
     legacyId,
@@ -521,7 +461,7 @@ export function toProductEntityData(
       gallery: dto.image?.gallery ?? [],
     },
     price: price === undefined ? [] : price,
-    shippingMethod: shippingMethod === undefined ? null : shippingMethod,
+    shippingMethodId: dto.shippingMethodId ?? null,
     tableInfo: dto.tableInfo ?? [],
     taxStatus: dto.taxStatus ?? null,
     taxClass: dto.taxClass ?? null,

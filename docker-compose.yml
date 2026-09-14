@@ -7,6 +7,14 @@
 # Nest on the host (recommended for dev):
 #   docker compose up -d migration-mysql phpmyadmin
 #   npm run start:dev
+#
+# Server DB setup (inside api container — image already has dist/, no nest build):
+#   sudo docker compose exec api npm run migration:run:prod
+#   sudo docker compose exec api npm run db:import:legacy:prod -- all
+#   sudo docker compose exec api npm run db:seed:super-admin:prod
+# Or one shot:
+#   sudo docker compose exec api npm run db:setup:prod
+# Requires SOURCE_DATABASE in .env (legacy dump DB, e.g. didnegar_new).
 
 services:
   api:

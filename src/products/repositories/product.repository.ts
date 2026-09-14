@@ -26,6 +26,7 @@ export class ProductRepository {
       relations: includeRelations
         ? {
             brand: true,
+            shippingMethod: true,
             productStock: true,
             productCategories: {
               category: { parentCategory: true },
@@ -108,6 +109,7 @@ export class ProductRepository {
 
     if (includeRelations) {
       qb.leftJoinAndSelect('product.brand', 'brand')
+        .leftJoinAndSelect('product.shippingMethod', 'shippingMethod')
         .leftJoinAndSelect('product.productStock', 'productStock')
         .leftJoinAndSelect('product.productCategories', 'productCategories')
         .leftJoinAndSelect('productCategories.category', 'category')
