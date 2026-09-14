@@ -20,6 +20,7 @@ import { UserAddress } from './entities/user-address.entity.js';
 import { RefreshToken } from './entities/refresh-token.entity.js';
 import { ConfigService } from '../config/config.service.js';
 import { RolesModule } from '../roles/roles.module.js';
+import { ShoppingCartModule } from '../shopping-cart/shopping-cart.module.js';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { RolesModule } from '../roles/roles.module.js';
       RefreshToken,
     ]),
     forwardRef(() => RolesModule),
+    forwardRef(() => ShoppingCartModule),
     ThrottlerModule.forRoot({
       throttlers: [
         authThrottler.otpSend,
