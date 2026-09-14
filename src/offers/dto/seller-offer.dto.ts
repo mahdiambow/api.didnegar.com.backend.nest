@@ -19,9 +19,13 @@ export class SellerOfferProductPatchDto extends PartialType(
 
 /** یک آیتم پیشنهاد برای یک محصول */
 export class SellerOfferItemDto {
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description:
+      'شناسه محصول موجود. اگر نباشد یا در کاتالوگ پیدا نشود، از روی فیلد product (و sku/price/stock آفر) محصول جدید ساخته می‌شود.',
+  })
+  @IsOptional()
   @IsULID()
-  productId: string;
+  productId?: string;
 
   @ApiProperty({ example: 'SAM-S24U-256-BLU', description: 'باید یکتا باشد' })
   @IsString()
@@ -70,7 +74,7 @@ export class SellerOfferItemDto {
   @ApiPropertyOptional({
     type: SellerOfferProductPatchDto,
     description:
-      'در صورت ارسال، فیلدهای کاتالوگ همان productId آپدیت می‌شوند (محصول → pending)',
+      'فیلدهای کاتالوگ: اگر محصول موجود باشد آپدیت می‌شود؛ اگر نباشد برای ساخت محصول جدید به‌کار می‌رود (حداقل name/slug توصیه می‌شود)',
   })
   @IsOptional()
   @ValidateNested()
@@ -107,10 +111,6 @@ export class ListSellerOffersDto extends PaginationQueryDto {
   )
   @IsBoolean()
   isActive?: boolean;
-  @ApiPropertyOptional({ enum: ['pending', 'approved', 'rejected'] })
-  @IsOptional()
-  @IsIn(['pending', 'approved', 'rejected'])
-  approvalStatus?: 'pending' | 'approved' | 'rejected';
 
   @ApiPropertyOptional({
     example: CATEGORY_EXAMPLES.categoryId,
@@ -134,6 +134,8 @@ export class SellerOfferResponseDto extends OmitType(SellerOfferItemDto, [
 ] as const) {
   @ApiProperty({ format: 'ulid' })
   offerId: string;
+  @ApiProperty({ format: 'ulid' })
+  productId: string;
   @ApiProperty()
   sellerId: string;
   @ApiProperty({ enum: ['pending', 'approved', 'rejected'] })

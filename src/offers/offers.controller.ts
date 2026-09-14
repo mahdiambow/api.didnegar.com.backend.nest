@@ -46,7 +46,8 @@ export class OffersController {
 
   @Get()
   @ApiOperation({
-    summary: 'لیست پیشنهادهای فروش با فیلتر محصول و فروشنده',
+    summary: 'لیست پیشنهادهای فروش تأییدشده',
+    description: 'فقط آفرهای با approvalStatus=approved برمی‌گردند.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_FOUND',
@@ -102,7 +103,7 @@ export class OffersController {
   @ApiOperation({
     summary: 'ایجاد یک یا چند پیشنهاد فروش',
     description:
-      'sellerId از JWT خوانده می‌شود. با آرایه items چند محصول را یکجا قیمت‌گذاری کنید. فیلد اختیاری product روی هر آیتم فیلدهای کاتالوگ همان محصول را آپدیت می‌کند.',
+      'sellerId از JWT خوانده می‌شود. اگر productId نباشد یا محصول در کاتالوگ نباشد، از روی فیلد product (و sku/قیمت/موجودی آفر) محصول جدید ساخته می‌شود.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_CREATED',
