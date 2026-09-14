@@ -21,6 +21,8 @@ import {
   SellerOfferItemDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
+import type { ProductResponseDto } from '../products/dto/product-response.dto.js';
+import type { CreateProductDto } from '../products/dto/create-product.dto.js';
 
 export function assertOfferAccess(user: AuthUser, sellerId: string) {
   if (
@@ -52,7 +54,10 @@ export function isImmediateOfferUpdate(dto: UpdateSellerOfferDto): boolean {
   );
 }
 
-export const toOfferResponse = (offer: SellerOffer) => ({
+export const toOfferResponse = (
+  offer: SellerOffer,
+  product?: ProductResponseDto,
+) => ({
   offerId: offer.id,
   sellerId: offer.sellerId,
   productId: offer.productId,
@@ -66,6 +71,7 @@ export const toOfferResponse = (offer: SellerOffer) => ({
   isActive: offer.isActive,
   approvalStatus: offer.approvalStatus ?? 'approved',
   rejectionReason: offer.rejectionReason ?? null,
+  ...(product ? { product } : {}),
   createdAt: offer.createdAt,
   updatedAt: offer.updatedAt,
 });
@@ -84,22 +90,44 @@ export class OffersService {
 
   async findAll(query: ListSellerOffersDto) {
     const { page, limit, offset } = getPaginationParams(query);
-    const qb = this.offers.createQueryBuilder('offer');
-    for (const field of [
-      'sellerId',
-      'productId',
-      'isActive',
-      'approvalStatus',
-    ] as const)
+    const qb = this.offers
+      .createQueryBuilder('offer')
+      .andWhere('offer.approvalStatus = :approved', { approved: 'approved' });
+
+    for (const field of ['sellerId', 'productId', 'isActive'] as const)
       if (query[field] !== undefined)
         qb.andWhere(`offer.${field} = :${field}`, { [field]: query[field] });
+
+    if (query.categoryId || query.subCategoryId) {
+      qb.innerJoin('offer.product', 'filterProduct').innerJoin(
+        'filterProduct.productCategories',
+        'pcFilter',
+      );
+      if (query.categoryId) {
+        qb.andWhere('pcFilter.categoryId = :categoryId', {
+          categoryId: query.categoryId,
+        });
+      }
+      if (query.subCategoryId) {
+        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
+          subCategoryId: query.subCategoryId,
+        });
+      }
+    }
+
     const [items, total] = await qb
+      .distinct(true)
       .orderBy('offer.price', 'ASC')
       .addOrderBy('offer.id', 'ASC')
       .skip(offset)
       .take(limit)
       .getManyAndCount();
-    return paginatedList(items.map(toOfferResponse), page, limit, total);
+    return paginatedList(
+      items.map((offer) => toOfferResponse(offer)),
+      page,
+      limit,
+      total,
+    );
   }
 
   async getEntity(id: string) {
@@ -117,7 +145,9 @@ export class OffersService {
   }
 
   async findOne(id: string) {
-    return toOfferResponse(await this.getEntity(id));
+    const offer = await this.getEntity(id);
+    const product = await this.productsService.findOne(offer.productId);
+    return toOfferResponse(offer, product);
   }
 
   async create(user: AuthUser, dto: CreateSellerOffersDto) {
@@ -157,18 +187,18 @@ export class OffersService {
       }
     }
 
-    const productIds = [...new Set(dto.items.map((item) => item.productId))];
-    const products = await this.products.findBy({ id: In(productIds) });
+    const productIds = [
+      ...new Set(
+        dto.items
+          .map((item) => item.productId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const products =
+      productIds.length > 0
+        ? await this.products.findBy({ id: In(productIds) })
+        : [];
     const productMap = new Map(products.map((product) => [product.id, product]));
-    for (const productId of productIds) {
-      if (!productMap.has(productId)) {
-        throw new ApiException(
-          'PRODUCT_NOT_FOUND',
-          `محصول یافت نشد: ${productId}`,
-          HttpStatus.NOT_FOUND,
-        );
-      }
-    }
 
     const created = [];
     for (const item of dto.items) {
@@ -177,25 +207,94 @@ export class OffersService {
     return created;
   }
 
+  private slugifySku(sku: string): string {
+    const slug = sku
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 200);
+    return slug || `offer-${Date.now()}`;
+  }
+
+  private async ensureProductForOffer(
+    sellerId: string,
+    item: SellerOfferItemDto,
+    productMap: Map<string, Product>,
+  ): Promise<Product> {
+    if (item.productId) {
+      const existing =
+        productMap.get(item.productId) ??
+        (await this.products.findOneBy({ id: item.productId }));
+      if (existing) {
+        productMap.set(existing.id, existing);
+        if (item.product && Object.keys(item.product).length > 0) {
+          await this.productsService.update(existing.id, item.product);
+          const refreshed = await this.products.findOneBy({ id: existing.id });
+          if (refreshed) {
+            productMap.set(refreshed.id, refreshed);
+            return refreshed;
+          }
+        }
+        return existing;
+      }
+    }
+
+    const patch = item.product ?? {};
+    const name = patch.name?.trim() || item.sku;
+    const slug = patch.slug?.trim() || this.slugifySku(item.sku);
+    const sku = patch.sku?.trim() || item.sku;
+
+    const created = await this.productsService.create({
+      ...patch,
+      name,
+      slug,
+      sku,
+      stock: patch.stock ?? item.stock,
+      taxStatus: patch.taxStatus ?? item.taxStatus ?? undefined,
+      taxClass: patch.taxClass ?? item.taxClass ?? undefined,
+      price:
+        patch.price ??
+        ([
+          {
+            price: item.price,
+            finalPrice: item.price,
+          },
+        ] as CreateProductDto['price']),
+      sellerIds: [...new Set([...(patch.sellerIds ?? []), sellerId])],
+      approvalStatus: 'pending',
+      status: patch.status ?? 'draft',
+    });
+
+    const entity = await this.products.findOneBy({ id: created.id });
+    if (!entity) {
+      throw new ApiException(
+        'PRODUCT_NOT_FOUND',
+        'محصول ساخته‌شده یافت نشد',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    productMap.set(entity.id, entity);
+    return entity;
+  }
+
   private async createOne(
     sellerId: string,
     item: SellerOfferItemDto,
     productMap: Map<string, Product>,
   ) {
-    if (item.product && Object.keys(item.product).length > 0) {
-      await this.productsService.update(item.productId, item.product);
-      const refreshed = await this.products.findOneBy({ id: item.productId });
-      if (refreshed) productMap.set(item.productId, refreshed);
-    }
-
-    const product = productMap.get(item.productId)!;
+    const product = await this.ensureProductForOffer(
+      sellerId,
+      item,
+      productMap,
+    );
     const approvalStatus =
       product.approvalStatus === 'approved' ? 'approved' : 'pending';
 
     return this.save(
       this.offers.create({
         sellerId,
-        productId: item.productId,
+        productId: product.id,
         sku: item.sku,
         price: item.price,
         stock: item.stock,
@@ -236,7 +335,7 @@ export class OffersService {
     offer.approvalStatus = 'approved';
     offer.rejectionReason = null;
 
-    return this.save(offer);
+    return this.save(offer, true);
   }
 
   async review(id: string, dto: ReviewSellerOfferDto) {
@@ -278,7 +377,7 @@ export class OffersService {
       offer.rejectionReason = null;
     }
 
-    return this.save(offer);
+    return this.save(offer, true);
   }
 
   async remove(user: AuthUser, id: string) {
@@ -298,9 +397,12 @@ export class OffersService {
     return {};
   }
 
-  private async save(offer: SellerOffer) {
+  private async save(offer: SellerOffer, includeProduct = false) {
     try {
-      return toOfferResponse(await this.offers.save(offer));
+      const saved = await this.offers.save(offer);
+      if (!includeProduct) return toOfferResponse(saved);
+      const product = await this.productsService.findOne(saved.productId);
+      return toOfferResponse(saved, product);
     } catch (error) {
       const err = error as { code?: string | number; errno?: number };
       if (

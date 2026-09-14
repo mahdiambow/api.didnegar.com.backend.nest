@@ -54,6 +54,90 @@ export class CategoriesService {
     return items.map(toParentCategoryResponse);
   }
 
+  /** درخت کامل منو: parent → category → subCategory (فقط isActive) */
+  async getMenu() {
+    const [parents, categories, subCategories] = await Promise.all([
+      this.parentCategoryRepository.findFiltered({ isActive: true }),
+      this.categoryRepository.findFiltered({ isActive: true }),
+      this.subCategoryRepository.findFiltered({ isActive: true }),
+    ]);
+
+    const subsByCategoryId = new Map<
+      string,
+      Array<{
+        id: string;
+        name: string;
+        nameEn: string | null;
+        slug: string;
+        icon: string | null;
+        image: string | null;
+        sort: number;
+      }>
+    >();
+
+    for (const sub of subCategories) {
+      const list = subsByCategoryId.get(sub.categoryId) ?? [];
+      list.push({
+        id: sub.id,
+        name: sub.name,
+        nameEn: sub.nameEn ?? null,
+        slug: sub.slug,
+        icon: sub.icon ?? null,
+        image: sub.image ?? null,
+        sort: sub.sort ?? 0,
+      });
+      subsByCategoryId.set(sub.categoryId, list);
+    }
+
+    const catsByParentId = new Map<
+      string,
+      Array<{
+        id: string;
+        name: string;
+        nameEn: string | null;
+        slug: string;
+        icon: string | null;
+        image: string | null;
+        sort: number;
+        children: Array<{
+          id: string;
+          name: string;
+          nameEn: string | null;
+          slug: string;
+          icon: string | null;
+          image: string | null;
+          sort: number;
+        }>;
+      }>
+    >();
+
+    for (const category of categories) {
+      const list = catsByParentId.get(category.parentCategoryId) ?? [];
+      list.push({
+        id: category.id,
+        name: category.name,
+        nameEn: category.nameEn ?? null,
+        slug: category.slug,
+        icon: category.icon ?? null,
+        image: category.image ?? null,
+        sort: category.sort ?? 0,
+        children: subsByCategoryId.get(category.id) ?? [],
+      });
+      catsByParentId.set(category.parentCategoryId, list);
+    }
+
+    return parents.map((parent) => ({
+      id: parent.id,
+      name: parent.name,
+      nameEn: parent.nameEn ?? null,
+      slug: parent.slug,
+      icon: parent.icon ?? null,
+      image: parent.image ?? null,
+      sort: parent.sort ?? 0,
+      children: catsByParentId.get(parent.id) ?? [],
+    }));
+  }
+
   async findParentCategory(id: string) {
     const parent = await this.parentCategoryRepository.findById(id);
     if (!parent) {

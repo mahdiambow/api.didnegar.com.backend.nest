@@ -9,6 +9,8 @@ import { Transform, Type } from 'class-transformer';
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { CreateProductDto } from '../../products/dto/create-product.dto.js';
+import { ProductResponseDto } from '../../products/dto/product-response.dto.js';
+import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
 
 /** آپدیت فیلدهای کاتالوگ محصول هنگام ثبت/ویرایش آفر (بدون approval) */
 export class SellerOfferProductPatchDto extends PartialType(
@@ -17,9 +19,13 @@ export class SellerOfferProductPatchDto extends PartialType(
 
 /** یک آیتم پیشنهاد برای یک محصول */
 export class SellerOfferItemDto {
-  @ApiProperty()
+  @ApiPropertyOptional({
+    description:
+      'شناسه محصول موجود. اگر نباشد یا در کاتالوگ پیدا نشود، از روی فیلد product (و sku/price/stock آفر) محصول جدید ساخته می‌شود.',
+  })
+  @IsOptional()
   @IsULID()
-  productId: string;
+  productId?: string;
 
   @ApiProperty({ example: 'SAM-S24U-256-BLU', description: 'باید یکتا باشد' })
   @IsString()
@@ -68,7 +74,7 @@ export class SellerOfferItemDto {
   @ApiPropertyOptional({
     type: SellerOfferProductPatchDto,
     description:
-      'در صورت ارسال، فیلدهای کاتالوگ همان productId آپدیت می‌شوند (محصول → pending)',
+      'فیلدهای کاتالوگ: اگر محصول موجود باشد آپدیت می‌شود؛ اگر نباشد برای ساخت محصول جدید به‌کار می‌رود (حداقل name/slug توصیه می‌شود)',
   })
   @IsOptional()
   @ValidateNested()
@@ -105,21 +111,42 @@ export class ListSellerOffersDto extends PaginationQueryDto {
   )
   @IsBoolean()
   isActive?: boolean;
-  @ApiPropertyOptional({ enum: ['pending', 'approved', 'rejected'] })
+
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.categoryId,
+    description: 'فیلتر بر اساس دسته اصلی محصول لینک‌شده',
+  })
   @IsOptional()
-  @IsIn(['pending', 'approved', 'rejected'])
-  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  @IsULID()
+  categoryId?: string;
+
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.subCategoryId,
+    description: 'فیلتر بر اساس زیردسته محصول لینک‌شده',
+  })
+  @IsOptional()
+  @IsULID()
+  subCategoryId?: string;
 }
 
-export class SellerOfferResponseDto extends SellerOfferItemDto {
+export class SellerOfferResponseDto extends OmitType(SellerOfferItemDto, [
+  'product',
+] as const) {
   @ApiProperty({ format: 'ulid' })
   offerId: string;
+  @ApiProperty({ format: 'ulid' })
+  productId: string;
   @ApiProperty()
   sellerId: string;
   @ApiProperty({ enum: ['pending', 'approved', 'rejected'] })
   approvalStatus: 'pending' | 'approved' | 'rejected';
   @ApiPropertyOptional({ nullable: true })
   rejectionReason: string | null;
+  @ApiPropertyOptional({
+    type: ProductResponseDto,
+    description: 'آبجکت کامل محصول لینک‌شده — برای فرم ویرایش / تأیید',
+  })
+  product?: ProductResponseDto;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
 }

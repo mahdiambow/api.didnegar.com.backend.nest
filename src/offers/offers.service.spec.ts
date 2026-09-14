@@ -66,6 +66,19 @@ function setup(patch = {}) {
   };
   const productsService = {
     update: vi.fn(async () => ({ id: productId })),
+    create: vi.fn(async (dto: { name: string; sku: string }) => ({
+      id: '01JEX000000000000000000099',
+      name: dto.name,
+      sku: dto.sku,
+      status: 'draft',
+      approvalStatus: 'pending',
+    })),
+    findOne: vi.fn(async () => ({
+      id: productId,
+      name: 'Galaxy',
+      status: 'publish',
+      approvalStatus: 'approved',
+    })),
   };
   const service = new OffersService(
     repo as unknown as Repository<SellerOffer>,
@@ -143,6 +156,72 @@ describe('seller offers', () => {
       subtitle: 'آپدیت از آفر',
       description: 'توضیح کامل',
     });
+  });
+
+  it('creates catalog product when productId is missing', async () => {
+    const { service, productsService, products, repo } = setup();
+    products.findOneBy.mockResolvedValueOnce({
+      id: '01JEX000000000000000000099',
+      status: 'draft',
+      approvalStatus: 'pending',
+    });
+
+    const result = await service.create(user, {
+      items: [
+        {
+          sku: 'NEW-SKU-1',
+          price: 1000,
+          stock: 2,
+          stockStatus: 'instock',
+          product: { name: 'محصول جدید', slug: 'new-product' },
+        },
+      ],
+    });
+
+    expect(productsService.create).toHaveBeenCalled();
+    expect(repo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        productId: '01JEX000000000000000000099',
+        sku: 'NEW-SKU-1',
+        approvalStatus: 'pending',
+      }),
+    );
+    expect(result).toHaveLength(1);
+  });
+
+  it('creates catalog product when productId is not found', async () => {
+    const { service, productsService, products } = setup();
+    products.findBy.mockResolvedValueOnce([]);
+    products.findOneBy
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: '01JEX000000000000000000099',
+        status: 'draft',
+        approvalStatus: 'pending',
+      });
+
+    await service.create(user, {
+      items: [
+        {
+          productId: '01JEX000000000000000000077',
+          sku: 'MISSING-PROD',
+          price: 5000,
+          stock: 1,
+          stockStatus: 'instock',
+          product: { name: 'از آفر', slug: 'from-offer' },
+        },
+      ],
+    });
+
+    expect(productsService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'از آفر',
+        slug: 'from-offer',
+        sku: 'MISSING-PROD',
+        sellerIds: [sellerId],
+        approvalStatus: 'pending',
+      }),
+    );
   });
 
   it('returns purchasable snapshot', async () => {

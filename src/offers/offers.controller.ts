@@ -46,7 +46,8 @@ export class OffersController {
 
   @Get()
   @ApiOperation({
-    summary: 'لیست پیشنهادهای فروش با فیلتر محصول و فروشنده',
+    summary: 'لیست پیشنهادهای فروش تأییدشده',
+    description: 'فقط آفرهای با approvalStatus=approved برمی‌گردند.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_FOUND',
@@ -55,6 +56,28 @@ export class OffersController {
   @ApiOkResponse({ type: OffersApiResponseDto })
   findAll(@Query() query: ListSellerOffersDto) {
     return this.offersService.findAll(query);
+  }
+
+  @Get(':id/approval')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @RequireRole(
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+    DEFAULT_ROLE_SLUGS.ADMIN,
+    DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+  )
+  @ApiOperation({
+    summary: 'دریافت پیشنهاد فروش برای فرم تأیید / ویرایش',
+    description:
+      'آفر به‌همراه آبجکت کامل محصول لینک‌شده برمی‌گردد تا در صفحه تأیید قابل ویرایش باشد.',
+  })
+  @ApiResponseMeta({
+    code: 'OFFER_FOUND',
+    message: 'Seller offer found successfully',
+  })
+  @ApiOkResponse({ type: OfferApiResponseDto })
+  findOneForApproval(@Param('id', ParseULIDPipe) id: string) {
+    return this.offersService.findOne(id);
   }
 
   @Get(':id')
@@ -80,7 +103,7 @@ export class OffersController {
   @ApiOperation({
     summary: 'ایجاد یک یا چند پیشنهاد فروش',
     description:
-      'sellerId از JWT خوانده می‌شود. با آرایه items چند محصول را یکجا قیمت‌گذاری کنید. فیلد اختیاری product روی هر آیتم فیلدهای کاتالوگ همان محصول را آپدیت می‌کند.',
+      'sellerId از JWT خوانده می‌شود. اگر productId نباشد یا محصول در کاتالوگ نباشد، از روی فیلد product (و sku/قیمت/موجودی آفر) محصول جدید ساخته می‌شود.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_CREATED',

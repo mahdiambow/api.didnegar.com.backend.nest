@@ -110,7 +110,7 @@ export class ListBannersQueryDto {
     default: DEFAULT_LIMIT,
     example: DEFAULT_LIMIT,
     maximum: MAX_LIMIT,
-    description: 'تعداد در هر صفحه (پیش‌فرض ۲۰، حداکثر ۱۰۰)',
+    description: 'تعداد در هر صفحه (پیش‌فرض و حداکثر ۳۰۰)',
   })
   @IsOptional()
   @Transform(({ value }) => {
