@@ -148,6 +148,22 @@ export class ProductsService {
 
     const { categoryIds, sellerIds, stock, ...productData } = dto;
 
+    if (productData.price !== undefined) {
+      productData.price =
+        productData.price === null
+          ? []
+          : productData.price.map((item) => ({
+              attributeIds: [...new Set(item.attributeIds ?? [])],
+              price: item.price ?? null,
+              discountPercentage: item.discountPercentage ?? null,
+              discountAmount: item.discountAmount ?? null,
+              expireDate: item.expireDate ?? null,
+              maxQuantity: item.maxQuantity ?? null,
+              minQuantity: item.minQuantity ?? null,
+              finalPrice: item.finalPrice ?? null,
+            }));
+    }
+
     if (productData.slug && productData.slug !== product.slug) {
       const slugTaken = await this.productRepository.findBySlug(
         productData.slug,

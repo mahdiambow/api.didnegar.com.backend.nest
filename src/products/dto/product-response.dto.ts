@@ -127,20 +127,22 @@ export class ProductResponseDto {
   image: ProductImageData;
 
   @ApiPropertyOptional({
-    type: ProductPriceDto,
+    type: [ProductPriceDto],
     nullable: true,
-    example: {
-      attributeIds: ['01JEX000000000000000000070'],
-      price: 68000000,
-      discountPercentage: 10,
-      discountAmount: 2000000,
-      expireDate: '2026-12-31T23:59:59.000Z',
-      maxQuantity: 5,
-      minQuantity: 1,
-      finalPrice: 66000000,
-    },
+    example: [
+      {
+        attributeIds: ['01JEX000000000000000000070'],
+        price: 68000000,
+        discountPercentage: 10,
+        discountAmount: 2000000,
+        expireDate: '2026-12-31T23:59:59.000Z',
+        maxQuantity: 5,
+        minQuantity: 1,
+        finalPrice: 66000000,
+      },
+    ],
   })
-  price: ProductPriceData | null;
+  price: ProductPriceData[];
 
   @ApiPropertyOptional({
     type: ProductShippingMethodDto,
@@ -271,6 +273,15 @@ function normalizeImage(image: Product['image']): ProductImageData {
   };
 }
 
+/** دادهٔ قدیمی ممکن است آبجکت تکی باشد — همیشه آرایه برمی‌گردانیم */
+function normalizePriceResponse(
+  price: Product['price'] | ProductPriceData | null | undefined,
+): ProductPriceData[] {
+  if (price == null) return [];
+  if (Array.isArray(price)) return price;
+  return [price];
+}
+
 export function toProductResponse(
   product: Product,
   includeRelations = false,
@@ -296,7 +307,7 @@ export function toProductResponse(
     stock: product.productStock?.stock ?? 0,
     seo: product.seo ?? [],
     image: normalizeImage(product.image),
-    price: product.price ?? null,
+    price: normalizePriceResponse(product.price),
     shippingMethod: product.shippingMethod ?? null,
     tableInfo: product.tableInfo ?? [],
     ratingCount: product.ratingCount,

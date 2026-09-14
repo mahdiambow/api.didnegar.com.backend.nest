@@ -108,8 +108,8 @@ export class Product {
   })
   image: ProductImageData;
 
-  @Column({ type: 'json', nullable: true })
-  price: ProductPriceData | null;
+  @Column({ type: 'json', default: [] })
+  price: ProductPriceData[];
 
   @Column({ type: 'json', nullable: true })
   shippingMethod: ProductShippingMethodData | null;

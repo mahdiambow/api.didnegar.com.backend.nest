@@ -2,6 +2,7 @@ import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+import type { ProductPriceData } from '../entities/product.entity.js';
 
 export function isProductAttributesSchema(value: unknown): boolean {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
@@ -305,11 +306,27 @@ export class ProductWritableFieldsDto {
   @Type(() => ProductImageDto)
   image?: ProductImageDto;
 
-  @ApiPropertyOptional({ type: ProductPriceDto })
+  @ApiPropertyOptional({
+    type: [ProductPriceDto],
+    example: [
+      {
+        attributeIds: ['01JEX000000000000000000070'],
+        price: 68000000,
+        discountPercentage: 10,
+        discountAmount: 2000000,
+        expireDate: '2026-12-31T23:59:59.000Z',
+        maxQuantity: 5,
+        minQuantity: 1,
+        finalPrice: 66000000,
+      },
+    ],
+  })
   @IsOptional()
-  @ValidateNested()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @ValidateNested({ each: true })
   @Type(() => ProductPriceDto)
-  price?: ProductPriceDto | null;
+  price?: ProductPriceDto[] | null;
 
   @ApiPropertyOptional({
     type: ProductShippingMethodDto,
@@ -439,11 +456,9 @@ function normalizeShippingMethod(
   };
 }
 
-function normalizePrice(
-  price: ProductPriceDto | null | undefined,
-): Record<string, unknown> | null {
-  if (price === undefined) return undefined as unknown as null;
-  if (price === null) return null;
+function normalizePriceItem(
+  price: ProductPriceDto,
+): ProductPriceData {
   return {
     attributeIds: [...new Set(price.attributeIds ?? [])],
     price: price.price ?? null,
@@ -454,6 +469,16 @@ function normalizePrice(
     minQuantity: price.minQuantity ?? null,
     finalPrice: price.finalPrice ?? null,
   };
+}
+
+/** ورودی ممکن است آرایه، آبجکت قدیمی، یا null باشد */
+function normalizePrices(
+  price: ProductPriceDto[] | ProductPriceDto | null | undefined,
+): ProductPriceData[] | undefined {
+  if (price === undefined) return undefined;
+  if (price === null) return [];
+  if (Array.isArray(price)) return price.map(normalizePriceItem);
+  return [normalizePriceItem(price)];
 }
 
 export function resolveProductStock(
@@ -468,7 +493,7 @@ export function toProductEntityData(
 ): Record<string, unknown> {
   const sellerIds = [...new Set(dto.sellerIds ?? [])];
   const approvalStatus = dto.approvalStatus ?? 'pending';
-  const price = normalizePrice(dto.price);
+  const price = normalizePrices(dto.price);
   const shippingMethod = normalizeShippingMethod(dto.shippingMethod);
 
   return {
@@ -495,7 +520,7 @@ export function toProductEntityData(
       featuredImg: dto.image?.featuredImg ?? null,
       gallery: dto.image?.gallery ?? [],
     },
-    price: price === undefined ? null : price,
+    price: price === undefined ? [] : price,
     shippingMethod: shippingMethod === undefined ? null : shippingMethod,
     tableInfo: dto.tableInfo ?? [],
     taxStatus: dto.taxStatus ?? null,

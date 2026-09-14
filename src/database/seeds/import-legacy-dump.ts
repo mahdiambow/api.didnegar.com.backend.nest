@@ -542,16 +542,18 @@ async function importProducts(ctx: StepContext) {
       featuredImg: row.featuredImage ? String(row.featuredImage) : null,
       gallery: [],
     });
-    const price = JSON.stringify({
-      attributeIds: [],
-      price: priceNum,
-      discountPercentage: null,
-      discountAmount: null,
-      expireDate: null,
-      maxQuantity: null,
-      minQuantity: 1,
-      finalPrice: priceNum,
-    });
+    const price = JSON.stringify([
+      {
+        attributeIds: [],
+        price: priceNum,
+        discountPercentage: null,
+        discountAmount: null,
+        expireDate: null,
+        maxQuantity: null,
+        minQuantity: 1,
+        finalPrice: priceNum,
+      },
+    ]);
     const attributeIdsJson = JSON.stringify(nestAttributeIds);
     const sellerIds = JSON.stringify(sellerId ? [sellerId] : []);
     const stock = Math.max(0, Math.floor(Number(row.stockQuantity ?? 0) || 0));
