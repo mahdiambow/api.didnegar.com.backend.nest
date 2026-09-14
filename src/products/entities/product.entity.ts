@@ -1,6 +1,7 @@
 import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, OneToOne, UpdateDateColumn } from 'typeorm';
 import type { Brand } from '../../brands/entities/brand.entity.js';
 import type { ProductCategory } from '../../categories/entities/product-category.entity.js';
+import type { ShippingMethod } from '../../shipping/entities/shipping-method.entity.js';
 import type { ProductVariant } from './product-variant.entity.js';
 import type { ProductStock } from './product-stock.entity.js';
 
@@ -25,15 +26,6 @@ export type ProductPriceData = {
 export type ProductTableInfoItem = {
   name: string;
   items: ProductSeoItem[];
-};
-
-export type ProductShippingMethodData = {
-  slug: string;
-  name: string;
-  price: number;
-  isCod: boolean;
-  isActive: boolean;
-  sortOrder: number;
 };
 
 @Entity('products')
@@ -111,8 +103,9 @@ export class Product {
   @Column({ type: 'json', default: [] })
   price: ProductPriceData[];
 
-  @Column({ type: 'json', nullable: true })
-  shippingMethod: ProductShippingMethodData | null;
+  @Index()
+  @Column({ type: 'varchar', length: 26, nullable: true })
+  shippingMethodId: string | null;
 
   @Column({ type: 'json', default: [] })
   tableInfo: ProductTableInfoItem[];
@@ -165,6 +158,10 @@ export class Product {
   @ManyToOne('Brand', 'products', { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'brandId' })
   brand: Brand | null;
+
+  @ManyToOne('ShippingMethod', { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'shippingMethodId' })
+  shippingMethod: ShippingMethod | null;
 
   @OneToMany('ProductCategory', 'product')
   productCategories: ProductCategory[];

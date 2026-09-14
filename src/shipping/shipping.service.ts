@@ -118,11 +118,13 @@ export class ShippingService {
 
     const ordersCount =
       await this.shippingMethodRepository.countOrdersByShippingMethodId(id);
+    const productsCount =
+      await this.shippingMethodRepository.countProductsByShippingMethodId(id);
 
-    if (ordersCount > 0) {
+    if (ordersCount > 0 || productsCount > 0) {
       throw new ApiException(
         'SHIPPING_METHOD_IN_USE',
-        'این روش ارسال در سفارش‌ها استفاده شده و قابل حذف نیست',
+        'این روش ارسال در سفارش‌ها یا محصولات استفاده شده و قابل حذف نیست',
         HttpStatus.CONFLICT,
       );
     }

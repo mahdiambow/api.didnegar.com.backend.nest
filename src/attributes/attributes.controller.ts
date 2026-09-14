@@ -1,5 +1,5 @@
 import { ParseULIDPipe } from '../common/id/index.js';
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -16,6 +16,7 @@ import { AttributesService } from './attributes.service.js';
 import {
   AttributeResponseDto,
   CreateAttributeDto,
+  ListAttributesQueryDto,
   UpdateAttributeDto,
 } from './dto/attribute-response.dto.js';
 
@@ -47,10 +48,12 @@ export class AttributesController {
     code: 'ATTRIBUTES_FOUND',
     message: 'Attributes retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست ویژگی‌ها' })
+  @ApiOperation({
+    summary: 'لیست ویژگی‌ها همراه values — فیلتر اختیاری با valueId',
+  })
   @ApiOkResponse({ type: AttributesListApiResponseDto })
-  findAll() {
-    return this.attributesService.findAllAttributes();
+  findAll(@Query() query: ListAttributesQueryDto) {
+    return this.attributesService.findAllAttributes(query);
   }
 
   @Get(':id')

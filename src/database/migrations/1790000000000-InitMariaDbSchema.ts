@@ -303,6 +303,27 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
       ) ENGINE=InnoDB
     `);
 
+    // --- attribute_values ---
+    await queryRunner.query(`
+      CREATE TABLE \`attribute_values\` (
+        \`id\` CHAR(26) NOT NULL,
+        \`legacyId\` BIGINT NOT NULL,
+        \`legacyTable\` VARCHAR(255) NOT NULL,
+        \`attributeId\` CHAR(26) NOT NULL,
+        \`value\` VARCHAR(200) NOT NULL,
+        \`label\` VARCHAR(200) NOT NULL,
+        \`sortOrder\` INT NOT NULL DEFAULT 0,
+        \`isActive\` TINYINT(1) NOT NULL DEFAULT 1,
+        \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        \`updatedAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        CONSTRAINT \`PK_attribute_values\` PRIMARY KEY (\`id\`),
+        INDEX \`IDX_attribute_values_attributeId\` (\`attributeId\`),
+        UNIQUE INDEX \`IDX_attribute_values_attributeId_value\` (\`attributeId\`, \`value\`),
+        UNIQUE INDEX \`IDX_attribute_values_legacyTable_legacyId\` (\`legacyTable\`, \`legacyId\`),
+        CONSTRAINT \`FK_attribute_values_attributeId\` FOREIGN KEY (\`attributeId\`) REFERENCES \`attributes\`(\`id\`) ON DELETE CASCADE ON UPDATE RESTRICT
+      ) ENGINE=InnoDB
+    `);
+
     // --- shipping_methods ---
     await queryRunner.query(`
       CREATE TABLE \`shipping_methods\` (
@@ -344,7 +365,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
         \`seo\` JSON NOT NULL DEFAULT ('[]'),
         \`image\` JSON NOT NULL DEFAULT ('{"featuredImg":null,"gallery":[]}'),
         \`price\` JSON NULL,
-        \`shippingMethod\` JSON NULL,
+        \`shippingMethodId\` CHAR(26) NULL,
         \`tableInfo\` JSON NOT NULL DEFAULT ('[]'),
         \`ratingCount\` INT NOT NULL DEFAULT 0,
         \`averageRating\` DECIMAL(3,2) NOT NULL DEFAULT 0,
@@ -368,8 +389,10 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
         INDEX \`IDX_products_status\` (\`status\`),
         INDEX \`IDX_products_approvalStatus\` (\`approvalStatus\`),
         INDEX \`IDX_products_brandId\` (\`brandId\`),
+        INDEX \`IDX_products_shippingMethodId\` (\`shippingMethodId\`),
         UNIQUE INDEX \`IDX_products_legacyTable_legacyId\` (\`legacyTable\`, \`legacyId\`),
-        CONSTRAINT \`FK_products_brandId\` FOREIGN KEY (\`brandId\`) REFERENCES \`brands\`(\`id\`) ON DELETE SET NULL ON UPDATE RESTRICT
+        CONSTRAINT \`FK_products_brandId\` FOREIGN KEY (\`brandId\`) REFERENCES \`brands\`(\`id\`) ON DELETE SET NULL ON UPDATE RESTRICT,
+        CONSTRAINT \`FK_products_shippingMethodId\` FOREIGN KEY (\`shippingMethodId\`) REFERENCES \`shipping_methods\`(\`id\`) ON DELETE SET NULL ON UPDATE RESTRICT
       ) ENGINE=InnoDB
     `);
 
@@ -644,6 +667,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS \`product_stocks\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`products\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`shipping_methods\``);
+    await queryRunner.query(`DROP TABLE IF EXISTS \`attribute_values\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`attributes\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`sub_categories\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`categories\``);

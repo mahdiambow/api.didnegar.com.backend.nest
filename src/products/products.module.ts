@@ -16,10 +16,12 @@ import { AuthModule } from '../auth/auth.module.js';
 import { BrandsModule } from '../brands/brands.module.js';
 import { CategoriesModule } from '../categories/categories.module.js';
 import { SellersModule } from '../sellers/sellers.module.js';
+import { ShippingMethod } from '../shipping/entities/shipping-method.entity.js';
+import { ShippingMethodRepository } from '../shipping/repositories/shipping-method.repository.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, ProductStock, ProductVariant]),
+    TypeOrmModule.forFeature([Product, ProductStock, ProductVariant, ShippingMethod]),
     BrandsModule,
     forwardRef(() => AuthModule),
     forwardRef(() => CategoriesModule),
@@ -34,6 +36,7 @@ import { SellersModule } from '../sellers/sellers.module.js';
     ProductsSeedService,
     ProductRepository,
     ProductStockRepository,
+    ShippingMethodRepository,
   ],
   exports: [
     ProductsService,

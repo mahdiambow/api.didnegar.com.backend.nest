@@ -4,14 +4,16 @@ import {
   CreateDateColumn,
   Entity,
   Index,
-  OneToMany,
+  JoinColumn,
+  ManyToOne,
   UpdateDateColumn,
 } from 'typeorm';
-import type { AttributeValue } from './attribute-value.entity.js';
+import type { Attribute } from './attribute.entity.js';
 
-@Entity('attributes')
+@Entity('attribute_values')
 @Index(['legacyTable', 'legacyId'], { unique: true })
-export class Attribute {
+@Index(['attributeId', 'value'], { unique: true })
+export class AttributeValue {
   @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
@@ -22,14 +24,20 @@ export class Attribute {
   legacyTable: string;
 
   @Index()
+  @Column({ type: 'varchar', length: 26 })
+  attributeId: string;
+
   @Column({ type: 'varchar', length: 200 })
-  name: string;
+  value: string;
 
   @Column({ type: 'varchar', length: 200 })
   label: string;
 
-  @Column({ type: 'boolean', default: false })
-  isPublic: boolean;
+  @Column({ type: 'int', default: 0 })
+  sortOrder: number;
+
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -37,6 +45,7 @@ export class Attribute {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToMany('AttributeValue', 'attribute')
-  values: AttributeValue[];
+  @ManyToOne('Attribute', 'values', { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'attributeId' })
+  attribute: Attribute;
 }

@@ -13,8 +13,22 @@ export class AttributeRepository {
     return this.repo.find({ order: { name: 'ASC' } });
   }
 
+  findAllWithValues() {
+    return this.repo.find({
+      order: { name: 'ASC' },
+      relations: { values: true },
+    });
+  }
+
   findById(id: string) {
     return this.repo.findOne({ where: { id } });
+  }
+
+  findByIdWithValues(id: string) {
+    return this.repo.findOne({
+      where: { id },
+      relations: { values: true },
+    });
   }
 
   findByIds(ids: string[]) {

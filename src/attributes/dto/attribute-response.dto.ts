@@ -1,3 +1,4 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   IsBoolean,
@@ -11,6 +12,20 @@ import {
   CREATE_ATTRIBUTE_EXAMPLE,
   ATTRIBUTE_RESPONSE_EXAMPLE,
 } from './attribute.examples.js';
+import {
+  AttributeValueResponseDto,
+  toAttributeValueResponse,
+} from './attribute-value.dto.js';
+
+export class ListAttributesQueryDto {
+  @ApiPropertyOptional({
+    example: '01JEX000000000000000000080',
+    description: 'فیلتر ویژگی والد بر اساس valueId',
+  })
+  @IsOptional()
+  @IsULID()
+  valueId?: string;
+}
 
 export class CreateAttributeDto {
   @ApiProperty({ example: CREATE_ATTRIBUTE_EXAMPLE.name })
@@ -51,9 +66,18 @@ export class AttributeResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
+
+  @ApiPropertyOptional({
+    type: [AttributeValueResponseDto],
+    description: 'مقادیر این ویژگی (valueId = id هر آیتم)',
+  })
+  values?: AttributeValueResponseDto[];
 }
 
-export function toAttributeResponse(attribute: Attribute): AttributeResponseDto {
+export function toAttributeResponse(
+  attribute: Attribute,
+  includeValues = false,
+): AttributeResponseDto {
   return {
     id: attribute.id,
     name: attribute.name,
@@ -61,5 +85,8 @@ export function toAttributeResponse(attribute: Attribute): AttributeResponseDto 
     isPublic: attribute.isPublic,
     createdAt: attribute.createdAt,
     updatedAt: attribute.updatedAt,
+    values: includeValues
+      ? (attribute.values ?? []).map(toAttributeValueResponse)
+      : undefined,
   };
 }
