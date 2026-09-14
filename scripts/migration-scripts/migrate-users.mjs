@@ -1,0 +1,287 @@
+/**
+ * Imports legacy users and roles into the existing Nest users/roles structure.
+ * Each 1,000-user batch is committed atomically in its own target transaction.
+ */
+import { createHash, randomUUID } from 'node:crypto';
+import {
+  BATCH_SIZE,
+  asBoolean,
+  asNullableString,
+  assertTables,
+  openLegacyConnection,
+  openTargetConnection,
+  requiredEnv,
+} from './shared.mjs';
+
+const ROLE_PRIORITY = ['super-admin', 'admin', 'super-seller', 'seller', 'user'];
+const LEGACY_ROLE_MAP = new Map([
+  ['customer', 'user'],
+  ['shop_manager', 'seller'],
+  ['subscriber', 'admin'],
+  ['administrator', 'super-admin'],
+  ['dokan_export_order', 'seller'],
+  ['edit_users', 'admin'],
+  ['seller', 'seller'],
+  ['gform_full_access', 'admin'],
+  ['edit_files', 'admin'],
+  ['edit_plugins', 'admin'],
+  ['edit_themes', 'admin'],
+  ['manage_links', 'admin'],
+]);
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log(`Usage: npm run db:migrate:users
+
+Reads legacy users through LEGACY_MIGRATED_DB_* and writes batches of ${BATCH_SIZE}
+users to the current DB_* database. Each batch is one target transaction.`);
+  process.exit(0);
+}
+
+function legacyKey(row) {
+  return `${row.legacyTable || 'users'}:${row.legacyId}`;
+}
+
+function mapLegacyRole(rawRole) {
+  return LEGACY_ROLE_MAP.get(String(rawRole || '').trim().toLowerCase()) || null;
+}
+
+function usernameBase(value) {
+  return String(value || '').trim().slice(0, 20);
+}
+
+function uniqueUsername(base, legacyId, usernameOwners, ownId = null) {
+  let candidate = base;
+  let sequence = 0;
+  while (usernameOwners.has(candidate) && usernameOwners.get(candidate) !== ownId) {
+    sequence += 1;
+    const suffix = `${legacyId ?? 'legacy'}${sequence > 1 ? `-${sequence}` : ''}`;
+    candidate = `${base.slice(0, Math.max(1, 20 - suffix.length - 1))}-${suffix}`.slice(0, 20);
+  }
+  return candidate;
+}
+
+function chooseRoles(roles, defaultUserRoleId) {
+  const distinct = [...new Map(roles.map((role) => [role.id, role])).values()];
+  distinct.sort((a, b) => {
+    const aRank = ROLE_PRIORITY.indexOf(a.slug);
+    const bRank = ROLE_PRIORITY.indexOf(b.slug);
+    return (aRank === -1 ? ROLE_PRIORITY.length : aRank) - (bRank === -1 ? ROLE_PRIORITY.length : bRank)
+      || a.slug.localeCompare(b.slug);
+  });
+  const primary = distinct[0] || { id: defaultUserRoleId, slug: 'user' };
+  return {
+    roleId: primary.id,
+    extraRoleIds: distinct.filter((role) => role.id !== primary.id).map((role) => role.id),
+  };
+}
+
+async function getBatchRoles(source, userIds) {
+  if (!userIds.length) return new Map();
+  const [links] = await source.execute(
+    `SELECT userId, role FROM user_roles WHERE userId IN (${userIds.map(() => '?').join(', ')})`,
+    userIds,
+  );
+  const byUser = new Map();
+  for (const link of links) {
+    const id = String(link.userId);
+    const roles = byUser.get(id) || [];
+    roles.push(String(link.role));
+    byUser.set(id, roles);
+  }
+  return byUser;
+}
+
+async function loadTargetUsers(target, legacyRows) {
+  const usernames = [...new Set(legacyRows.map((row) => usernameBase(row.username)).filter(Boolean))];
+  const legacyClauses = legacyRows.map(() => '(legacyTable = ? AND legacyId = ?)').join(' OR ');
+  const conditions = [];
+  const parameters = [];
+  if (usernames.length) {
+    conditions.push(`username IN (${usernames.map(() => '?').join(', ')})`);
+    parameters.push(...usernames);
+  }
+  conditions.push(legacyClauses);
+  for (const row of legacyRows) parameters.push(row.legacyTable || 'users', row.legacyId);
+  const [rows] = await target.execute(
+    `SELECT id, legacyId, legacyTable, username FROM users WHERE ${conditions.join(' OR ')}`,
+    parameters,
+  );
+  return {
+    byLegacy: new Map(rows.filter((row) => row.legacyId !== null).map((row) => [legacyKey(row), row])),
+    byUsername: new Map(rows.map((row) => [String(row.username), row])),
+  };
+}
+
+function sellerName(row) {
+  return asNullableString(row.displayName, 150)
+    || [asNullableString(row.firstName, 100), asNullableString(row.lastName, 100)].filter(Boolean).join(' ')
+    || usernameBase(row.username);
+}
+
+function sellerSlug(row) {
+  return `legacy-seller-${createHash('sha1').update(String(row.id)).digest('hex').slice(0, 32)}`;
+}
+
+async function ensureSeller(target, row) {
+  const slug = sellerSlug(row);
+  const name = sellerName(row);
+  const email = asNullableString(row.email, 150) || `seller-${row.legacyId}@legacy.invalid`;
+  const phone = usernameBase(row.username).slice(0, 20);
+  const values = [name, name.slice(0, 200), email, phone, asBoolean(row.isActive) ? 'active' : 'inactive', row.createdAt, row.updatedAt];
+  const [existing] = await target.execute('SELECT id FROM sellers WHERE slug = ? LIMIT 1', [slug]);
+  if (existing[0]) {
+    await target.execute(
+      `UPDATE sellers SET name = ?, businessName = ?, email = ?, phone = ?, status = ?,
+       createdAt = ?, updatedAt = ? WHERE id = ?`,
+      [...values, existing[0].id],
+    );
+    return { id: existing[0].id, created: false };
+  }
+  const id = randomUUID();
+  await target.execute(
+    `INSERT INTO sellers (id, name, slug, businessName, businessType, email, phone, status, settings, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, 'other', ?, ?, ?, CAST('{}' AS JSON), ?, ?)`,
+    [id, name, slug, ...values.slice(1)],
+  );
+  return { id, created: true };
+}
+
+async function migrateBatch({ source, target, rows, offset, batchNumber, roleBySlug, defaultUserRoleId }) {
+  const startedAt = Date.now();
+  const rolesByUser = await getBatchRoles(source, rows.map((row) => String(row.id)));
+  const users = await loadTargetUsers(target, rows);
+  const usernameOwners = new Map([...users.byUsername].map(([username, user]) => [username, user.id]));
+  const counters = {
+    read: rows.length,
+    added: 0,
+    updated: 0,
+    skipped: 0,
+    sellersAdded: 0,
+    sellersUpdated: 0,
+    unmappedRoleLinks: 0,
+  };
+
+  await target.beginTransaction();
+  try {
+    for (const row of rows) {
+      const base = usernameBase(row.username);
+      if (!base) {
+        counters.skipped += 1;
+        continue;
+      }
+      const key = legacyKey(row);
+      let existing = users.byLegacy.get(key);
+      if (!existing) {
+        const usernameMatch = users.byUsername.get(base);
+        if (usernameMatch && (!usernameMatch.legacyId || legacyKey(usernameMatch) === key)) existing = usernameMatch;
+      }
+      const username = uniqueUsername(base, row.legacyId, usernameOwners, existing?.id || null);
+      const sourceRoles = rolesByUser.get(String(row.id)) || [];
+      const mappedSlugs = sourceRoles.map(mapLegacyRole);
+      counters.unmappedRoleLinks += mappedSlugs.filter((slug) => !slug).length;
+      const mappedRoles = mappedSlugs.map((slug) => (slug ? roleBySlug.get(slug) : null)).filter(Boolean);
+      const { roleId, extraRoleIds } = chooseRoles(mappedRoles, defaultUserRoleId);
+      const sellerRole = mappedRoles.some((role) => role.slug === 'seller');
+      const seller = sellerRole ? await ensureSeller(target, row) : null;
+      if (seller?.created) counters.sellersAdded += 1;
+      if (seller && !seller.created) counters.sellersUpdated += 1;
+      const values = [
+        row.legacyId, row.legacyTable || 'users', username,
+        asNullableString(row.password, 255), asNullableString(row.email, 150),
+        asNullableString(row.displayName, 150), asNullableString(row.firstName, 100),
+        asNullableString(row.lastName, 100), asNullableString(row.website, 255),
+        asBoolean(row.isActive) ? 1 : 0, roleId, JSON.stringify(extraRoleIds), seller?.id || null, row.createdAt, row.updatedAt,
+      ];
+      if (existing) {
+        await target.execute(
+          `UPDATE users SET legacyId = ?, legacyTable = ?, username = ?, password = ?, email = ?,
+           displayName = ?, firstName = ?, lastName = ?, website = ?, isActive = ?, roleId = ?,
+           extraRoleIds = CAST(? AS JSON), sellerId = ?, createdAt = ?, updatedAt = ? WHERE id = ?`,
+          [...values, existing.id],
+        );
+        if (existing.username !== username) usernameOwners.delete(existing.username);
+        Object.assign(existing, { legacyId: row.legacyId, legacyTable: row.legacyTable || 'users', username });
+        users.byLegacy.set(key, existing);
+        users.byUsername.set(username, existing);
+        usernameOwners.set(username, existing.id);
+        counters.updated += 1;
+      } else {
+        const id = randomUUID();
+        await target.execute(
+          `INSERT INTO users (id, legacyId, legacyTable, username, password, email, displayName,
+           firstName, lastName, website, isActive, roleId, extraRoleIds, sellerId, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?, ?, ?)`,
+          [id, ...values],
+        );
+        const inserted = { id, legacyId: row.legacyId, legacyTable: row.legacyTable || 'users', username };
+        users.byLegacy.set(key, inserted);
+        users.byUsername.set(username, inserted);
+        usernameOwners.set(username, id);
+        counters.added += 1;
+      }
+    }
+    await target.commit();
+  } catch (error) {
+    await target.rollback();
+    throw error;
+  }
+  console.log(JSON.stringify({ batch: batchNumber, offset, ...counters, elapsedMs: Date.now() - startedAt }, null, 2));
+  return counters;
+}
+
+async function main() {
+  const sourceDatabase = requiredEnv('LEGACY_MIGRATED_DB_DATABASE');
+  const targetDatabase = requiredEnv('DB_DATABASE');
+  const source = await openLegacyConnection();
+  const target = await openTargetConnection();
+  const totals = {
+    read: 0,
+    added: 0,
+    updated: 0,
+    skipped: 0,
+    sellersAdded: 0,
+    sellersUpdated: 0,
+    unmappedRoleLinks: 0,
+  };
+  try {
+    await assertTables(source, sourceDatabase, ['users', 'user_roles'], 'Legacy');
+    await assertTables(target, targetDatabase, ['users', 'roles', 'sellers'], 'Target');
+    const [roleRows] = await target.execute('SELECT id, slug FROM roles');
+    const roleBySlug = new Map(roleRows.map((role) => [String(role.slug), role]));
+    const defaultUserRoleId = roleBySlug.get('user')?.id;
+    if (!defaultUserRoleId) throw new Error('Target role "user" is missing. Seed roles before importing users.');
+    const missingMappedRoles = ['seller', 'admin', 'super-admin'].filter((slug) => !roleBySlug.has(slug));
+    if (missingMappedRoles.length) {
+      throw new Error(`Target role(s) missing. Seed roles before importing users: ${missingMappedRoles.join(', ')}`);
+    }
+    let offset = 0;
+    let batchNumber = 0;
+    while (true) {
+      const [rows] = await source.execute(
+        `SELECT id, legacyId, legacyTable, username, password, email, displayName, firstName,
+         lastName, website, isActive, createdAt, updatedAt
+         FROM users ORDER BY legacyId ASC, id ASC LIMIT ? OFFSET ?`,
+        [BATCH_SIZE, offset],
+      );
+      if (!rows.length) break;
+      batchNumber += 1;
+      try {
+        const counters = await migrateBatch({ source, target, rows, offset, batchNumber, roleBySlug, defaultUserRoleId });
+        for (const key of Object.keys(totals)) totals[key] += counters[key];
+      } catch (error) {
+        console.error(JSON.stringify({ batch: batchNumber, offset, rolledBack: true, error: error.message }, null, 2));
+        throw error;
+      }
+      offset += rows.length;
+      if (rows.length < BATCH_SIZE) break;
+    }
+    console.log(JSON.stringify({ complete: true, batches: batchNumber, ...totals }, null, 2));
+  } finally {
+    await Promise.all([source.end(), target.end()]);
+  }
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
