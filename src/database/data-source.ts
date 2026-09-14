@@ -6,7 +6,11 @@ import { assertAppMysqlTarget } from '../config/assert-app-mysql.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-assertAppMysqlTarget(process.env.DB_HOST, process.env.DB_PORT);
+assertAppMysqlTarget(
+  process.env.DB_HOST,
+  process.env.DB_PORT,
+  process.env.DB_DATABASE,
+);
 
 export default new DataSource({
   type: 'mysql',

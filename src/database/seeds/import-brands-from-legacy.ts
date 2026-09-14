@@ -11,6 +11,7 @@ import { newId } from '../../common/id/index.js';
 import 'dotenv/config';
 import { createHash } from 'node:crypto';
 import mysql from 'mysql2/promise';
+import { assertAppMysqlTarget } from '../../config/assert-app-mysql.js';
 
 type LegacyBrand = {
   id: string;
@@ -83,6 +84,12 @@ async function main() {
   const password = env('DB_PASSWORD', 'didnegar');
   const targetDb = env('DB_DATABASE', 'didnegar');
   const sourceDb = env('SOURCE_DATABASE', 'didnegar_new');
+  assertAppMysqlTarget(host, port, targetDb);
+  if (targetDb.trim().toLowerCase() === sourceDb.trim().toLowerCase()) {
+    throw new Error(
+      `DB_DATABASE and SOURCE_DATABASE must differ (both are "${targetDb}").`,
+    );
+  }
 
   const conn = await mysql.createConnection({
     host,

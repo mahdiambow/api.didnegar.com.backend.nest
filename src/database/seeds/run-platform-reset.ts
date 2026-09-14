@@ -5,8 +5,15 @@ import {
   DEFAULT_ROLE_PERMISSIONS,
   DEFAULT_ROLE_SLUGS,
 } from '../../roles/permissions.js';
+import { assertAppMysqlTarget } from '../../config/assert-app-mysql.js';
 
 const SUPER_ADMIN_USERNAME = '09363078987';
+
+assertAppMysqlTarget(
+  process.env.DB_HOST,
+  process.env.DB_PORT,
+  process.env.DB_DATABASE,
+);
 
 const dataSource = new DataSource({
   type: 'mysql',

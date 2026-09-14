@@ -12,7 +12,8 @@ export function env(name: string, fallback?: string): string {
 export async function openConn(): Promise<Connection> {
   const host = env('DB_HOST', 'localhost');
   const port = Number(env('DB_PORT', '3309'));
-  assertAppMysqlTarget(host, port);
+  const database = env('DB_DATABASE', 'didnegar');
+  assertAppMysqlTarget(host, port, database);
   return mysql.createConnection({
     host,
     port,
@@ -28,7 +29,15 @@ export function sourceDb() {
 }
 
 export function targetDb() {
-  return env('DB_DATABASE', 'didnegar');
+  const target = env('DB_DATABASE', 'didnegar');
+  assertAppMysqlTarget(undefined, undefined, target);
+  if (target.trim().toLowerCase() === sourceDb().trim().toLowerCase()) {
+    throw new Error(
+      `DB_DATABASE and SOURCE_DATABASE must differ (both are "${target}"). ` +
+        `Nest target cannot be didnegar_new.`,
+    );
+  }
+  return target;
 }
 
 export async function ensureIdMap(conn: Connection, target: string) {

@@ -13,7 +13,9 @@
 # IMPORTANT — server:
 #   Never point the API at migration-mysql / didnegar_migration_mysql
 #   (didnegar.schema.database MySQL on :3307). That service is schema-only.
-#   On the server compose, set DB_HOST to the app MySQL (e.g. new-mysql).
+#   Never set DB_DATABASE=didnegar_new (legacy dump only as SOURCE_DATABASE).
+#   On the server compose, set DB_HOST to the app MySQL (e.g. new-mysql)
+#   and DB_DATABASE to the Nest DB (e.g. didnegar).
 #
 # Server DB setup (inside api — image already has dist/):
 #   sudo docker compose exec api npm run migration:run:prod

@@ -63,9 +63,13 @@ export class ConfigService {
     this.assertNotSchemaMigrationMysql();
   }
 
-  /** Server schema MySQL must never be the Nest app database. */
+  /** Block schema MySQL host and legacy dump DB name as Nest app target. */
   private assertNotSchemaMigrationMysql() {
-    assertAppMysqlTarget(process.env.DB_HOST, process.env.DB_PORT);
+    assertAppMysqlTarget(
+      process.env.DB_HOST,
+      process.env.DB_PORT,
+      process.env.DB_DATABASE,
+    );
   }
 
   private resolve(key: string): string | undefined {

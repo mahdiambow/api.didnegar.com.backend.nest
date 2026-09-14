@@ -11,6 +11,7 @@
 import 'dotenv/config';
 import { spawn } from 'node:child_process';
 import mysql from 'mysql2/promise';
+import { assertAppMysqlTarget } from '../../config/assert-app-mysql.js';
 
 function env(name: string, fallback?: string): string {
   const value = process.env[name] ?? fallback;
@@ -40,6 +41,12 @@ async function ensureDatabases() {
   const password = env('DB_PASSWORD', 'didnegar');
   const target = env('DB_DATABASE', 'didnegar');
   const source = env('SOURCE_DATABASE', 'didnegar_new');
+  assertAppMysqlTarget(host, port, target);
+  if (target.trim().toLowerCase() === source.trim().toLowerCase()) {
+    throw new Error(
+      `DB_DATABASE and SOURCE_DATABASE must differ (both are "${target}").`,
+    );
+  }
   const rootPassword = process.env.MYSQL_ROOT_PASSWORD;
 
   // Prefer app user; fall back to root if available (compose usually has MYSQL_ROOT_PASSWORD)
