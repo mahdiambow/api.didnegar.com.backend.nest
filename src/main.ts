@@ -22,29 +22,13 @@ async function bootstrap() {
   const reflector = app.get(Reflector);
   const isProduction = process.env.NODE_ENV === 'production';
 
-  const allowedOrigins = [
-    'https://didnegar.net',
-    'https://www.didnegar.net',
-    ...(process.env.CORS_ORIGINS?.split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean) ?? []),
-  ];
-
+  // Reflect any request Origin so browsers (local, LAN, production) can call the API.
+  // With credentials:true we cannot use '*'; reflecting the Origin is required.
   app.enableCors({
-    origin: (
-      origin: string | undefined,
-      callback: (error: Error | null, allow?: boolean) => void,
-    ) => {
-      // درخواست‌های بدون origin (curl/Postman) و originهای مجاز
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
   });
 
   app.use(
