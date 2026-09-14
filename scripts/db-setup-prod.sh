@@ -24,7 +24,7 @@ DB_USER="${DB_USERNAME:-didnegar}"
 SOURCE="${SOURCE_DATABASE:-didnegar_new}"
 TARGET="${DB_DATABASE:-didnegar}"
 DUMP="${LEGACY_DUMP_PATH:-}"
-MYSQL_SERVICE="${MYSQL_SERVICE:-migration-mysql}"
+MYSQL_SERVICE="${MYSQL_SERVICE:-mysql}"
 API_SERVICE="${API_SERVICE:-api}"
 
 mysql_root() {

@@ -1,4 +1,4 @@
-# Full stack: API + MySQL + phpMyAdmin
+# Full stack: API + MySQL + phpMyAdmin (local / self-contained)
 #   cp .env.example .env
 #   docker compose up -d --build
 #
@@ -7,8 +7,13 @@
 #   phpMyAdmin: http://localhost:${PHPMYADMIN_PORT:-8080}
 #
 # Nest on host (MySQL + phpMyAdmin only):
-#   docker compose up -d migration-mysql phpmyadmin
-#   npm run start:dev
+#   docker compose up -d mysql phpmyadmin
+#   npm run start:dev   # .env: DB_HOST=localhost DB_PORT=3309
+#
+# IMPORTANT — server:
+#   Never point the API at migration-mysql / didnegar_migration_mysql
+#   (didnegar.schema.database MySQL on :3307). That service is schema-only.
+#   On the server compose, set DB_HOST to the app MySQL (e.g. new-mysql).
 #
 # Server DB setup (inside api — image already has dist/):
 #   sudo docker compose exec api npm run migration:run:prod
@@ -31,9 +36,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      # Inside the compose network, use the MySQL service name + internal port
-      DB_HOST: migration-mysql
-      DB_PORT: 3306
+      # App MySQL on this compose network — NOT migration-mysql / schema DB
+      DB_HOST: ${DOCKER_DB_HOST:-mysql}
+      DB_PORT: ${DOCKER_DB_PORT:-3306}
       DB_USERNAME: ${DB_USERNAME:-didnegar}
       DB_PASSWORD: ${DB_PASSWORD:-didnegar}
       DB_DATABASE: ${DB_DATABASE:-didnegar}
@@ -46,12 +51,12 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     depends_on:
-      migration-mysql:
+      mysql:
         condition: service_healthy
 
-  migration-mysql:
+  mysql:
     image: mysql:8.0
-    container_name: migration-mysql
+    container_name: didnegar-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
@@ -62,7 +67,7 @@ services:
       # Host port for local Nest / clients; container always listens on 3306
       - "${DB_PORT:-3309}:3306"
     volumes:
-      - migration_mysql_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
       - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
     command:
       - --character-set-server=utf8mb4
@@ -89,7 +94,7 @@ services:
     container_name: phpmyadmin
     restart: unless-stopped
     environment:
-      PMA_HOST: migration-mysql
+      PMA_HOST: mysql
       PMA_PORT: 3306
       PMA_USER: root
       PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
@@ -97,8 +102,8 @@ services:
     ports:
       - '${PHPMYADMIN_PORT:-8080}:80'
     depends_on:
-      migration-mysql:
+      mysql:
         condition: service_healthy
 
 volumes:
-  migration_mysql_data:
+  mysql_data:

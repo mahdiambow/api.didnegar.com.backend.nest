@@ -10,6 +10,7 @@ import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { CreateProductDto } from '../../products/dto/create-product.dto.js';
 import { ProductResponseDto } from '../../products/dto/product-response.dto.js';
+import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
 
 /** آپدیت فیلدهای کاتالوگ محصول هنگام ثبت/ویرایش آفر (بدون approval) */
 export class SellerOfferProductPatchDto extends PartialType(
@@ -110,6 +111,22 @@ export class ListSellerOffersDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(['pending', 'approved', 'rejected'])
   approvalStatus?: 'pending' | 'approved' | 'rejected';
+
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.categoryId,
+    description: 'فیلتر بر اساس دسته اصلی محصول لینک‌شده',
+  })
+  @IsOptional()
+  @IsULID()
+  categoryId?: string;
+
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.subCategoryId,
+    description: 'فیلتر بر اساس زیردسته محصول لینک‌شده',
+  })
+  @IsOptional()
+  @IsULID()
+  subCategoryId?: string;
 }
 
 export class SellerOfferResponseDto extends OmitType(SellerOfferItemDto, [

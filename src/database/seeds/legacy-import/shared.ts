@@ -1,6 +1,7 @@
 import { newId } from '../../../common/id/index.js';
 import 'dotenv/config';
 import mysql, { type Connection, type RowDataPacket } from 'mysql2/promise';
+import { assertAppMysqlTarget } from '../../../config/assert-app-mysql.js';
 
 export function env(name: string, fallback?: string): string {
   const value = process.env[name] ?? fallback;
@@ -9,9 +10,12 @@ export function env(name: string, fallback?: string): string {
 }
 
 export async function openConn(): Promise<Connection> {
+  const host = env('DB_HOST', 'localhost');
+  const port = Number(env('DB_PORT', '3309'));
+  assertAppMysqlTarget(host, port);
   return mysql.createConnection({
-    host: env('DB_HOST', 'localhost'),
-    port: Number(env('DB_PORT', '3309')),
+    host,
+    port,
     user: env('DB_USERNAME', 'didnegar'),
     password: env('DB_PASSWORD', 'didnegar'),
     multipleStatements: true,

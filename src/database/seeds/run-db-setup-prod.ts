@@ -94,7 +94,7 @@ async function ensureDatabases() {
           `  LEGACY_DUMP_PATH=${dumpHint} sudo bash scripts/db-setup-prod.sh`,
           ``,
           `Or manually:`,
-          `  sudo docker compose exec -T migration-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" ${source} < ${dumpHint}`,
+          `  sudo docker compose exec -T mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" ${source} < ${dumpHint}`,
           `  sudo docker compose exec api npm run db:setup:prod`,
         ].join('\n'),
       );

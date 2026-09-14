@@ -86,7 +86,21 @@ export class ProductRepository {
       qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
-    return qb.getMany();
+    if (filters.categoryId || filters.subCategoryId) {
+      qb.innerJoin('product.productCategories', 'pcFilter');
+      if (filters.categoryId) {
+        qb.andWhere('pcFilter.categoryId = :categoryId', {
+          categoryId: filters.categoryId,
+        });
+      }
+      if (filters.subCategoryId) {
+        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
+          subCategoryId: filters.subCategoryId,
+        });
+      }
+    }
+
+    return qb.distinct(true).getMany();
   }
 
   findAllForPricingExport() {
@@ -122,22 +136,18 @@ export class ProductRepository {
         );
     }
 
-    if (filters.categoryId) {
-      qb.innerJoin(
-        'product.productCategories',
-        'pcCategory',
-        'pcCategory.categoryId = :categoryId',
-        { categoryId: filters.categoryId },
-      );
-    }
-
-    if (filters.subCategoryId) {
-      qb.innerJoin(
-        'product.productCategories',
-        'pcSubCategory',
-        'pcSubCategory.subCategoryId = :subCategoryId',
-        { subCategoryId: filters.subCategoryId },
-      );
+    if (filters.categoryId || filters.subCategoryId) {
+      qb.innerJoin('product.productCategories', 'pcFilter');
+      if (filters.categoryId) {
+        qb.andWhere('pcFilter.categoryId = :categoryId', {
+          categoryId: filters.categoryId,
+        });
+      }
+      if (filters.subCategoryId) {
+        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
+          subCategoryId: filters.subCategoryId,
+        });
+      }
     }
 
     if (filters.status) {
@@ -176,7 +186,7 @@ export class ProductRepository {
       qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
-    return qb.getManyAndCount();
+    return qb.distinct(true).getManyAndCount();
   }
 
   getNextLegacyId() {

@@ -98,7 +98,26 @@ export class OffersService {
     ] as const)
       if (query[field] !== undefined)
         qb.andWhere(`offer.${field} = :${field}`, { [field]: query[field] });
+
+    if (query.categoryId || query.subCategoryId) {
+      qb.innerJoin('offer.product', 'filterProduct').innerJoin(
+        'filterProduct.productCategories',
+        'pcFilter',
+      );
+      if (query.categoryId) {
+        qb.andWhere('pcFilter.categoryId = :categoryId', {
+          categoryId: query.categoryId,
+        });
+      }
+      if (query.subCategoryId) {
+        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
+          subCategoryId: query.subCategoryId,
+        });
+      }
+    }
+
     const [items, total] = await qb
+      .distinct(true)
       .orderBy('offer.price', 'ASC')
       .addOrderBy('offer.id', 'ASC')
       .skip(offset)

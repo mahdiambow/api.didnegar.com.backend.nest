@@ -52,7 +52,7 @@ Docker باید در حال اجرا باشد؛ وگرنه اتصال به دی�
 فقط دیتابیس (حالت پیشنهادی برای توسعه):
 
 ```bash
-docker compose up -d migration-mysql phpmyadmin
+docker compose up -d mysql phpmyadmin
 ```
 
 صبر کنید تا healthy شود:
@@ -66,7 +66,7 @@ docker compose ps
 | MySQL | `localhost:3309` |
 | phpMyAdmin | http://localhost:8080 (user: `root` / password: مقدار `MYSQL_ROOT_PASSWORD`) |
 
-دادهٔ MySQL در volume `migration_mysql_data` می‌ماند.  
+دادهٔ MySQL در volume `mysql_data` می‌ماند.  
 `docker compose down` داده را نگه می‌دارد؛ `docker compose down -v` پاک می‌کند.
 
 ### ۶) اجرای API
@@ -121,7 +121,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-داخل شبکهٔ Docker، سرویس `api` خودش `DB_HOST=migration-mysql` و `DB_PORT=3306` می‌گیرد (نیازی به عوض کردن `.env` برای هاست نیست).
+داخل شبکهٔ Docker، سرویس `api` خودش `DB_HOST=mysql` و `DB_PORT=3306` می‌گیرد (نیازی به عوض کردن `.env` برای هاست نیست). روی سرور هرگز به `migration-mysql` وصل نشوید.
 
 ---
 
@@ -142,7 +142,7 @@ npm run migration:run  # اجرای دستی مایگریشن‌ها
 
 | مشکل | کار |
 |------|-----|
-| `ECONNREFUSED ...:3309` | Docker Desktop را روشن کنید، بعد `docker compose up -d migration-mysql` |
+| `ECONNREFUSED ...:3309` | Docker Desktop را روشن کنید، بعد `docker compose up -d mysql` |
 | پورت 3309 اشغال است | در `.env` مقدار `DB_PORT` را عوض کنید و دوباره compose را بالا بیاورید |
 | مایگریشن / اسکیما عجیب | به Postgres قدیمی وصل نباشید؛ فقط MySQL همین پروژه |
 | Swagger توکن را نگه نمی‌دارد | در `.env`: `SWAGGER_PERSIST_AUTH=true` |
