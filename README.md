@@ -37,7 +37,6 @@ cp .env.example .env
 | `DB_HOST` | `localhost` | وقتی Nest روی هاست اجرا می‌شود |
 | `DB_PORT` | `3309` | پورت publish‌شدهٔ MySQL روی ماشین شما |
 | `DB_DATABASE` | `didnegar` | دیتابیس Nest |
-| `SOURCE_DATABASE` | `didnegar_new` | فقط برای ایمپورت دامپ لگاسی |
 | `JWT_SECRET` | یک رشتهٔ بلند تصادفی | حتماً عوض کنید |
 | `MYSQL_ROOT_PASSWORD` | `root` | برای Docker MySQL / phpMyAdmin |
 
@@ -79,35 +78,7 @@ npm run start:dev
 - Swagger: http://localhost:3000/api  
 
 مایگریشن‌ها موقع استارت API خودکار اجرا می‌شوند (`migrationsRun: true`).  
-سید خودکار خاموش است (`SEED_ON_STARTUP=false`).
-
-### ۷) (اختیاری) سید اولیهٔ پلتفرم
-
-اگر دیتابیس خالی است و نقش/یوزر پایه می‌خواهید:
-
-```bash
-npm run db:seed:initial
-```
-
-برای ریست کامل‌تر پلتفرم (با احتیاط):
-
-```bash
-npm run db:seed
-```
-
-### ۸) (اختیاری) ایمپورت دامپ لگاسی
-
-اگر دامپ روی همان MySQL به‌صورت دیتابیس `didnegar_new` لود شده:
-
-```bash
-npm run db:import:legacy -- all
-# یا یک استپ، مثلاً:
-npm run db:import:legacy -- products
-```
-
-- مقصد همیشه `DB_DATABASE` (`didnegar`) است.  
-- Nest را به `didnegar_new` وصل نکنید.  
-- مدیا به‌صورت پیش‌فرض داخل `all` نیست.
+سید خودکار خاموش است (`SEED_ON_STARTUP=false`). در صورت روشن بودن، فقط سیدهای داخل ماژول‌ها (roles / shipping / …) موقع استارت اجرا می‌شوند.
 
 ---
 

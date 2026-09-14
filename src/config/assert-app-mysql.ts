@@ -4,7 +4,7 @@ const BLOCKED_DB_HOSTS = new Set([
   'didnegar_migration_mysql',
 ]);
 
-/** Legacy dump DB — only for import scripts as SOURCE_DATABASE, never as DB_DATABASE. */
+/** Legacy dump DB name — Nest must never use it as DB_DATABASE. */
 const BLOCKED_APP_DATABASES = new Set(['didnegar_new']);
 
 export function assertAppMysqlTarget(
@@ -26,9 +26,7 @@ export function assertAppMysqlTarget(
   if (BLOCKED_APP_DATABASES.has(normalizedDatabase)) {
     throw new Error(
       `Refusing to use legacy dump database as app DB ` +
-        `(DB_DATABASE=${database}). ` +
-        `Use the Nest database (e.g. didnegar). ` +
-        `didnegar_new is only allowed as SOURCE_DATABASE for one-off imports.`,
+        `(DB_DATABASE=${database}). Use the Nest database (e.g. didnegar).`,
     );
   }
 }

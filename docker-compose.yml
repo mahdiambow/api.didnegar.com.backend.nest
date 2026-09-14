@@ -10,20 +10,15 @@
 #   docker compose up -d mysql phpmyadmin
 #   npm run start:dev   # .env: DB_HOST=localhost DB_PORT=3309
 #
+# Server DB setup (inside api — image already has dist/):
+#   sudo docker compose exec api npm run migration:run:prod
+#
 # IMPORTANT — server:
 #   Never point the API at migration-mysql / didnegar_migration_mysql
 #   (didnegar.schema.database MySQL on :3307). That service is schema-only.
-#   Never set DB_DATABASE=didnegar_new (legacy dump only as SOURCE_DATABASE).
+#   Never set DB_DATABASE=didnegar_new (legacy dump only).
 #   On the server compose, set DB_HOST to the app MySQL (e.g. new-mysql)
 #   and DB_DATABASE to the Nest DB (e.g. didnegar).
-#
-# Server DB setup (inside api — image already has dist/):
-#   sudo docker compose exec api npm run migration:run:prod
-#   sudo docker compose exec api npm run db:import:legacy:prod -- all
-#   sudo docker compose exec api npm run db:seed:super-admin:prod
-# Or:
-#   sudo docker compose exec api npm run db:setup:prod
-# Requires SOURCE_DATABASE in .env (legacy dump DB, e.g. didnegar_new).
 
 services:
   api:
@@ -44,7 +39,6 @@ services:
       DB_USERNAME: ${DB_USERNAME:-didnegar}
       DB_PASSWORD: ${DB_PASSWORD:-didnegar}
       DB_DATABASE: ${DB_DATABASE:-didnegar}
-      SOURCE_DATABASE: ${SOURCE_DATABASE:-didnegar_new}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       SEED_ON_STARTUP: ${SEED_ON_STARTUP:-false}
       ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-12h}
