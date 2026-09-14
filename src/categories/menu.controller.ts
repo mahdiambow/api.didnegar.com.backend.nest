@@ -22,9 +22,9 @@ export class MenuController {
     message: 'Menu retrieved successfully',
   })
   @ApiOperation({
-    summary: 'درخت کامل دسته‌بندی‌ها برای منو',
+    summary: 'منوی دسته‌بندی‌ها (۳ سطح)',
     description:
-      'همه parent → category → subCategory های فعال را به‌صورت تو در تو برمی‌گرداند.',
+      'سطح ۱ parentCategories ← سطح ۲ categories ← سطح ۳ subCategories (فقط فعال‌ها)',
   })
   @ApiOkResponse({ type: MenuApiResponseDto })
   getMenu() {
