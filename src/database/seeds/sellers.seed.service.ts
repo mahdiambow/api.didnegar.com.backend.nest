@@ -101,4 +101,19 @@ export class SellersSeedService {
       );
     }
   }
+
+  async ensureUserLinkedToDefaultSeller(username: string) {
+    let seller = await this.sellerRepository.findBySlug(SEED_SELLER.slug);
+    if (!seller) {
+      await this.seed();
+      seller = await this.sellerRepository.findBySlug(SEED_SELLER.slug);
+    }
+    if (!seller) return null;
+
+    await this.userRepo.query(
+      `UPDATE users SET sellerId = ? WHERE username = ?`,
+      [seller.id, username],
+    );
+    return seller;
+  }
 }

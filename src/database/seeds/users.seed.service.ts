@@ -184,4 +184,75 @@ export class UsersSeedService {
     const user = await this.userRepo.findOne({ where: { username } });
     return user?.id;
   }
+
+  /**
+   * یک کاربر را سوپرادمین + سوپرسِلِر می‌کند (upsert).
+   * sellerId را SellersSeedService بعداً ست می‌کند.
+   */
+  async seedSuperAdmin(username: string) {
+    const passwordHash = await bcrypt.hash(
+      this.config.get('SEED_DEFAULT_PASSWORD'),
+      10,
+    );
+
+    const role = await this.roleRepository.findBySlug(
+      DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+      null,
+    );
+    if (!role) {
+      throw new Error('Role not found: super-admin — ابتدا roles را seed کنید');
+    }
+
+    const superSeller = await this.roleRepository.findBySlug(
+      DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+      null,
+    );
+    if (!superSeller) {
+      throw new Error(
+        'Role not found: super-seller — ابتدا roles را seed کنید',
+      );
+    }
+
+    const extraRoleIds = [superSeller.id];
+    const existing = await this.userRepo.findOne({ where: { username } });
+
+    if (existing) {
+      existing.roleId = role.id;
+      existing.extraRoleIds = extraRoleIds;
+      existing.password = passwordHash;
+      existing.displayName = existing.displayName || 'Super Admin';
+      existing.firstName = existing.firstName || 'مدیر';
+      existing.lastName = existing.lastName || 'سیستم';
+      existing.isActive = true;
+      await this.userRepo.save(existing);
+      this.sellerUserIds.set(SEED_DEFAULT_SELLER_SLUG, existing.id);
+      return existing;
+    }
+
+    const user = await this.userRepo.save(
+      this.userRepo.create({
+        username,
+        password: passwordHash,
+        displayName: 'Super Admin',
+        firstName: 'مدیر',
+        lastName: 'سیستم',
+        email: `${username}@didnegar.com`,
+        roleId: role.id,
+        extraRoleIds,
+        legacyTable: 'users',
+        isActive: true,
+      }),
+    );
+
+    await this.profileRepo.save(
+      this.profileRepo.create({
+        userId: user.id,
+        nationalCode: null,
+        birthDate: null,
+      }),
+    );
+
+    this.sellerUserIds.set(SEED_DEFAULT_SELLER_SLUG, user.id);
+    return user;
+  }
 }
