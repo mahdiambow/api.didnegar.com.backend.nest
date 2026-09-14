@@ -21,6 +21,7 @@ import {
   SellerOfferItemDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
+import type { ProductResponseDto } from '../products/dto/product-response.dto.js';
 
 export function assertOfferAccess(user: AuthUser, sellerId: string) {
   if (
@@ -52,7 +53,10 @@ export function isImmediateOfferUpdate(dto: UpdateSellerOfferDto): boolean {
   );
 }
 
-export const toOfferResponse = (offer: SellerOffer) => ({
+export const toOfferResponse = (
+  offer: SellerOffer,
+  product?: ProductResponseDto,
+) => ({
   offerId: offer.id,
   sellerId: offer.sellerId,
   productId: offer.productId,
@@ -66,6 +70,7 @@ export const toOfferResponse = (offer: SellerOffer) => ({
   isActive: offer.isActive,
   approvalStatus: offer.approvalStatus ?? 'approved',
   rejectionReason: offer.rejectionReason ?? null,
+  ...(product ? { product } : {}),
   createdAt: offer.createdAt,
   updatedAt: offer.updatedAt,
 });
@@ -99,7 +104,12 @@ export class OffersService {
       .skip(offset)
       .take(limit)
       .getManyAndCount();
-    return paginatedList(items.map(toOfferResponse), page, limit, total);
+    return paginatedList(
+      items.map((offer) => toOfferResponse(offer)),
+      page,
+      limit,
+      total,
+    );
   }
 
   async getEntity(id: string) {
@@ -117,7 +127,9 @@ export class OffersService {
   }
 
   async findOne(id: string) {
-    return toOfferResponse(await this.getEntity(id));
+    const offer = await this.getEntity(id);
+    const product = await this.productsService.findOne(offer.productId);
+    return toOfferResponse(offer, product);
   }
 
   async create(user: AuthUser, dto: CreateSellerOffersDto) {
@@ -236,7 +248,7 @@ export class OffersService {
     offer.approvalStatus = 'approved';
     offer.rejectionReason = null;
 
-    return this.save(offer);
+    return this.save(offer, true);
   }
 
   async review(id: string, dto: ReviewSellerOfferDto) {
@@ -278,7 +290,7 @@ export class OffersService {
       offer.rejectionReason = null;
     }
 
-    return this.save(offer);
+    return this.save(offer, true);
   }
 
   async remove(user: AuthUser, id: string) {
@@ -298,9 +310,12 @@ export class OffersService {
     return {};
   }
 
-  private async save(offer: SellerOffer) {
+  private async save(offer: SellerOffer, includeProduct = false) {
     try {
-      return toOfferResponse(await this.offers.save(offer));
+      const saved = await this.offers.save(offer);
+      if (!includeProduct) return toOfferResponse(saved);
+      const product = await this.productsService.findOne(saved.productId);
+      return toOfferResponse(saved, product);
     } catch (error) {
       const err = error as { code?: string | number; errno?: number };
       if (

@@ -66,6 +66,12 @@ function setup(patch = {}) {
   };
   const productsService = {
     update: vi.fn(async () => ({ id: productId })),
+    findOne: vi.fn(async () => ({
+      id: productId,
+      name: 'Galaxy',
+      status: 'publish',
+      approvalStatus: 'approved',
+    })),
   };
   const service = new OffersService(
     repo as unknown as Repository<SellerOffer>,

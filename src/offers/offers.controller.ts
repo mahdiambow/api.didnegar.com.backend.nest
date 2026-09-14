@@ -57,6 +57,28 @@ export class OffersController {
     return this.offersService.findAll(query);
   }
 
+  @Get(':id/approval')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @RequireRole(
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+    DEFAULT_ROLE_SLUGS.ADMIN,
+    DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+  )
+  @ApiOperation({
+    summary: 'دریافت پیشنهاد فروش برای فرم تأیید / ویرایش',
+    description:
+      'آفر به‌همراه آبجکت کامل محصول لینک‌شده برمی‌گردد تا در صفحه تأیید قابل ویرایش باشد.',
+  })
+  @ApiResponseMeta({
+    code: 'OFFER_FOUND',
+    message: 'Seller offer found successfully',
+  })
+  @ApiOkResponse({ type: OfferApiResponseDto })
+  findOneForApproval(@Param('id', ParseULIDPipe) id: string) {
+    return this.offersService.findOne(id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'دریافت پیشنهاد فروش' })
   @ApiResponseMeta({

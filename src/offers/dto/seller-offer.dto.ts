@@ -9,6 +9,7 @@ import { Transform, Type } from 'class-transformer';
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { CreateProductDto } from '../../products/dto/create-product.dto.js';
+import { ProductResponseDto } from '../../products/dto/product-response.dto.js';
 
 /** آپدیت فیلدهای کاتالوگ محصول هنگام ثبت/ویرایش آفر (بدون approval) */
 export class SellerOfferProductPatchDto extends PartialType(
@@ -111,7 +112,9 @@ export class ListSellerOffersDto extends PaginationQueryDto {
   approvalStatus?: 'pending' | 'approved' | 'rejected';
 }
 
-export class SellerOfferResponseDto extends SellerOfferItemDto {
+export class SellerOfferResponseDto extends OmitType(SellerOfferItemDto, [
+  'product',
+] as const) {
   @ApiProperty({ format: 'ulid' })
   offerId: string;
   @ApiProperty()
@@ -120,6 +123,11 @@ export class SellerOfferResponseDto extends SellerOfferItemDto {
   approvalStatus: 'pending' | 'approved' | 'rejected';
   @ApiPropertyOptional({ nullable: true })
   rejectionReason: string | null;
+  @ApiPropertyOptional({
+    type: ProductResponseDto,
+    description: 'آبجکت کامل محصول لینک‌شده — برای فرم ویرایش / تأیید',
+  })
+  product?: ProductResponseDto;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
 }
