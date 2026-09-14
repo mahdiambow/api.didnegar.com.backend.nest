@@ -18,6 +18,7 @@ import { AttributesModule } from './attributes/attributes.module.js';
 import { BrandsModule } from './brands/brands.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { MediaModule } from './media/media.module.js';
+import { NewsletterModule } from './newsletter/newsletter.module.js';
 import { DatabaseSeedModule } from './database/database.seed.module.js';
 import { UlidSubscriber } from './common/id/ulid.subscriber.js';
 
@@ -58,6 +59,7 @@ import { UlidSubscriber } from './common/id/ulid.subscriber.js';
     AttributesModule,
     SettingsModule,
     MediaModule,
+    NewsletterModule,
     DatabaseSeedModule,
   ],
 })
