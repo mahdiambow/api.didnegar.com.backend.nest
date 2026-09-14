@@ -19,6 +19,10 @@ FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends default-mysql-client \
+  && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY --from=build --chown=node:node /app/package.json ./package.json

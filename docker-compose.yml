@@ -10,14 +10,9 @@
 #   docker compose up -d migration-mysql phpmyadmin
 #   npm run start:dev
 #
-# Server one-shot (host — loads dump + migrate + import + seed):
-#   LEGACY_DUMP_PATH=/var/www/dumps/didnegar-20260913-151630.sql sudo bash scripts/db-setup-prod.sh
-# Or if dump is already in /var/www/dumps/*.sql:
-#   sudo bash scripts/db-setup-prod.sh
-#
-# Inside api only (SOURCE_DATABASE must already have legacy tables):
-#   sudo docker compose exec api npm run db:setup:prod
-
+# One command inside api (loads dump from /dumps + migrate + import + seed):
+#   sudo docker compose exec api node dist/database/seeds/run-db-setup-prod.js
+# Put SQL files in ./dumps (or /var/www/dumps). Dump USE `didnegar` is rewritten to SOURCE_DATABASE.
 services:
   api:
     image: didnegar-api:latest
@@ -43,8 +38,12 @@ services:
       ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-12h}
       SWAGGER_PERSIST_AUTH: ${SWAGGER_PERSIST_AUTH:-false}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      LEGACY_DUMP_PATH: ${LEGACY_DUMP_PATH:-/dumps/didnegar-20260913-151630.sql}
     ports:
       - "${PORT:-3000}:3000"
+    volumes:
+      - ${DUMPS_PATH:-./dumps}:/dumps:ro
     depends_on:
       migration-mysql:
         condition: service_healthy

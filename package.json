@@ -35,8 +35,8 @@
     "db:import:brands:prod": "node dist/database/seeds/import-brands-from-legacy.js",
     "db:import:legacy": "node dist/database/seeds/import-legacy-dump.js",
     "db:import:legacy:prod": "node dist/database/seeds/import-legacy-dump.js",
-    "db:setup:prod": "npm run migration:run && npm run db:import:legacy -- all && npm run db:seed:super-admin",
-    "db:setup": "bash scripts/db-setup-prod.sh"
+    "db:setup:prod": "node dist/database/seeds/run-db-setup-prod.js",
+    "db:setup": "node dist/database/seeds/run-db-setup-prod.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
