@@ -64,7 +64,20 @@ function resolveDumpPath(source: string): string | null {
 async function rootConn() {
   const host = env('DB_HOST', 'localhost');
   const port = Number(env('DB_PORT', '3306'));
-  const rootPassword = env('MYSQL_ROOT_PASSWORD');
+  const rootPassword =
+    process.env.MYSQL_ROOT_PASSWORD?.trim() ||
+    process.env.MYSQL_ROOT_PASS?.trim() ||
+    '';
+  if (!rootPassword) {
+    throw new Error(
+      [
+        'Missing env MYSQL_ROOT_PASSWORD inside api container.',
+        'Pass it for this run:',
+        `  sudo docker compose exec -e MYSQL_ROOT_PASSWORD=YOUR_ROOT_PASS api node dist/database/seeds/run-db-setup-prod.js`,
+        'Or add to compose api.environment / .env and recreate api.',
+      ].join('\n'),
+    );
+  }
   return mysql.createConnection({
     host,
     port,
@@ -121,7 +134,13 @@ async function ensureDatabases() {
 async function loadDumpIntoSource(dumpPath: string, source: string) {
   const host = env('DB_HOST', 'localhost');
   const port = env('DB_PORT', '3306');
-  const rootPassword = env('MYSQL_ROOT_PASSWORD');
+  const rootPassword =
+    process.env.MYSQL_ROOT_PASSWORD?.trim() ||
+    process.env.MYSQL_ROOT_PASS?.trim() ||
+    '';
+  if (!rootPassword) {
+    throw new Error('Missing MYSQL_ROOT_PASSWORD for dump load');
+  }
 
   console.log(`==> recreate ${source}`);
   const conn = await rootConn();
