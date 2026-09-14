@@ -1,18 +1,20 @@
-# Local stack:
+# Full stack: API + MySQL + phpMyAdmin
 #   cp .env.example .env
-#   docker compose up -d
-# MySQL: localhost:${DB_PORT:-3309}  |  phpMyAdmin: http://localhost:8080
-# API (optional, built image): http://localhost:${PORT:-3000}
+#   docker compose up -d --build
 #
-# Nest on the host (recommended for dev):
+#   API:        http://localhost:${PORT:-3000}
+#   MySQL:      localhost:${DB_PORT:-3309}
+#   phpMyAdmin: http://localhost:${PHPMYADMIN_PORT:-8080}
+#
+# Nest on host (MySQL + phpMyAdmin only):
 #   docker compose up -d migration-mysql phpmyadmin
 #   npm run start:dev
 #
-# Server DB setup (inside api container — image already has dist/, no nest build):
+# Server DB setup (inside api — image already has dist/):
 #   sudo docker compose exec api npm run migration:run:prod
 #   sudo docker compose exec api npm run db:import:legacy:prod -- all
 #   sudo docker compose exec api npm run db:seed:super-admin:prod
-# Or one shot:
+# Or:
 #   sudo docker compose exec api npm run db:setup:prod
 # Requires SOURCE_DATABASE in .env (legacy dump DB, e.g. didnegar_new).
 
@@ -35,10 +37,12 @@ services:
       DB_USERNAME: ${DB_USERNAME:-didnegar}
       DB_PASSWORD: ${DB_PASSWORD:-didnegar}
       DB_DATABASE: ${DB_DATABASE:-didnegar}
+      SOURCE_DATABASE: ${SOURCE_DATABASE:-didnegar_new}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       SEED_ON_STARTUP: ${SEED_ON_STARTUP:-false}
       ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-12h}
       SWAGGER_PERSIST_AUTH: ${SWAGGER_PERSIST_AUTH:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
     ports:
       - "${PORT:-3000}:3000"
     depends_on:
@@ -59,6 +63,7 @@ services:
       - "${DB_PORT:-3309}:3306"
     volumes:
       - migration_mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -88,6 +93,7 @@ services:
       PMA_PORT: 3306
       PMA_USER: root
       PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      UPLOAD_LIMIT: 256M
     ports:
       - '${PHPMYADMIN_PORT:-8080}:80'
     depends_on:
