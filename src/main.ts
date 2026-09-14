@@ -22,6 +22,28 @@ async function bootstrap() {
   const reflector = app.get(Reflector);
   const isProduction = process.env.NODE_ENV === 'production';
 
+  const allowedOrigins = [
+    'https://didnegar.net',
+    'https://www.didnegar.net',
+    ...(process.env.CORS_ORIGINS?.split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean) ?? []),
+  ];
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      // درخواست‌های بدون origin (curl/Postman) و originهای مجاز
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   app.use(
     helmet({
       contentSecurityPolicy: isProduction
