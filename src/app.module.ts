@@ -21,6 +21,7 @@ import { MediaModule } from './media/media.module.js';
 import { NewsletterModule } from './newsletter/newsletter.module.js';
 import { DatabaseSeedModule } from './database/database.seed.module.js';
 import { UlidSubscriber } from './common/id/ulid.subscriber.js';
+import { ShoppingCartModule } from './shopping-cart/shopping-cart.module.js';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { UlidSubscriber } from './common/id/ulid.subscriber.js';
     ProductsModule,
     BrandsModule,
     OffersModule,
+    ShoppingCartModule,
     OrdersModule,
     PaymentsModule,
     ShippingModule,

@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
 import { ApiException } from '../common/exceptions/api.exception.js';
@@ -16,7 +17,8 @@ import {
   refreshTokenExpiresAt,
 } from './config/auth.config.js';
 import { resolveUserRoles } from './types/auth-user.type.js';
-import type { User } from './entities/user.entity.js';
+import { User } from './entities/user.entity.js';
+import { ShoppingCartService } from '../shopping-cart/shopping-cart.service.js';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +29,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly rolesSeedService: RolesSeedService,
     private readonly roleRepository: RoleRepository,
+    private readonly shoppingCartService: ShoppingCartService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async loginOrSignup(mobile: string) {
@@ -34,13 +38,18 @@ export class AuthService {
 
     if (!user) {
       const defaultRole = await this.rolesSeedService.getDefaultUserRole();
-      user = await this.userRepository.save(
-        this.userRepository.create({
-          username: mobile,
-          isActive: true,
-          roleId: defaultRole.id,
-        }),
-      );
+      user = await this.dataSource.transaction(async (manager) => {
+        const users = manager.getRepository(User);
+        const created = await users.save(
+          users.create({
+            username: mobile,
+            isActive: true,
+            roleId: defaultRole.id,
+          }),
+        );
+        await this.shoppingCartService.init(created.id, manager);
+        return created;
+      });
     }
 
     const code = this.config.get('OTP_STATIC_CODE');
