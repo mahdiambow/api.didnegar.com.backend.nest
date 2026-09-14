@@ -9,7 +9,7 @@ import { OffersController } from './offers.controller.js';
 import { OffersService } from './offers.service.js';
 @Module({
   imports: [
-    AuthModule,
+    forwardRef(() => AuthModule),
     TypeOrmModule.forFeature([SellerOffer, Seller, Product]),
     forwardRef(() => ProductsModule),
   ],
