@@ -10,12 +10,14 @@
 #   docker compose up -d migration-mysql phpmyadmin
 #   npm run start:dev
 #
-# Server DB setup (inside api — image already has dist/):
-#   sudo docker compose exec api npm run migration:run:prod
-#   sudo docker compose exec api npm run db:import:legacy:prod -- all
-#   sudo docker compose exec api npm run db:seed:super-admin:prod
-# Or:
+# Server DB setup (one command from host — creates DBs, loads dump, migrate, import, seed):
+#   LEGACY_DUMP_PATH=/path/to/didnegar_new.sql sudo bash scripts/db-setup-prod.sh
+#
+# If didnegar_new already has data:
+#   sudo bash scripts/db-setup-prod.sh
+#   # or:
 #   sudo docker compose exec api npm run db:setup:prod
+#
 # Requires SOURCE_DATABASE in .env (legacy dump DB, e.g. didnegar_new).
 
 services:
