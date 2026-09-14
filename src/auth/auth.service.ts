@@ -43,9 +43,7 @@ export class AuthService {
       );
     }
 
-    const code = this.config.get('NODE_ENV') === 'production'
-      ? this.generateRandomOtpCode()
-      : this.config.get('OTP_STATIC_CODE');
+    const code = this.config.get('OTP_STATIC_CODE');
 
     const hashedCode = await bcrypt.hash(code, 10);
 
@@ -59,7 +57,7 @@ export class AuthService {
     }
 
     return {
-      ...(this.config.get('NODE_ENV') === 'production' ? {} : { code }),
+      code,
       isNewUser: !user.password,
       expiresIn: authConfig.otpTtlMinutes * 60,
     };
@@ -355,9 +353,5 @@ export class AuthService {
 
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
-  }
-
-  private generateRandomOtpCode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
   }
 }
