@@ -5,7 +5,7 @@ import {
   SUB_CATEGORY_RESPONSE_EXAMPLE,
 } from './category.examples.js';
 
-/** نود برگ منو — sub-category */
+/** سطح ۳ — sub-category */
 export class MenuSubCategoryDto {
   @ApiProperty({ example: SUB_CATEGORY_RESPONSE_EXAMPLE.id })
   id: string;
@@ -38,10 +38,13 @@ export class MenuSubCategoryDto {
   sort: number;
 }
 
-/** نود میانی منو — category + children */
+/** سطح ۲ — category + subCategories */
 export class MenuCategoryDto {
   @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.id })
   id: string;
+
+  @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.parentCategoryId })
+  parentCategoryId: string;
 
   @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.name })
   name: string;
@@ -70,11 +73,14 @@ export class MenuCategoryDto {
   @ApiProperty({ example: 0 })
   sort: number;
 
-  @ApiProperty({ type: [MenuSubCategoryDto] })
-  children: MenuSubCategoryDto[];
+  @ApiProperty({
+    type: [MenuSubCategoryDto],
+    description: 'سطح ۳ — sub-categories',
+  })
+  subCategories: MenuSubCategoryDto[];
 }
 
-/** نود ریشه منو — parent category + children */
+/** سطح ۱ — parent category + categories */
 export class MenuParentCategoryDto {
   @ApiProperty({ example: PARENT_CATEGORY_RESPONSE_EXAMPLE.id })
   id: string;
@@ -106,6 +112,9 @@ export class MenuParentCategoryDto {
   @ApiProperty({ example: 0 })
   sort: number;
 
-  @ApiProperty({ type: [MenuCategoryDto] })
-  children: MenuCategoryDto[];
+  @ApiProperty({
+    type: [MenuCategoryDto],
+    description: 'سطح ۲ — categories',
+  })
+  categories: MenuCategoryDto[];
 }

@@ -54,7 +54,7 @@ export class CategoriesService {
     return items.map(toParentCategoryResponse);
   }
 
-  /** درخت کامل منو: parent → category → subCategory (فقط isActive) */
+  /** درخت ۳سطحی منو: parentCategories → categories → subCategories */
   async getMenu() {
     const [parents, categories, subCategories] = await Promise.all([
       this.parentCategoryRepository.findFiltered({ isActive: true }),
@@ -62,19 +62,17 @@ export class CategoriesService {
       this.subCategoryRepository.findFiltered({ isActive: true }),
     ]);
 
-    const subsByCategoryId = new Map<
-      string,
-      Array<{
-        id: string;
-        name: string;
-        nameEn: string | null;
-        slug: string;
-        icon: string | null;
-        image: string | null;
-        sort: number;
-      }>
-    >();
+    type MenuNode = {
+      id: string;
+      name: string;
+      nameEn: string | null;
+      slug: string;
+      icon: string | null;
+      image: string | null;
+      sort: number;
+    };
 
+    const subsByCategoryId = new Map<string, MenuNode[]>();
     for (const sub of subCategories) {
       const list = subsByCategoryId.get(sub.categoryId) ?? [];
       list.push({
@@ -91,37 +89,24 @@ export class CategoriesService {
 
     const catsByParentId = new Map<
       string,
-      Array<{
-        id: string;
-        name: string;
-        nameEn: string | null;
-        slug: string;
-        icon: string | null;
-        image: string | null;
-        sort: number;
-        children: Array<{
-          id: string;
-          name: string;
-          nameEn: string | null;
-          slug: string;
-          icon: string | null;
-          image: string | null;
-          sort: number;
-        }>;
-      }>
+      Array<MenuNode & { parentCategoryId: string; subCategories: MenuNode[] }>
     >();
 
     for (const category of categories) {
+      // skip migration catch-all where category id == parent id
+      if (category.id === category.parentCategoryId) continue;
+
       const list = catsByParentId.get(category.parentCategoryId) ?? [];
       list.push({
         id: category.id,
+        parentCategoryId: category.parentCategoryId,
         name: category.name,
         nameEn: category.nameEn ?? null,
         slug: category.slug,
         icon: category.icon ?? null,
         image: category.image ?? null,
         sort: category.sort ?? 0,
-        children: subsByCategoryId.get(category.id) ?? [],
+        subCategories: subsByCategoryId.get(category.id) ?? [],
       });
       catsByParentId.set(category.parentCategoryId, list);
     }
@@ -134,7 +119,7 @@ export class CategoriesService {
       icon: parent.icon ?? null,
       image: parent.image ?? null,
       sort: parent.sort ?? 0,
-      children: catsByParentId.get(parent.id) ?? [],
+      categories: catsByParentId.get(parent.id) ?? [],
     }));
   }
 
