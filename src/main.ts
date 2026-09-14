@@ -31,7 +31,10 @@ async function bootstrap() {
   ];
 
   app.enableCors({
-    origin: (origin, callback) => {
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
       // درخواست‌های بدون origin (curl/Postman) و originهای مجاز
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
