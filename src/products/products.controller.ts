@@ -2,6 +2,7 @@ import { ParseULIDPipe } from '../common/id/index.js';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -19,8 +20,10 @@ import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ReviewProductDto } from './dto/review-product.dto.js';
 import {
   BrandResponseDto,
+  ProductPriceResponseDto,
   ProductResponseDto,
 } from './dto/product-response.dto.js';
+import { AttributeValueResponseDto } from '../attributes/dto/attribute-value.dto.js';
 import { ListProductsQueryDto } from './dto/list-products-query.dto.js';
 
 const ProductApiResponseDto = createSuccessResponseDto(ProductResponseDto, {
@@ -45,6 +48,11 @@ const BrandsListApiResponseDto = createSuccessResponseDto(BrandResponseDto, {
 });
 
 @ApiTags('Products')
+@ApiExtraModels(
+  ProductResponseDto,
+  ProductPriceResponseDto,
+  AttributeValueResponseDto,
+)
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 @Controller('products')

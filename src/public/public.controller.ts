@@ -1,5 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { SettingsService } from '../settings/settings.service.js';
@@ -9,7 +14,11 @@ import { CategoriesService } from '../categories/categories.service.js';
 import { FooterResponseDto } from '../settings/dto/footer.dto.js';
 import { HeaderResponseDto } from '../settings/dto/header.dto.js';
 import { BannerResponseDto } from '../settings/dto/banner.dto.js';
-import { ProductResponseDto } from '../products/dto/product-response.dto.js';
+import {
+  ProductPriceResponseDto,
+  ProductResponseDto,
+} from '../products/dto/product-response.dto.js';
+import { AttributeValueResponseDto } from '../attributes/dto/attribute-value.dto.js';
 import { MenuParentCategoryDto } from '../categories/dto/menu-response.dto.js';
 
 const PublicFooterApiResponseDto = createSuccessResponseDto(FooterResponseDto, {
@@ -28,6 +37,7 @@ const PublicBannersApiResponseDto = createSuccessResponseDto(BannerResponseDto, 
   code: 'PUBLIC_BANNERS_FOUND',
   message: 'Banners retrieved successfully',
   name: 'PublicBanners',
+  isArray: true,
 });
 
 const PublicProductsApiResponseDto = createSuccessResponseDto(
@@ -36,6 +46,7 @@ const PublicProductsApiResponseDto = createSuccessResponseDto(
     code: 'PUBLIC_PRODUCTS_FOUND',
     message: 'Products retrieved successfully',
     name: 'PublicProducts',
+    isArray: true,
   },
 );
 
@@ -45,10 +56,16 @@ const PublicCategoriesApiResponseDto = createSuccessResponseDto(
     code: 'PUBLIC_CATEGORIES_FOUND',
     message: 'Categories retrieved successfully',
     name: 'PublicCategories',
+    isArray: true,
   },
 );
 
 @ApiTags('Public')
+@ApiExtraModels(
+  ProductResponseDto,
+  ProductPriceResponseDto,
+  AttributeValueResponseDto,
+)
 @Controller('public')
 export class PublicController {
   constructor(

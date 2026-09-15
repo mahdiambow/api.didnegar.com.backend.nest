@@ -39,6 +39,17 @@ export class AttributeRepository {
       .getMany();
   }
 
+  findByIdsWithValues(ids: string[]) {
+    if (!ids.length) return Promise.resolve([] as Attribute[]);
+    return this.repo
+      .createQueryBuilder('attribute')
+      .leftJoinAndSelect('attribute.values', 'values')
+      .where('attribute.id IN (:...ids)', { ids: [...new Set(ids)] })
+      .orderBy('values.sortOrder', 'ASC')
+      .addOrderBy('values.label', 'ASC')
+      .getMany();
+  }
+
   findByName(name: string) {
     return this.repo.findOne({ where: { name } });
   }
