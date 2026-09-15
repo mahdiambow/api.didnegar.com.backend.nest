@@ -146,23 +146,16 @@ async function upsertSuperAdminUser(conn, {
     await conn.execute(
       `UPDATE users
        SET roleId = ?,
-           extraRoleIds = ?,
+           extraRoleIds = CAST('[]' AS JSON),
            adminId = ?,
-           password = COALESCE(?, password),
-           displayName = COALESCE(?, displayName),
+           password = ?,
+           displayName = COALESCE(NULLIF(?, ''), displayName),
            isActive = 1,
            otpCode = NULL,
            otpExpiresAt = NULL,
            updatedAt = NOW(6)
        WHERE id = ?`,
-      [
-        roleId,
-        JSON.stringify([]),
-        adminId,
-        passwordHash,
-        name,
-        existing[0].id,
-      ],
+      [roleId, adminId, passwordHash, name, existing[0].id],
     );
     return { id: existing[0].id, created: false };
   }
@@ -255,14 +248,28 @@ async function main() {
 
       await conn.commit();
 
+      const [verify] = await conn.execute(
+        `SELECT u.id AS userId, u.username, r.slug AS roleSlug, u.adminId
+         FROM users u
+         INNER JOIN roles r ON r.id = u.roleId
+         WHERE u.username = ?
+         LIMIT 1`,
+        [mobile],
+      );
+
       console.log('\n✅ سوپرادمین آماده شد');
       console.log(`   mobile : ${mobile}`);
       console.log(`   userId : ${user.id}`);
       console.log(`   adminId: ${adminId}`);
-      console.log(`   role   : super-admin`);
+      console.log(`   role   : ${verify[0]?.roleSlug ?? 'UNKNOWN'}`);
       console.log(
         `   status : ${user.created ? 'created' : 'upgraded existing user'}`,
       );
+      if (verify[0]?.roleSlug !== 'super-admin') {
+        throw new Error(
+          `نقش بعد از آپدیت هنوز super-admin نیست (الان: ${verify[0]?.roleSlug}).`,
+        );
+      }
       console.log('\nورود از: POST /admin/auth/login-with-password');
     } catch (error) {
       await conn.rollback();
