@@ -330,6 +330,14 @@ export class AuthService {
   }
 
   private async assertPortalAccess(user: User, portal: AuthPortal) {
+    if (!user.role) {
+      throw new ApiException(
+        'PORTAL_ACCESS_DENIED',
+        'نقش کاربر بارگذاری نشد',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
     const roles = await this.resolveRoleSlugs(user);
     const allowed = AUTH_PORTAL_ROLES[portal];
     if (
@@ -340,7 +348,7 @@ export class AuthService {
     ) {
       throw new ApiException(
         'PORTAL_ACCESS_DENIED',
-        'دسترسی به این پورتال برای این حساب مجاز نیست',
+        `دسترسی به پورتال ${portal} مجاز نیست (نقش‌های فعلی: ${roles.join(', ') || '—'})`,
         HttpStatus.FORBIDDEN,
       );
     }

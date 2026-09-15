@@ -21,7 +21,10 @@ export class UserRepository {
   }
 
   findByUsername(username: string) {
-    return this.repo.findOne({ where: { username } });
+    return this.repo.findOne({
+      where: { username },
+      relations: { role: true, seller: true, admin: true },
+    });
   }
 
   findPaginatedForTenant(
