@@ -1,4 +1,4 @@
-import type { AuthUser } from '../../auth/types/auth-user.type.js';
+import type { AuthUser } from '../../utils/auth/types/auth-user.type.js';
 import { isSuperAdminRole } from '../../roles/permissions.js';
 
 export function canAccessSellerData(

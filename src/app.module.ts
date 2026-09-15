@@ -4,10 +4,11 @@ import { ConfigModule } from './config/config.module.js';
 import { ConfigService } from './config/config.service.js';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from './auth/auth.module.js';
+import { AuthModule } from './utils/auth/auth.module.js';
 import { RolesModule } from './roles/roles.module.js';
 import { UsersModule } from './users/users.module.js';
 import { SellersModule } from './sellers/sellers.module.js';
+import { AdminModule } from './admin/admin.module.js';
 import { LocationsModule } from './locations/locations.module.js';
 import { ProductsModule } from './products/products.module.js';
 import { OrdersModule } from './orders/orders.module.js';
@@ -50,6 +51,7 @@ import { ShoppingCartModule } from './shopping-cart/shopping-cart.module.js';
     RolesModule,
     UsersModule,
     SellersModule,
+    AdminModule,
     LocationsModule,
     ProductsModule,
     BrandsModule,

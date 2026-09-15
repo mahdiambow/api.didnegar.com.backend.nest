@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { RolesModule } from '../roles/roles.module.js';
 import { LocationsModule } from '../locations/locations.module.js';
 import { SellersModule } from '../sellers/sellers.module.js';

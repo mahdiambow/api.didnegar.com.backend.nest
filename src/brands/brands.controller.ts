@@ -9,9 +9,9 @@ import {
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
-import { PermissionsGuard } from '../auth/guards/permissions.guard.js';
-import { RequirePermissions } from '../auth/decorators/require-permissions.decorator.js';
+import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
+import { PermissionsGuard } from '../utils/auth/guards/permissions.guard.js';
+import { RequirePermissions } from '../utils/auth/decorators/require-permissions.decorator.js';
 import { PERMISSIONS } from '../roles/permissions.js';
 import { BrandsService } from './brands.service.js';
 import {

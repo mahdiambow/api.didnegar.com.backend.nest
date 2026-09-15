@@ -16,7 +16,7 @@ export class CreateUserDto {
       '01JEX000000000000000000040',
     ],
     description:
-      'آرایه شناسه نقش‌ها — اولین آیتم نقش اصلی است، بقیه نقش‌های اضافه (مثلاً super-admin + super-seller)',
+      'آرایه شناسه نقش‌ها — اولین آیتم نقش اصلی است. همه باید audience یکسان داشته باشند (نمی‌شود super-admin را با user/seller ترکیب کرد)',
   })
   @IsArray()
   @ArrayMinSize(1)

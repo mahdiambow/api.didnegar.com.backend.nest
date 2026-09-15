@@ -16,7 +16,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import {
