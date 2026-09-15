@@ -3,7 +3,6 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 
 dotenv.config();
-const require = createRequire(import.meta.url);
 
 async function bootstrap() {
   const { NestFactory, Reflector } = await import('@nestjs/core');
@@ -88,8 +87,10 @@ async function bootstrap() {
 
   // Serve Scalar's standalone bundle locally so the reference page never needs jsDelivr.
   const express = await import('express');
+  // Resolve from project root — createRequire(import.meta.url) can fail under dist/
+  const requireFromRoot = createRequire(join(process.cwd(), 'package.json'));
   const scalarAssetsPath = join(
-    dirname(require.resolve('@scalar/api-reference')),
+    dirname(requireFromRoot.resolve('@scalar/api-reference')),
     'browser',
   );
   app.use('/reference-assets', express.default.static(scalarAssetsPath));
