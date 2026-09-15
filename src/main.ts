@@ -38,7 +38,12 @@ async function bootstrap() {
             directives: {
               defaultSrc: [`'self'`],
               styleSrc: [`'self'`, `'unsafe-inline'`],
-              scriptSrc: [`'self'`],
+              // Scalar uses an inline bootstrap module that loads its UI from jsDelivr.
+              scriptSrc: [
+                `'self'`,
+                `'unsafe-inline'`,
+                'https://cdn.jsdelivr.net',
+              ],
               imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
               fontSrc: [`'self'`, 'https://fonts.gstatic.com'],
               connectSrc: [`'self'`],
