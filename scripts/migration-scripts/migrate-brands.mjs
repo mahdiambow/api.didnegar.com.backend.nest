@@ -6,6 +6,7 @@ import {
   BATCH_SIZE,
   asBoolean,
   asNullableString,
+  assertColumns,
   assertTables,
   newId,
   openLegacyConnection,
@@ -172,6 +173,7 @@ async function main() {
   try {
     await assertTables(source, sourceDatabase, ['brands'], 'Legacy');
     await assertTables(target, targetDatabase, ['brands'], 'Target');
+    await assertColumns(target, targetDatabase, 'brands', ['legacyId', 'legacyTable'], 'Target');
     let offset = 0;
     let batchNumber = 0;
     while (true) {

@@ -6,9 +6,16 @@ import type { Role } from '../../roles/entities/role.entity.js';
 import type { SellerContract } from './seller-contract.entity.js';
 
 @Entity('sellers')
+@Index(['legacyTable', 'legacyId'], { unique: true })
 export class Seller {
   @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
+
+  @Column({ type: 'bigint', nullable: true })
+  legacyId: number | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  legacyTable: string | null;
 
   @Column({ type: 'varchar', length: 150 })
   name: string;

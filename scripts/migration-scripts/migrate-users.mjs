@@ -129,21 +129,40 @@ async function ensureSeller(target, row) {
   const name = sellerName(row);
   const email = asNullableString(row.email, 150) || `seller-${row.legacyId}@legacy.invalid`;
   const phone = usernameBase(row.username).slice(0, 20);
-  const values = [name, name.slice(0, 200), email, phone, asBoolean(row.isActive) ? 'active' : 'inactive', row.createdAt, row.updatedAt];
-  const [existing] = await target.execute('SELECT id FROM sellers WHERE slug = ? LIMIT 1', [slug]);
+  const legacyId = Number(row.legacyId);
+  const legacyTable = String(row.legacyTable || 'users');
+  const values = [
+    legacyId,
+    legacyTable,
+    name,
+    name.slice(0, 200),
+    email,
+    phone,
+    asBoolean(row.isActive) ? 'active' : 'inactive',
+    row.createdAt,
+    row.updatedAt,
+  ];
+  let [existing] = await target.execute(
+    'SELECT id FROM sellers WHERE legacyTable = ? AND legacyId = ? LIMIT 1',
+    [legacyTable, legacyId],
+  );
+  if (!existing[0]) {
+    [existing] = await target.execute('SELECT id FROM sellers WHERE slug = ? LIMIT 1', [slug]);
+  }
   if (existing[0]) {
     await target.execute(
-      `UPDATE sellers SET name = ?, businessName = ?, email = ?, phone = ?, status = ?,
-       createdAt = ?, updatedAt = ? WHERE id = ?`,
+      `UPDATE sellers SET legacyId = ?, legacyTable = ?, name = ?, businessName = ?, email = ?,
+       phone = ?, status = ?, createdAt = ?, updatedAt = ? WHERE id = ?`,
       [...values, existing[0].id],
     );
     return { id: existing[0].id, created: false };
   }
   const id = newId();
   await target.execute(
-    `INSERT INTO sellers (id, name, slug, businessName, businessType, email, phone, status, settings, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, 'other', ?, ?, ?, CAST('{}' AS JSON), ?, ?)`,
-    [id, name, slug, ...values.slice(1)],
+    `INSERT INTO sellers (id, legacyId, legacyTable, name, slug, businessName, businessType, email,
+     phone, status, settings, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, 'other', ?, ?, ?, CAST('{}' AS JSON), ?, ?)`,
+    [id, legacyId, legacyTable, name, slug, ...values.slice(3)],
   );
   return { id, created: true };
 }
@@ -158,11 +177,20 @@ async function ensureAdmin(target, row, existingAdminId) {
   const name = sellerName(row);
   const phone = adminPhone(row);
   const email = asNullableString(row.email, 150);
+  const legacyId = Number(row.legacyId);
+  const legacyTable = String(row.legacyTable || 'users');
   let existing = null;
 
   if (existingAdminId) {
     const [byId] = await target.execute('SELECT id FROM admins WHERE id = ? LIMIT 1', [existingAdminId]);
     existing = byId[0] || null;
+  }
+  if (!existing) {
+    const [byLegacy] = await target.execute(
+      'SELECT id FROM admins WHERE legacyTable = ? AND legacyId = ? LIMIT 1',
+      [legacyTable, legacyId],
+    );
+    existing = byLegacy[0] || null;
   }
   if (!existing) {
     const [byPhone] = await target.execute('SELECT id FROM admins WHERE phone = ? LIMIT 1', [phone]);
@@ -173,11 +201,20 @@ async function ensureAdmin(target, row, existingAdminId) {
     existing = byEmail[0] || null;
   }
 
-  const values = [name, email, phone, asBoolean(row.isActive) ? 1 : 0, row.createdAt, row.updatedAt];
+  const values = [
+    legacyId,
+    legacyTable,
+    name,
+    email,
+    phone,
+    asBoolean(row.isActive) ? 1 : 0,
+    row.createdAt,
+    row.updatedAt,
+  ];
   if (existing) {
     await target.execute(
-      `UPDATE admins SET name = ?, email = ?, phone = ?, isActive = ?, createdAt = ?, updatedAt = ?
-       WHERE id = ?`,
+      `UPDATE admins SET legacyId = ?, legacyTable = ?, name = ?, email = ?, phone = ?, isActive = ?,
+       createdAt = ?, updatedAt = ? WHERE id = ?`,
       [...values, existing.id],
     );
     return { id: existing.id, created: false };
@@ -185,8 +222,8 @@ async function ensureAdmin(target, row, existingAdminId) {
 
   const id = newId();
   await target.execute(
-    `INSERT INTO admins (id, name, email, phone, isActive, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO admins (id, legacyId, legacyTable, name, email, phone, isActive, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, ...values],
   );
   return { id, created: true };
@@ -301,7 +338,9 @@ async function main() {
   try {
     await assertTables(source, sourceDatabase, ['users', 'user_roles'], 'Legacy');
     await assertTables(target, targetDatabase, ['users', 'roles', 'sellers', 'admins'], 'Target');
-    await assertColumns(target, targetDatabase, 'users', ['adminId'], 'Target');
+    await assertColumns(target, targetDatabase, 'users', ['legacyId', 'legacyTable', 'adminId'], 'Target');
+    await assertColumns(target, targetDatabase, 'sellers', ['legacyId', 'legacyTable'], 'Target');
+    await assertColumns(target, targetDatabase, 'admins', ['legacyId', 'legacyTable'], 'Target');
     const [roleRows] = await target.execute('SELECT id, slug FROM roles');
     const roleBySlug = new Map(roleRows.map((role) => [String(role.slug), role]));
     const defaultUserRoleId = roleBySlug.get('user')?.id;
