@@ -80,7 +80,7 @@ export class UserAuthController {
     return this.authService.loginWithPassword(dto.mobile, dto.password, 'user');
   }
 
-  @Post('validate-token')
+  @Post('validate-token') //TODO: Create a hashcode in response login-or-signup for validate token
   @ApiResponseMeta({
     code: 'TOKEN_VALIDATED',
     message: 'Token validated successfully',
