@@ -19,7 +19,7 @@ const ROLE_PRIORITY = ['super-admin', 'admin', 'super-seller', 'seller', 'user']
 const LEGACY_ROLE_MAP = new Map([
   ['customer', 'user'],
   ['shop_manager', 'seller'],
-  ['subscriber', 'admin'],
+  ['subscriber', 'user'],
   ['administrator', 'super-admin'],
   ['dokan_export_order', 'seller'],
   ['edit_users', 'admin'],
