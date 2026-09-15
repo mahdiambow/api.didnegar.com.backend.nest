@@ -2,7 +2,7 @@
  * Imports legacy users and roles into the existing Nest users/roles structure.
  * Each 1,000-user batch is committed atomically in its own target transaction.
  */
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import {
   BATCH_SIZE,
   asBoolean,
@@ -10,6 +10,7 @@ import {
   assertTables,
   openLegacyConnection,
   openTargetConnection,
+  newId,
   requiredEnv,
 } from './shared.mjs';
 
@@ -137,7 +138,7 @@ async function ensureSeller(target, row) {
     );
     return { id: existing[0].id, created: false };
   }
-  const id = randomUUID();
+  const id = newId();
   await target.execute(
     `INSERT INTO sellers (id, name, slug, businessName, businessType, email, phone, status, settings, createdAt, updatedAt)
      VALUES (?, ?, ?, ?, 'other', ?, ?, ?, CAST('{}' AS JSON), ?, ?)`,
@@ -206,7 +207,7 @@ async function migrateBatch({ source, target, rows, offset, batchNumber, roleByS
         usernameOwners.set(username, existing.id);
         counters.updated += 1;
       } else {
-        const id = randomUUID();
+        const id = newId();
         await target.execute(
           `INSERT INTO users (id, legacyId, legacyTable, username, password, email, displayName,
            firstName, lastName, website, isActive, roleId, extraRoleIds, sellerId, createdAt, updatedAt)
