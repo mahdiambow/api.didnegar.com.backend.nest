@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { RolesModule } from '../roles/roles.module.js';
 import { Brand } from './entities/brand.entity.js';
 import { BrandRepository } from './repositories/brand.repository.js';

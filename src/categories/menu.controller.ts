@@ -9,6 +9,7 @@ const MenuApiResponseDto = createSuccessResponseDto(MenuParentCategoryDto, {
   code: 'MENU_FOUND',
   message: 'Menu retrieved successfully',
   name: 'Menu',
+  isArray: true,
 });
 
 @ApiTags('Menu')

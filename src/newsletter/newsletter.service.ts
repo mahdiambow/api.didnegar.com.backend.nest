@@ -6,7 +6,7 @@ import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
-import { UserRepository } from '../auth/repositories/user.repository.js';
+import { UserRepository } from '../utils/auth/repositories/user.repository.js';
 import { NewsletterSubscription } from './entities/newsletter-subscription.entity.js';
 import {
   ListNewsletterQueryDto,

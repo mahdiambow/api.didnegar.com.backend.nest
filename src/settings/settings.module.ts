@@ -4,7 +4,7 @@ import { BannersController } from './banners.controller.js';
 import { BannersService } from './banners.service.js';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { FooterSettings } from './entities/footer-settings.entity.js';
 import { SettingsController } from './settings.controller.js';
 import { SettingsService } from './settings.service.js';
@@ -40,6 +40,6 @@ import { ContactMessagesService } from './contact-messages.service.js';
     BannersController,
   ],
   providers: [SettingsService, BannersService, ContactMessagesService],
-  exports: [SettingsService, ContactMessagesService],
+  exports: [SettingsService, BannersService, ContactMessagesService],
 })
 export class SettingsModule {}

@@ -1,5 +1,5 @@
 import { PrimaryColumn, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, UpdateDateColumn } from 'typeorm';
-import type { User } from '../../auth/entities/user.entity.js';
+import type { User } from '../../users/entities/user.entity.js';
 import type { OrderItem } from '../../orders/entities/order-item.entity.js';
 import type { Payment } from './payment.entity.js';
 import type { ShippingMethod } from '../../shipping/entities/shipping-method.entity.js';

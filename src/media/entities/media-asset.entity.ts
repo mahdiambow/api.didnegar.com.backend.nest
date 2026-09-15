@@ -1,7 +1,7 @@
 import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
 import type { Seller } from '../../sellers/entities/seller.entity.js';
 import type { Product } from '../../products/entities/product.entity.js';
-import type { User } from '../../auth/entities/user.entity.js';
+import type { User } from '../../users/entities/user.entity.js';
 import type {
   MediaGroup,
   MediaStatus,

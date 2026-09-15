@@ -18,7 +18,7 @@ import { CategoryRepository } from './repositories/category.repository.js';
 import { SubCategoryRepository } from './repositories/sub-category.repository.js';
 import { ProductCategoryRepository } from './repositories/product-category.repository.js';
 import { ProductsModule } from '../products/products.module.js';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 
 @Module({
   imports: [

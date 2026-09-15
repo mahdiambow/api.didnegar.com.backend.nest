@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ApiException } from '../common/exceptions/api.exception.js';
-import type { AuthUser } from '../auth/types/auth-user.type.js';
+import type { AuthUser } from '../utils/auth/types/auth-user.type.js';
 import { assertMediaAccess, canBrowseAllMedia } from './media.service.js';
 
 const seller = (overrides: Partial<AuthUser> = {}): AuthUser => ({

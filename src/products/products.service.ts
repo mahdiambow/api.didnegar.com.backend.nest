@@ -6,6 +6,7 @@ import {
 } from '../common/response/helpers/paginated-response.helper.js';
 import { CategoriesService } from '../categories/categories.service.js';
 import { AttributeRepository } from '../attributes/repositories/attribute.repository.js';
+import { AttributeValueRepository } from '../attributes/repositories/attribute-value.repository.js';
 import { SellerRepository } from '../sellers/repositories/seller.repository.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
 import {
@@ -16,6 +17,7 @@ import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ReviewProductDto } from './dto/review-product.dto.js';
 import {
   toAttributeResponse,
+  toAttributeValueResponse,
   toBrandResponse,
   toProductResponse,
   toSellerResponse,
@@ -35,6 +37,7 @@ export class ProductsService {
     private readonly productStockRepository: ProductStockRepository,
     private readonly brandRepository: BrandRepository,
     private readonly attributeRepository: AttributeRepository,
+    private readonly attributeValueRepository: AttributeValueRepository,
     private readonly sellerRepository: SellerRepository,
     @Inject(forwardRef(() => CategoriesService))
     private readonly categoriesService: CategoriesService,
@@ -76,6 +79,19 @@ export class ProductsService {
       limit,
       total,
     );
+  }
+
+  /** کاتالوگ پابلیک — همه محصولات publish + approved + active با روابط کامل */
+  async findAllPublic() {
+    const items = await this.productRepository.findFiltered(
+      {
+        status: 'publish',
+        approvalStatus: 'approved',
+        isActive: true,
+      },
+      true,
+    );
+    return this.toEnrichedProductResponses(items);
   }
 
   async findOne(id: string) {
@@ -159,7 +175,9 @@ export class ProductsService {
         productData.price === null
           ? []
           : productData.price.map((item) => ({
-              attributeIds: [...new Set(item.attributeIds ?? [])],
+              attributeIds: [
+                ...new Set(item.valueAttributeIds ?? item.attributeIds ?? []),
+              ],
               price: item.price ?? null,
               discountPercentage: item.discountPercentage ?? null,
               discountAmount: item.discountAmount ?? null,
@@ -326,6 +344,18 @@ export class ProductsService {
     const attributeIds = [
       ...new Set(products.flatMap((product) => product.attributeIds ?? [])),
     ];
+    const priceValueIds = [
+      ...new Set(
+        products.flatMap((product) => {
+          const prices = Array.isArray(product.price)
+            ? product.price
+            : product.price
+              ? [product.price]
+              : [];
+          return prices.flatMap((item) => item.attributeIds ?? []);
+        }),
+      ),
+    ];
     const sellerIds = [
       ...new Set(
         products.flatMap((product) =>
@@ -341,17 +371,31 @@ export class ProductsService {
       ),
     ];
 
-    const [attributes, sellers, shippingMethods] = await Promise.all([
-      this.attributeRepository.findByIds(attributeIds),
-      this.sellerRepository.findByIds(sellerIds),
-      this.shippingMethodRepository.findByIds(shippingMethodIds),
-    ]);
+    const [attributes, priceValues, sellers, shippingMethods] =
+      await Promise.all([
+        this.attributeRepository.findByIdsWithValues(attributeIds),
+        this.attributeValueRepository.findByIds(priceValueIds),
+        this.sellerRepository.findByIds(sellerIds),
+        this.shippingMethodRepository.findByIds(shippingMethodIds),
+      ]);
 
     const attributeMap = new Map(
       attributes.map((attribute) => [
         attribute.id,
-        toAttributeResponse(attribute),
+        toAttributeResponse(attribute, true),
       ]),
+    );
+    const valueAttributesByAttributeId = new Map(
+      attributes.map((attribute) => [
+        attribute.id,
+        (attribute.values ?? []).map(toAttributeValueResponse),
+      ]),
+    );
+    const attributeValueById = new Map(
+      [
+        ...attributes.flatMap((attribute) => attribute.values ?? []),
+        ...priceValues,
+      ].map((value) => [value.id, toAttributeValueResponse(value)]),
     );
     const sellerMap = new Map(
       sellers.map((seller) => [seller.id, toSellerResponse(seller)]),
@@ -363,19 +407,24 @@ export class ProductsService {
       ]),
     );
 
-    return products.map((product) =>
-      toProductResponse(product, true, {
-        attributes: (product.attributeIds ?? [])
+    return products.map((product) => {
+      const productAttributeIds = product.attributeIds ?? [];
+      return toProductResponse(product, true, {
+        attributes: productAttributeIds
           .map((id) => attributeMap.get(id))
           .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+        valueAttributes: productAttributeIds.flatMap(
+          (id) => valueAttributesByAttributeId.get(id) ?? [],
+        ),
+        attributeValueById,
         createdBySeller: product.createdBySellerId
           ? (sellerMap.get(product.createdBySellerId) ?? null)
           : null,
         shippingMethod: product.shippingMethodId
           ? (shippingMethodMap.get(product.shippingMethodId) ?? null)
           : null,
-      }),
-    );
+      });
+    });
   }
 
   private async assertUniqueFields(slug: string, sku: string) {

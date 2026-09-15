@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { Seller } from '../sellers/entities/seller.entity.js';
 import { Product } from '../products/entities/product.entity.js';
 import { ProductsModule } from '../products/products.module.js';

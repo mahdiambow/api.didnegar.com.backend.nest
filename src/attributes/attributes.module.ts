@@ -8,7 +8,7 @@ import { AttributeRepository } from './repositories/attribute.repository.js';
 import { AttributeValueRepository } from './repositories/attribute-value.repository.js';
 import { AttributesController } from './attributes.controller.js';
 import { AttributeValuesController } from './attribute-values.controller.js';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { RolesModule } from '../roles/roles.module.js';
 
 @Module({

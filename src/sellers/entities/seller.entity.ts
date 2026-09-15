@@ -1,7 +1,7 @@
 import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, OneToMany, UpdateDateColumn } from 'typeorm';
 import { BusinessType, SellerStatus } from './seller.enums.js';
 import type { SellerSettings } from '../types/seller-settings.type.js';
-import type { User } from '../../auth/entities/user.entity.js';
+import type { User } from '../../users/entities/user.entity.js';
 import type { Role } from '../../roles/entities/role.entity.js';
 import type { SellerContract } from './seller-contract.entity.js';
 

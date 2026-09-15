@@ -1,6 +1,6 @@
-import type { AuthUser } from '../auth/types/auth-user.type.js';
-import { RoleGuard } from '../auth/guards/role.guard.js';
-import { RequireRole } from '../auth/decorators/require-role.decorator.js';
+import type { AuthUser } from '../utils/auth/types/auth-user.type.js';
+import { RoleGuard } from '../utils/auth/guards/role.guard.js';
+import { RequireRole } from '../utils/auth/decorators/require-role.decorator.js';
 import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
 import {
   Body,
@@ -27,7 +27,7 @@ import type { Response } from 'express';
 import { memoryStorage } from 'multer';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
 import { ProductPricingService } from './product-pricing.service.js';
 import {
   AdjustProductPricesDto,

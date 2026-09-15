@@ -1,8 +1,17 @@
 import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 import { ALL_PERMISSIONS } from '../permissions.js';
 import { IsPermissionArray } from '../validators/is-permission.validator.js';
+import { RoleAudience } from '../role-audience.enum.js';
 
 export class CreateRoleDto {
   @ApiProperty({ example: 'editor' })
@@ -29,6 +38,16 @@ export class CreateRoleDto {
   @IsString({ each: true })
   @IsPermissionArray()
   permissions: string[];
+
+  @ApiPropertyOptional({
+    enum: RoleAudience,
+    example: RoleAudience.ADMIN,
+    description:
+      'حوزه نقش — اگر sellerId باشد همیشه seller است. نقش‌های حوزه‌های مختلف روی یک کاربر قابل ترکیب نیستند',
+  })
+  @IsOptional()
+  @IsEnum(RoleAudience)
+  audience?: RoleAudience;
 
   @ApiPropertyOptional({
     example: '01JEX000000000000000000010',

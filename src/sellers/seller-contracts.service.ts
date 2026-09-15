@@ -7,7 +7,7 @@ import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
-import { UserRepository } from '../auth/repositories/user.repository.js';
+import { UserRepository } from '../utils/auth/repositories/user.repository.js';
 import { SellerRepository } from './repositories/seller.repository.js';
 import { SellerContractRepository } from './repositories/seller-contract.repository.js';
 import { CreateSellerContractDto } from './dto/create-seller-contract.dto.js';

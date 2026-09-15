@@ -9,8 +9,8 @@ import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
-import { UserRepository } from '../auth/repositories/user.repository.js';
-import { toUserResponse } from '../auth/dto/user-response.dto.js';
+import { UserRepository } from '../utils/auth/repositories/user.repository.js';
+import { toUserResponse } from '../utils/auth/dto/user-response.dto.js';
 import { RoleRepository } from '../roles/repositories/role.repository.js';
 import { DEFAULT_ROLE_SLUGS, isSuperAdminRole } from '../roles/permissions.js';
 import { BusinessType, SellerStatus } from './entities/seller.enums.js';

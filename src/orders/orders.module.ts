@@ -8,7 +8,7 @@ import { OrdersController } from './orders.controller.js';
 import { OrderRepository } from './repositories/order.repository.js';
 import { ProductsModule } from '../products/products.module.js';
 import { ShippingModule } from '../shipping/shipping.module.js';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { RolesModule } from '../roles/roles.module.js';
 
 @Module({

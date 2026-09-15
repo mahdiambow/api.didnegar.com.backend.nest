@@ -1,6 +1,7 @@
 import { PrimaryColumn, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, UpdateDateColumn } from 'typeorm';
-import type { User } from '../../auth/entities/user.entity.js';
+import type { User } from '../../users/entities/user.entity.js';
 import type { Seller } from '../../sellers/entities/seller.entity.js';
+import { RoleAudience } from '../role-audience.enum.js';
 
 @Entity('roles')
 export class Role {
@@ -18,6 +19,13 @@ export class Role {
 
   @Column({ type: 'boolean', default: false })
   isSystem: boolean;
+
+  /**
+   * حوزهٔ نقش — فقط نقش‌های هم‌حوزه روی یک کاربر قابل ترکیب‌اند.
+   * مثلاً نمی‌شود super-admin را به user/seller اضافه کرد.
+   */
+  @Column({ type: 'varchar', length: 20, default: RoleAudience.USER })
+  audience: RoleAudience;
 
   @Column({ type: 'varchar', length: 26, nullable: true })
   sellerId: string | null;
