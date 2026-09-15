@@ -28,6 +28,7 @@
     "migration:revert": "npm run build && node ./node_modules/typeorm/cli.js migration:revert -d dist/database/data-source.js",
     "migration:revert:prod": "node ./node_modules/typeorm/cli.js migration:revert -d dist/database/data-source.js",
     "create:super-admin": "node scripts/create-super-admin.mjs",
+    "create:seller": "node scripts/create-seller-user.mjs",
     "db:migrate:users": "node scripts/migration-scripts/migrate-users.mjs",
     "db:migrate:brands": "node scripts/migration-scripts/migrate-brands.mjs"
   },
