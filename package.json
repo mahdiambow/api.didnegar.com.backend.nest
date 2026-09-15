@@ -27,7 +27,8 @@
     "migration:run:prod": "node ./node_modules/typeorm/cli.js migration:run -d dist/database/data-source.js",
     "migration:revert": "npm run build && node ./node_modules/typeorm/cli.js migration:revert -d dist/database/data-source.js",
     "migration:revert:prod": "node ./node_modules/typeorm/cli.js migration:revert -d dist/database/data-source.js",
-    "db:migrate:users": "node scripts/migration-scripts/migrate-users.mjs"
+    "db:migrate:users": "node scripts/migration-scripts/migrate-users.mjs",
+    "db:migrate:brands": "node scripts/migration-scripts/migrate-brands.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

@@ -19,3 +19,11 @@ npm run db:migrate:users
 It reads and commits 1,000 users per batch. Every target batch is one transaction:
 a failure rolls back that batch and stops the script. The script prints added, updated,
 skipped, seller-added, seller-updated, and unmapped-role-link counts after each committed batch.
+
+## Brands
+
+```sh
+npm run db:migrate:brands
+```
+
+See [BRANDS_PLAN.md](./BRANDS_PLAN.md) for the field mappings and conflict policy.
