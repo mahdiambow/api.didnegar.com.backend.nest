@@ -1,6 +1,9 @@
 import * as dotenv from 'dotenv';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 
 dotenv.config();
+const require = createRequire(import.meta.url);
 
 async function bootstrap() {
   const { NestFactory, Reflector } = await import('@nestjs/core');
@@ -42,7 +45,6 @@ async function bootstrap() {
               scriptSrc: [
                 `'self'`,
                 `'unsafe-inline'`,
-                'https://cdn.jsdelivr.net',
               ],
               imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
               fontSrc: [`'self'`, 'https://fonts.gstatic.com'],
@@ -84,18 +86,26 @@ async function bootstrap() {
     customSiteTitle: 'Didnegar API',
   });
 
+  // Serve Scalar's standalone bundle locally so the reference page never needs jsDelivr.
+  const express = await import('express');
+  const scalarAssetsPath = join(
+    dirname(require.resolve('@scalar/api-reference')),
+    'browser',
+  );
+  app.use('/reference-assets', express.default.static(scalarAssetsPath));
+
   // Scalar API Reference — modern alternative to Swagger UI
   app.use(
     '/reference',
     apiReference({
       content: document,
       theme: 'purple',
+      cdn: '/reference-assets/standalone.js',
     }),
   );
 
   const { mediaConfig } = await import('./media/media.config.js');
   if (!mediaConfig.sftp.enabled) {
-    const express = await import('express');
     const { resolve } = await import('node:path');
     app.use(
       '/media-files/staging',

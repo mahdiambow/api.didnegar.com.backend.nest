@@ -27,7 +27,6 @@
     "migration:run:prod": "node ./node_modules/typeorm/cli.js migration:run -d dist/database/data-source.js",
     "migration:revert": "npm run build && node ./node_modules/typeorm/cli.js migration:revert -d dist/database/data-source.js",
     "migration:revert:prod": "node ./node_modules/typeorm/cli.js migration:revert -d dist/database/data-source.js",
-    
     "db:migrate:users": "node scripts/migration-scripts/migrate-users.mjs"
   },
   "dependencies": {
@@ -42,6 +41,7 @@
     "@nestjs/swagger": "^12.0.1",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^12.0.1",
+    "@scalar/api-reference": "^1.68.0",
     "@scalar/nestjs-api-reference": "^1.2.18",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
