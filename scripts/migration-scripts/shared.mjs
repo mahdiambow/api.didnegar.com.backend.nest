@@ -45,6 +45,20 @@ export async function assertTables(connection, database, tableNames, side) {
   }
 }
 
+export async function assertColumns(connection, database, tableName, columnNames, side) {
+  const [rows] = await connection.execute(
+    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+       AND COLUMN_NAME IN (${columnNames.map(() => '?').join(', ')})`,
+    [database, tableName, ...columnNames],
+  );
+  const found = new Set(rows.map((row) => row.COLUMN_NAME));
+  const missing = columnNames.filter((column) => !found.has(column));
+  if (missing.length) {
+    throw new Error(`${side} table ${tableName} is missing required column(s): ${missing.join(', ')}`);
+  }
+}
+
 export function asNullableString(value, maxLength) {
   if (value === null || value === undefined) return null;
   const text = String(value).trim();
