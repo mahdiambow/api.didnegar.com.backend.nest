@@ -45,10 +45,25 @@ export class ProductRepository {
     return this.repo.findOne({ where: { sku } });
   }
 
-  findByFilters(filters: ProductFilters = {}) {
+  findByFilters(filters: ProductFilters = {}, includeRelations = false) {
     const qb = this.repo
       .createQueryBuilder('product')
-      .orderBy('product.name', 'ASC');
+      .orderBy('product.createdAt', 'DESC');
+
+    if (includeRelations) {
+      qb.leftJoinAndSelect('product.brand', 'brand')
+        .leftJoinAndSelect('product.shippingMethod', 'shippingMethod')
+        .leftJoinAndSelect('product.productStock', 'productStock')
+        .leftJoinAndSelect('product.productCategories', 'productCategories')
+        .leftJoinAndSelect('productCategories.category', 'category')
+        .leftJoinAndSelect('category.parentCategory', 'parentCategory')
+        .leftJoinAndSelect('productCategories.subCategory', 'subCategory')
+        .leftJoinAndSelect('subCategory.category', 'subCategoryCategory')
+        .leftJoinAndSelect(
+          'subCategoryCategory.parentCategory',
+          'subParentCategory',
+        );
+    }
 
     if (filters.status) {
       qb.andWhere('product.status = :status', { status: filters.status });
@@ -101,6 +116,10 @@ export class ProductRepository {
     }
 
     return qb.distinct(true).getMany();
+  }
+
+  findFiltered(filters: ProductFilters = {}, includeRelations = false) {
+    return this.findByFilters(filters, includeRelations);
   }
 
   findAllForPricingExport() {

@@ -19,6 +19,7 @@ import { BrandsModule } from './brands/brands.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { MediaModule } from './media/media.module.js';
 import { NewsletterModule } from './newsletter/newsletter.module.js';
+import { PublicModule } from './public/public.module.js';
 import { DatabaseSeedModule } from './database/database.seed.module.js';
 import { UlidSubscriber } from './common/id/ulid.subscriber.js';
 import { ShoppingCartModule } from './shopping-cart/shopping-cart.module.js';
@@ -62,6 +63,7 @@ import { ShoppingCartModule } from './shopping-cart/shopping-cart.module.js';
     SettingsModule,
     MediaModule,
     NewsletterModule,
+    PublicModule,
     DatabaseSeedModule,
   ],
 })

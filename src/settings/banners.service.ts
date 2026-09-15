@@ -41,6 +41,13 @@ export class BannersService {
     return paginatedList(items, page, limit, total);
   }
 
+  /** همه بنرها بدون pagination — برای API پابلیک */
+  async findAllPublic() {
+    return this.banners.find({
+      order: { createdAt: 'ASC', id: 'ASC' },
+    });
+  }
+
   async findOne(id: string) {
     const banner = await this.banners.findOneBy({ id });
     if (!banner) {

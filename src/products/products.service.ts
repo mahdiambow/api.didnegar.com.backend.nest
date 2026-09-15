@@ -78,6 +78,19 @@ export class ProductsService {
     );
   }
 
+  /** کاتالوگ پابلیک — همه محصولات publish + approved + active با روابط کامل */
+  async findAllPublic() {
+    const items = await this.productRepository.findFiltered(
+      {
+        status: 'publish',
+        approvalStatus: 'approved',
+        isActive: true,
+      },
+      true,
+    );
+    return this.toEnrichedProductResponses(items);
+  }
+
   async findOne(id: string) {
     const product = await this.productRepository.findById(id, true);
     if (!product) {

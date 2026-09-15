@@ -40,6 +40,6 @@ import { ContactMessagesService } from './contact-messages.service.js';
     BannersController,
   ],
   providers: [SettingsService, BannersService, ContactMessagesService],
-  exports: [SettingsService, ContactMessagesService],
+  exports: [SettingsService, BannersService, ContactMessagesService],
 })
 export class SettingsModule {}
