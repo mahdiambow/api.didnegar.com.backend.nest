@@ -12,7 +12,6 @@ import 'dotenv/config';
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import bcrypt from 'bcrypt';
-import mysql from 'mysql2/promise';
 import {
   newId,
   openTargetConnection,
@@ -20,6 +19,31 @@ import {
 } from './migration-scripts/shared.mjs';
 
 const MOBILE_RE = /^09\d{9}$/;
+const BLOCKED_DB_HOSTS = new Set([
+  'migration-mysql',
+  'didnegar_migration_mysql',
+]);
+
+function assertAppMysqlTarget() {
+  const host = (process.env.DB_HOST ?? '').trim().toLowerCase();
+  const port = Number(process.env.DB_PORT);
+  const database = (process.env.DB_DATABASE ?? '').trim().toLowerCase();
+
+  if (BLOCKED_DB_HOSTS.has(host) || port === 3307) {
+    throw new Error(
+      `DB_HOST=${process.env.DB_HOST} به MySQL مهاجرت اشاره می‌کند و از روی host resolve نمی‌شود.\n` +
+        `اسکریپت را داخل کانتینر API بزن:\n` +
+        `  sudo docker exec -it didnegar_api npm run create:super-admin -- --mobile=09xxxxxxxxx --password='...' --name='Super Admin'\n` +
+        `یا روی host فقط به MySQL اپ وصل شو (مثلاً DB_HOST=127.0.0.1 و پورت publish‌شده).`,
+    );
+  }
+
+  if (database === 'didnegar_new') {
+    throw new Error(
+      `DB_DATABASE=didnegar_new دیتابیس legacy است. برای Nest از didnegar استفاده کن.`,
+    );
+  }
+}
 
 function printHelp() {
   console.log(`Usage:
@@ -180,6 +204,7 @@ async function main() {
   requiredEnv('DB_USERNAME');
   requiredEnv('DB_PASSWORD');
   requiredEnv('DB_DATABASE');
+  assertAppMysqlTarget();
 
   const rl = createInterface({ input, output });
   try {
