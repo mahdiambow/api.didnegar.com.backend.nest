@@ -29,3 +29,15 @@ npm run db:migrate:brands
 ```
 
 See [BRANDS_PLAN.md](./BRANDS_PLAN.md) for the field mappings and conflict policy.
+
+## Locations
+
+```sh
+npm run db:migrate:locations
+```
+
+Imports `countries`, then `states`, then `cities`. Source IDs are retained where
+possible so existing legacy references remain valid. Countries match by ID or code;
+states match by ID or their resolved `(countryId, code)` pair; cities match only by
+ID. Missing relations or a city whose country conflicts with its state's country stop
+and roll back the affected batch.
