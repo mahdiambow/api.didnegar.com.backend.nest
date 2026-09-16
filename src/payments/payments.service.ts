@@ -120,14 +120,12 @@ export class PaymentsService {
       }
       payment = await paymentRepo.save(payment);
 
-      // مسیر واحد credit: فقط charge از موجودی فعلی
-      const { balanceAfter } = await this.creditService.payOrderViaCredit(
+      // مسیر واحد credit: فقط out از موجودی فعلی
+      const wallet = await this.creditService.payOrderViaCredit(
         userId,
         amount,
         {
-          reason: 'order_pay_credit',
-          orderId: order.id,
-          paymentId: payment.id,
+          sourceId: payment.id,
           depositFromGateway: false,
         },
         manager,
@@ -139,7 +137,7 @@ export class PaymentsService {
 
       await orderRepo.update({ id: order.id }, { status: 'paid' });
 
-      return { payment, balanceAfter };
+      return { payment, amountAfter: wallet.amount };
     });
 
     return toPaymentResponse({
@@ -153,8 +151,8 @@ export class PaymentsService {
       shippingMethod: order.shippingMethod
         ? toShippingMethodResponse(order.shippingMethod)
         : null,
-      gatewayMessage: `پرداخت از کیف پول انجام شد. موجودی باقی‌مانده: ${result.balanceAfter}`,
-      creditBalance: result.balanceAfter,
+      gatewayMessage: `پرداخت از کیف پول انجام شد. موجودی باقی‌مانده: ${result.amountAfter}`,
+      creditBalance: result.amountAfter,
     });
   }
 
@@ -327,7 +325,7 @@ export class PaymentsService {
       );
     }
 
-    // ACID: verify → deposit credit → charge credit → mark paid
+    // ACID: verify → credit in → credit out → mark paid
     const settled = await this.dataSource.transaction(async (manager) => {
       const paymentRepo = manager.getRepository(Payment);
       const locked = await paymentRepo.findOne({
@@ -342,16 +340,14 @@ export class PaymentsService {
         );
       }
       if (locked.status === 'success') {
-        return { already: true as const, balanceAfter: null as number | null };
+        return { already: true as const, amountAfter: null as number | null };
       }
 
-      const { balanceAfter } = await this.creditService.payOrderViaCredit(
+      const wallet = await this.creditService.payOrderViaCredit(
         userId,
         amount,
         {
-          reason: `gateway_${gateway}`,
-          orderId: locked.orderId,
-          paymentId: locked.id,
+          sourceId: locked.id,
           depositFromGateway: true,
         },
         manager,
@@ -364,7 +360,7 @@ export class PaymentsService {
         .getRepository(Order)
         .update({ id: locked.orderId }, { status: 'paid' });
 
-      return { already: false as const, balanceAfter };
+      return { already: false as const, amountAfter: wallet.amount };
     });
 
     return toPaymentVerifyResponse({
@@ -382,7 +378,7 @@ export class PaymentsService {
       gatewayMessage: settled.already
         ? 'این تراکنش قبلاً تأیید شده است'
         : `${verifyResult.message} — مبلغ ابتدا به کیف پول واریز و سپس کسر شد`,
-      creditBalance: settled.balanceAfter ?? undefined,
+      creditBalance: settled.amountAfter ?? undefined,
     });
   }
 

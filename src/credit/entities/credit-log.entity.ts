@@ -8,11 +8,10 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 import type { User } from '../../users/entities/user.entity.js';
+import { CreditSourceType } from '../credit-source-type.enum.js';
 
-export type CreditLedgerType = 'deposit' | 'charge';
-
-@Entity('credit_ledger')
-export class CreditLedger {
+@Entity('credit_logs')
+export class CreditLog {
   @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
@@ -20,26 +19,28 @@ export class CreditLedger {
   @Column({ type: 'varchar', length: 26 })
   userId: string;
 
-  /** مبلغ مثبت برای deposit و charge (علامت از type) */
+  /** مبلغ این عملیات (همیشه مثبت) */
   @Column({ type: 'decimal', precision: 19, scale: 4 })
   amount: number;
 
   @Column({ type: 'varchar', length: 20 })
-  type: CreditLedgerType;
-
-  @Column({ type: 'varchar', length: 100 })
-  reason: string;
+  sourceType: CreditSourceType;
 
   @Index()
   @Column({ type: 'varchar', length: 26, nullable: true })
-  orderId: string | null;
-
-  @Index()
-  @Column({ type: 'varchar', length: 26, nullable: true })
-  paymentId: string | null;
+  sourceId: string | null;
 
   @Column({ type: 'decimal', precision: 19, scale: 4 })
-  balanceAfter: number;
+  amountBefore: number;
+
+  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  amountAfter: number;
+
+  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  lockedBefore: number;
+
+  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  lockedAfter: number;
 
   @CreateDateColumn()
   createdAt: Date;

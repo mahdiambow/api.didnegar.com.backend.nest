@@ -31,7 +31,8 @@ export class CheckoutCreditAndOrderAddress1790000000016
         CREATE TABLE \`user_credits\` (
           \`id\` varchar(26) NOT NULL,
           \`userId\` varchar(26) NOT NULL,
-          \`balance\` decimal(19,4) NOT NULL DEFAULT 0,
+          \`amount\` decimal(19,4) NOT NULL DEFAULT 0,
+          \`lockedAmount\` decimal(19,4) NOT NULL DEFAULT 0,
           \`createdAt\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
           \`updatedAt\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
           PRIMARY KEY (\`id\`),
@@ -43,23 +44,23 @@ export class CheckoutCreditAndOrderAddress1790000000016
       `);
     }
 
-    if (!(await queryRunner.hasTable('credit_ledger'))) {
+    if (!(await queryRunner.hasTable('credit_logs'))) {
       await queryRunner.query(`
-        CREATE TABLE \`credit_ledger\` (
+        CREATE TABLE \`credit_logs\` (
           \`id\` varchar(26) NOT NULL,
           \`userId\` varchar(26) NOT NULL,
           \`amount\` decimal(19,4) NOT NULL,
-          \`type\` varchar(20) NOT NULL,
-          \`reason\` varchar(100) NOT NULL,
-          \`orderId\` varchar(26) NULL,
-          \`paymentId\` varchar(26) NULL,
-          \`balanceAfter\` decimal(19,4) NOT NULL,
+          \`sourceType\` varchar(20) NOT NULL,
+          \`sourceId\` varchar(26) NULL,
+          \`amountBefore\` decimal(19,4) NOT NULL,
+          \`amountAfter\` decimal(19,4) NOT NULL,
+          \`lockedBefore\` decimal(19,4) NOT NULL,
+          \`lockedAfter\` decimal(19,4) NOT NULL,
           \`createdAt\` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
           PRIMARY KEY (\`id\`),
-          KEY \`IDX_credit_ledger_userId\` (\`userId\`),
-          KEY \`IDX_credit_ledger_orderId\` (\`orderId\`),
-          KEY \`IDX_credit_ledger_paymentId\` (\`paymentId\`),
-          CONSTRAINT \`FK_credit_ledger_userId\`
+          KEY \`IDX_credit_logs_userId\` (\`userId\`),
+          KEY \`IDX_credit_logs_sourceId\` (\`sourceId\`),
+          CONSTRAINT \`FK_credit_logs_userId\`
             FOREIGN KEY (\`userId\`) REFERENCES \`users\`(\`id\`)
             ON DELETE CASCADE ON UPDATE RESTRICT
         ) ENGINE=InnoDB
@@ -68,6 +69,7 @@ export class CheckoutCreditAndOrderAddress1790000000016
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query('DROP TABLE IF EXISTS `credit_logs`');
     await queryRunner.query('DROP TABLE IF EXISTS `credit_ledger`');
     await queryRunner.query('DROP TABLE IF EXISTS `user_credits`');
 

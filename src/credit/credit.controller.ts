@@ -13,7 +13,10 @@ import { CreditService } from './credit.service.js';
 
 class CreditBalanceDto {
   @ApiProperty({ example: 1500000 })
-  balance: number;
+  amount: number;
+
+  @ApiProperty({ example: 0 })
+  lockedAmount: number;
 }
 
 const CreditBalanceApiResponseDto = createSuccessResponseDto(CreditBalanceDto, {
@@ -34,10 +37,9 @@ export class CreditController {
     code: 'CREDIT_BALANCE_FOUND',
     message: 'Credit balance retrieved successfully',
   })
-  @ApiOperation({ summary: 'موجودی کیف پول کاربر' })
+  @ApiOperation({ summary: 'موجودی و مبلغ قفل‌شده کیف پول کاربر' })
   @ApiOkResponse({ type: CreditBalanceApiResponseDto })
-  async getBalance(@Req() req: { user: { sub: string } }) {
-    const balance = await this.creditService.getBalance(req.user.sub);
-    return { balance };
+  getBalance(@Req() req: { user: { sub: string } }) {
+    return this.creditService.getBalance(req.user.sub);
   }
 }

@@ -19,8 +19,13 @@ export class UserCredit {
   @Column({ type: 'varchar', length: 26 })
   userId: string;
 
+  /** موجودی قابل‌خرج */
   @Column({ type: 'decimal', precision: 19, scale: 4, default: 0 })
-  balance: number;
+  amount: number;
+
+  /** مبلغ قفل‌شده (قابل‌خرج نیست تا unlock) */
+  @Column({ type: 'decimal', precision: 19, scale: 4, default: 0 })
+  lockedAmount: number;
 
   @CreateDateColumn()
   createdAt: Date;

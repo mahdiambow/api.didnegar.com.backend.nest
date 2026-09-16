@@ -2,13 +2,12 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
-import { CreditLedger } from './entities/credit-ledger.entity.js';
+import { CreditSourceType } from './credit-source-type.enum.js';
+import { CreditLog } from './entities/credit-log.entity.js';
 import { UserCredit } from './entities/user-credit.entity.js';
 
 export type CreditTxMeta = {
-  reason: string;
-  orderId?: string | null;
-  paymentId?: string | null;
+  sourceId?: string | null;
 };
 
 @Injectable()
@@ -16,81 +15,153 @@ export class CreditService {
   constructor(
     @InjectRepository(UserCredit)
     private readonly credits: Repository<UserCredit>,
-    @InjectRepository(CreditLedger)
-    private readonly ledger: Repository<CreditLedger>,
+    @InjectRepository(CreditLog)
+    private readonly logs: Repository<CreditLog>,
   ) {}
 
-  async getBalance(userId: string): Promise<number> {
+  async getBalance(userId: string): Promise<{
+    amount: number;
+    lockedAmount: number;
+  }> {
     const wallet = await this.credits.findOneBy({ userId });
-    return Number(wallet?.balance ?? 0);
+    return {
+      amount: Number(wallet?.amount ?? 0),
+      lockedAmount: Number(wallet?.lockedAmount ?? 0),
+    };
   }
 
-  /** Create the user's wallet at registration time (balance 0); safe to call repeatedly. */
+  /** Create the user's wallet at registration (amount/locked = 0); idempotent. */
   async init(userId: string, manager?: EntityManager): Promise<UserCredit> {
     return this.ensureWallet(userId, manager);
   }
 
-  /** شارژ کیف پول (مثلاً بعد از موفقیت درگاه) */
-  async deposit(
+  /** شارژ موجودی قابل‌خرج */
+  async in(
     userId: string,
     amount: number,
     meta: CreditTxMeta,
     manager: EntityManager,
-  ): Promise<number> {
-    this.assertPositiveAmount(amount);
-    const wallet = await this.ensureWallet(userId, manager);
-
-    await manager
-      .createQueryBuilder()
-      .update(UserCredit)
-      .set({ balance: () => '`balance` + :amount' })
-      .where('id = :id', { id: wallet.id })
-      .setParameters({ amount })
-      .execute();
-
-    const updated = await manager.getRepository(UserCredit).findOneByOrFail({
-      id: wallet.id,
-    });
-    const balanceAfter = Number(updated.balance);
-
-    await manager.getRepository(CreditLedger).save(
-      manager.getRepository(CreditLedger).create({
-        userId,
-        amount,
-        type: 'deposit',
-        reason: meta.reason,
-        orderId: meta.orderId ?? null,
-        paymentId: meta.paymentId ?? null,
-        balanceAfter,
-      }),
-    );
-
-    return balanceAfter;
+  ): Promise<UserCredit> {
+    return this.apply(userId, amount, CreditSourceType.IN, meta, manager);
   }
 
-  /** کسر از کیف پول — فقط اگر موجودی کافی باشد (اتمیک) */
-  async charge(
+  /** کسر از موجودی قابل‌خرج */
+  async out(
     userId: string,
     amount: number,
     meta: CreditTxMeta,
     manager: EntityManager,
-  ): Promise<number> {
+  ): Promise<UserCredit> {
+    return this.apply(userId, amount, CreditSourceType.OUT, meta, manager);
+  }
+
+  /** قفل کردن مبلغ از موجودی قابل‌خرج */
+  async lock(
+    userId: string,
+    amount: number,
+    meta: CreditTxMeta,
+    manager: EntityManager,
+  ): Promise<UserCredit> {
+    return this.apply(userId, amount, CreditSourceType.LOCK, meta, manager);
+  }
+
+  /** آزاد کردن مبلغ قفل‌شده به موجودی قابل‌خرج */
+  async unlock(
+    userId: string,
+    amount: number,
+    meta: CreditTxMeta,
+    manager: EntityManager,
+  ): Promise<UserCredit> {
+    return this.apply(userId, amount, CreditSourceType.UNLOCK, meta, manager);
+  }
+
+  /**
+   * پرداخت سفارش از credit:
+   * - gateway: in سپس out
+   * - کیف پول مستقیم: فقط out
+   */
+  async payOrderViaCredit(
+    userId: string,
+    amount: number,
+    meta: CreditTxMeta & { depositFromGateway?: boolean },
+    manager: EntityManager,
+  ): Promise<{ amount: number; lockedAmount: number }> {
+    if (meta.depositFromGateway) {
+      await this.in(userId, amount, { sourceId: meta.sourceId }, manager);
+    }
+
+    const wallet = await this.out(
+      userId,
+      amount,
+      { sourceId: meta.sourceId },
+      manager,
+    );
+
+    return {
+      amount: Number(wallet.amount),
+      lockedAmount: Number(wallet.lockedAmount),
+    };
+  }
+
+  private async apply(
+    userId: string,
+    amount: number,
+    sourceType: CreditSourceType,
+    meta: CreditTxMeta,
+    manager: EntityManager,
+  ): Promise<UserCredit> {
     this.assertPositiveAmount(amount);
     const wallet = await this.ensureWallet(userId, manager);
+    const amountBefore = Number(wallet.amount);
+    const lockedBefore = Number(wallet.lockedAmount);
 
-    const result = await manager
+    let qb = manager
       .createQueryBuilder()
       .update(UserCredit)
-      .set({ balance: () => '`balance` - :amount' })
       .where('id = :id', { id: wallet.id })
-      .andWhere('`balance` >= :amount')
-      .setParameters({ amount })
-      .execute();
+      .setParameters({ amount });
 
-    if ((result.affected ?? 0) === 0) {
+    switch (sourceType) {
+      case CreditSourceType.IN:
+        qb = qb.set({ amount: () => '`amount` + :amount' });
+        break;
+      case CreditSourceType.OUT:
+        qb = qb
+          .set({ amount: () => '`amount` - :amount' })
+          .andWhere('`amount` >= :amount');
+        break;
+      case CreditSourceType.LOCK:
+        qb = qb
+          .set({
+            amount: () => '`amount` - :amount',
+            lockedAmount: () => '`lockedAmount` + :amount',
+          })
+          .andWhere('`amount` >= :amount');
+        break;
+      case CreditSourceType.UNLOCK:
+        qb = qb
+          .set({
+            amount: () => '`amount` + :amount',
+            lockedAmount: () => '`lockedAmount` - :amount',
+          })
+          .andWhere('`lockedAmount` >= :amount');
+        break;
+    }
+
+    const result = await qb.execute();
+    if (
+      (sourceType === CreditSourceType.OUT ||
+        sourceType === CreditSourceType.LOCK ||
+        sourceType === CreditSourceType.UNLOCK) &&
+      (result.affected ?? 0) === 0
+    ) {
       throw new ApiException(
-        'INSUFFICIENT_CREDIT',
-        'موجودی کیف پول کافی نیست',
+        sourceType === CreditSourceType.UNLOCK
+          ? 'INSUFFICIENT_LOCKED_CREDIT'
+          : 'INSUFFICIENT_CREDIT',
+        sourceType === CreditSourceType.UNLOCK
+          ? 'مبلغ قفل‌شده کافی نیست'
+          : 'موجودی کیف پول کافی نیست',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -98,63 +169,35 @@ export class CreditService {
     const updated = await manager.getRepository(UserCredit).findOneByOrFail({
       id: wallet.id,
     });
-    const balanceAfter = Number(updated.balance);
 
-    await manager.getRepository(CreditLedger).save(
-      manager.getRepository(CreditLedger).create({
+    await manager.getRepository(CreditLog).save(
+      manager.getRepository(CreditLog).create({
         userId,
         amount,
-        type: 'charge',
-        reason: meta.reason,
-        orderId: meta.orderId ?? null,
-        paymentId: meta.paymentId ?? null,
-        balanceAfter,
+        sourceType,
+        sourceId: meta.sourceId ?? null,
+        amountBefore,
+        amountAfter: Number(updated.amount),
+        lockedBefore,
+        lockedAfter: Number(updated.lockedAmount),
       }),
     );
 
-    return balanceAfter;
-  }
-
-  /**
-   * مسیر یکپارچه پرداخت سفارش از طریق credit:
-   * ابتدا deposit (اگر مبلغ خارجی آمده) سپس charge.
-   * برای پرداخت مستقیم با کیف پول فقط charge می‌زند.
-   */
-  async payOrderViaCredit(
-    userId: string,
-    amount: number,
-    meta: CreditTxMeta & { depositFromGateway?: boolean },
-    manager: EntityManager,
-  ): Promise<{ balanceAfter: number }> {
-    if (meta.depositFromGateway) {
-      await this.deposit(userId, amount, {
-        reason: meta.reason ? `${meta.reason}:deposit` : 'gateway_topup',
-        orderId: meta.orderId,
-        paymentId: meta.paymentId,
-      }, manager);
-    }
-
-    const balanceAfter = await this.charge(userId, amount, {
-      reason: meta.reason ? `${meta.reason}:charge` : 'order_payment',
-      orderId: meta.orderId,
-      paymentId: meta.paymentId,
-    }, manager);
-
-    return { balanceAfter };
+    return updated;
   }
 
   private async ensureWallet(
     userId: string,
     manager?: EntityManager,
   ): Promise<UserCredit> {
-    const repo = manager
-      ? manager.getRepository(UserCredit)
-      : this.credits;
+    const repo = manager ? manager.getRepository(UserCredit) : this.credits;
     const existing = await repo.findOneBy({ userId });
     if (existing) return existing;
 
     try {
-      return await repo.save(repo.create({ userId, balance: 0 }));
+      return await repo.save(
+        repo.create({ userId, amount: 0, lockedAmount: 0 }),
+      );
     } catch {
       const again = await repo.findOneBy({ userId });
       if (again) return again;
