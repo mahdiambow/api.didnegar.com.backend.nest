@@ -58,7 +58,7 @@ export class StatesController {
     code: 'STATES_FOUND',
     message: 'States retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست استان‌ها' })
+  @ApiOperation({ summary: 'List states', description: 'لیست استان‌ها' })
   @ApiOkResponse({ type: StatesPaginatedApiResponseDto })
   findAll(@Query() query: ListStatesQueryDto) {
     return this.statesService.findAll(query);
@@ -70,7 +70,7 @@ export class StatesController {
     code: 'STATE_FOUND',
     message: 'State retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک استان' })
+  @ApiOperation({ summary: 'Get one state', description: 'دریافت یک استان' })
   @ApiOkResponse({ type: StateApiResponseDto })
   findOne(@Param('id') id: string) {
     return this.statesService.findOne(id);
@@ -82,7 +82,7 @@ export class StatesController {
     code: 'STATE_CREATED',
     message: 'State created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد استان' })
+  @ApiOperation({ summary: 'Create state', description: 'ایجاد استان' })
   @ApiOkResponse({ type: StateApiResponseDto })
   create(@Body() dto: CreateStateDto) {
     return this.statesService.create(dto);
@@ -94,7 +94,7 @@ export class StatesController {
     code: 'STATE_UPDATED',
     message: 'State updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش استان' })
+  @ApiOperation({ summary: 'Update state', description: 'ویرایش استان' })
   @ApiOkResponse({ type: StateApiResponseDto })
   update(@Param('id') id: string, @Body() dto: UpdateStateDto) {
     return this.statesService.update(id, dto);
@@ -106,7 +106,7 @@ export class StatesController {
     code: 'STATE_DELETED',
     message: 'State deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف استان' })
+  @ApiOperation({ summary: 'Delete state', description: 'حذف استان' })
   remove(@Param('id') id: string) {
     return this.statesService.remove(id);
   }

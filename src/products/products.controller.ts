@@ -64,7 +64,7 @@ export class ProductsController {
     code: 'BRANDS_FOUND',
     message: 'Brands retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست برندها' })
+  @ApiOperation({ summary: 'List brands', description: 'لیست برندها' })
   @ApiOkResponse({ type: BrandsListApiResponseDto })
   findAllBrands() {
     return this.productsService.findAllBrands();
@@ -75,7 +75,7 @@ export class ProductsController {
     code: 'PRODUCTS_FOUND',
     message: 'Products retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست محصولات با pagination و فیلتر' })
+  @ApiOperation({ summary: 'List products with pagination and filters', description: 'لیست محصولات با pagination و فیلتر' })
   @ApiOkResponse({ type: ProductsPaginatedApiResponseDto })
   findAll(@Query() query: ListProductsQueryDto) {
     return this.productsService.findAll(query);
@@ -86,7 +86,7 @@ export class ProductsController {
     code: 'PRODUCT_FOUND',
     message: 'Product retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک محصول' })
+  @ApiOperation({ summary: 'Get one product', description: 'دریافت یک محصول' })
   @ApiOkResponse({ type: ProductApiResponseDto })
   findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.productsService.findOne(id);
@@ -98,9 +98,8 @@ export class ProductsController {
     message: 'Product created successfully',
   })
   @ApiOperation({
-    summary: 'ایجاد محصول جدید',
-    description:
-      'محصول با approvalStatus=pending ساخته می‌شود تا ادمین تأیید کند',
+    summary: 'Create new product',
+    description: 'ایجاد محصول جدید\n\nمحصول با approvalStatus=pending ساخته می‌شود تا ادمین تأیید کند',
   })
   @ApiOkResponse({ type: ProductApiResponseDto })
   create(@Body() dto: CreateProductDto) {
@@ -119,7 +118,8 @@ export class ProductsController {
     message: 'Product approval status updated',
   })
   @ApiOperation({
-    summary: 'تأیید / رد / بازگرداندن به انتظار محصول (ادمین / سوپر فروشنده)',
+    summary: 'Approve / reject / set product pending (admin / super-seller)',
+    description: 'تأیید / رد / بازگرداندن به انتظار محصول (ادمین / سوپر فروشنده)',
   })
   @ApiOkResponse({ type: ProductApiResponseDto })
   review(
@@ -135,9 +135,8 @@ export class ProductsController {
     message: 'Product updated successfully',
   })
   @ApiOperation({
-    summary: 'ویرایش محصول',
-    description:
-      'هر تغییر روی محصول وضعیت را به pending برمی‌گرداند تا ادمین دوباره تأیید کند. تغییر قیمت از طریق seller-offers است و فوری اعمال می‌شود.',
+    summary: 'Update product',
+    description: 'ویرایش محصول\n\nهر تغییر روی محصول وضعیت را به pending برمی‌گرداند تا ادمین دوباره تأیید کند. تغییر قیمت از طریق seller-offers است و فوری اعمال می‌شود.',
   })
   @ApiOkResponse({ type: ProductApiResponseDto })
   update(
@@ -152,7 +151,7 @@ export class ProductsController {
     code: 'PRODUCT_DELETED',
     message: 'Product deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف محصول' })
+  @ApiOperation({ summary: 'Delete product', description: 'حذف محصول' })
   remove(@Param('id', ParseULIDPipe) id: string) {
     return this.productsService.remove(id);
   }

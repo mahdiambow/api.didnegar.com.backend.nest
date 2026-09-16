@@ -58,7 +58,7 @@ export class SellersController {
     code: 'SELLERS_FOUND',
     message: 'Sellers retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست فروشندگان' })
+  @ApiOperation({ summary: 'List sellers', description: 'لیست فروشندگان' })
   @ApiOkResponse({ type: SellersPaginatedApiResponseDto })
   findAll(@Req() req: { user: AuthUser }, @Query() query: ListSellersQueryDto) {
     return this.sellersService.findAll(req.user, query);
@@ -70,7 +70,7 @@ export class SellersController {
     code: 'SELLER_FOUND',
     message: 'Seller retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک فروشنده' })
+  @ApiOperation({ summary: 'Get one seller', description: 'دریافت یک فروشنده' })
   @ApiOkResponse({ type: SellerApiResponseDto })
   findOne(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     return this.sellersService.findOne(req.user, id);
@@ -82,7 +82,7 @@ export class SellersController {
     code: 'SELLER_CREATED',
     message: 'Seller created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد فروشنده (super-admin)' })
+  @ApiOperation({ summary: 'Create seller (super-admin)', description: 'ایجاد فروشنده (super-admin)' })
   @ApiOkResponse({ type: SellerApiResponseDto })
   create(@Req() req: { user: AuthUser }, @Body() dto: CreateSellerDto) {
     return this.sellersService.create(req.user, dto);
@@ -94,7 +94,7 @@ export class SellersController {
     code: 'SELLER_UPDATED',
     message: 'Seller updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش فروشنده' })
+  @ApiOperation({ summary: 'Update seller', description: 'ویرایش فروشنده' })
   @ApiOkResponse({ type: SellerApiResponseDto })
   update(
     @Req() req: { user: AuthUser },
@@ -110,7 +110,7 @@ export class SellersController {
     code: 'SELLER_DELETED',
     message: 'Seller deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف فروشنده (super-admin)' })
+  @ApiOperation({ summary: 'Delete seller (super-admin)', description: 'حذف فروشنده (super-admin)' })
   remove(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     return this.sellersService.remove(req.user, id);
   }

@@ -73,7 +73,8 @@ export class ShippingController {
     message: 'Shipping quote calculated successfully',
   })
   @ApiOperation({
-    summary: 'محاسبه مجموع قیمت بر اساس محصول و روش ارسال',
+    summary: 'Calculate total price by product and shipping method',
+    description: 'محاسبه مجموع قیمت بر اساس محصول و روش ارسال',
   })
   @ApiOkResponse({ type: ShippingQuoteApiResponseDto })
   getQuote(@Query() query: ShippingQuoteQueryDto) {
@@ -86,7 +87,7 @@ export class ShippingController {
     code: 'SHIPPING_METHODS_FOUND',
     message: 'Shipping methods retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست روش‌های ارسال با pagination و فیلتر' })
+  @ApiOperation({ summary: 'List shipping methods with pagination and filters', description: 'لیست روش‌های ارسال با pagination و فیلتر' })
   @ApiOkResponse({ type: ShippingMethodsPaginatedApiResponseDto })
   findAll(@Query() query: ListShippingMethodsQueryDto) {
     return this.shippingService.findAll(query);
@@ -98,7 +99,7 @@ export class ShippingController {
     code: 'SHIPPING_METHOD_FOUND',
     message: 'Shipping method retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک روش ارسال' })
+  @ApiOperation({ summary: 'Get one shipping method', description: 'دریافت یک روش ارسال' })
   @ApiOkResponse({ type: ShippingMethodApiResponseDto })
   findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.shippingService.findOne(id);
@@ -110,7 +111,7 @@ export class ShippingController {
     code: 'SHIPPING_METHOD_CREATED',
     message: 'Shipping method created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد روش ارسال' })
+  @ApiOperation({ summary: 'Create shipping method', description: 'ایجاد روش ارسال' })
   @ApiOkResponse({ type: ShippingMethodApiResponseDto })
   create(@Body() dto: CreateShippingMethodDto) {
     return this.shippingService.create(dto);
@@ -122,7 +123,7 @@ export class ShippingController {
     code: 'SHIPPING_METHOD_UPDATED',
     message: 'Shipping method updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش روش ارسال' })
+  @ApiOperation({ summary: 'Update shipping method', description: 'ویرایش روش ارسال' })
   @ApiOkResponse({ type: ShippingMethodApiResponseDto })
   update(
     @Param('id', ParseULIDPipe) id: string,
@@ -137,7 +138,7 @@ export class ShippingController {
     code: 'SHIPPING_METHOD_DELETED',
     message: 'Shipping method deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف روش ارسال' })
+  @ApiOperation({ summary: 'Delete shipping method', description: 'حذف روش ارسال' })
   remove(@Param('id', ParseULIDPipe) id: string) {
     return this.shippingService.remove(id);
   }

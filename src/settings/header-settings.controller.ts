@@ -39,7 +39,7 @@ export class HeaderSettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'دریافت تنظیمات هدر' })
+  @ApiOperation({ summary: 'Get header settings', description: 'دریافت تنظیمات هدر' })
   @ApiResponseMeta({
     code: 'HEADER_FOUND',
     message: 'Header settings found successfully',
@@ -53,7 +53,7 @@ export class HeaderSettingsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'ایجاد تنظیمات هدر' })
+  @ApiOperation({ summary: 'Create header settings', description: 'ایجاد تنظیمات هدر' })
   @ApiResponseMeta({
     code: 'HEADER_CREATED',
     message: 'Header settings created successfully',
@@ -67,7 +67,7 @@ export class HeaderSettingsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'ویرایش تنظیمات هدر' })
+  @ApiOperation({ summary: 'Update header settings', description: 'ویرایش تنظیمات هدر' })
   @ApiResponseMeta({
     code: 'HEADER_UPDATED',
     message: 'Header settings updated successfully',
@@ -81,7 +81,7 @@ export class HeaderSettingsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'حذف تنظیمات هدر' })
+  @ApiOperation({ summary: 'Delete header settings', description: 'حذف تنظیمات هدر' })
   @ApiResponseMeta({
     code: 'HEADER_DELETED',
     message: 'Header settings deleted successfully',

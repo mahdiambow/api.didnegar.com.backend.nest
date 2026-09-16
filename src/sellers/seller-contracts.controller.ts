@@ -61,7 +61,7 @@ export class SellerContractsController {
     code: 'CONTRACTS_FOUND',
     message: 'Contracts retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست قراردادهای فروشنده' })
+  @ApiOperation({ summary: 'List seller contracts', description: 'لیست قراردادهای فروشنده' })
   @ApiOkResponse({ type: ContractsPaginatedApiResponseDto })
   findAll(
     @Req() req: { user: AuthUser },
@@ -76,7 +76,7 @@ export class SellerContractsController {
     code: 'CONTRACT_FOUND',
     message: 'Contract retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک قرارداد' })
+  @ApiOperation({ summary: 'Get one contract', description: 'دریافت یک قرارداد' })
   @ApiOkResponse({ type: ContractApiResponseDto })
   findOne(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     return this.contractsService.findOne(req.user, id);
@@ -88,7 +88,7 @@ export class SellerContractsController {
     code: 'CONTRACT_CREATED',
     message: 'Contract created successfully',
   })
-  @ApiOperation({ summary: 'ثبت قرارداد فروشنده (فرم ثابت)' })
+  @ApiOperation({ summary: 'Submit seller contract (fixed form)', description: 'ثبت قرارداد فروشنده (فرم ثابت)' })
   @ApiOkResponse({ type: ContractApiResponseDto })
   create(
     @Req() req: { user: AuthUser },
@@ -103,7 +103,7 @@ export class SellerContractsController {
     code: 'CONTRACT_UPDATED',
     message: 'Contract updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش قرارداد' })
+  @ApiOperation({ summary: 'Update contract', description: 'ویرایش قرارداد' })
   @ApiOkResponse({ type: ContractApiResponseDto })
   update(
     @Req() req: { user: AuthUser },
@@ -119,7 +119,7 @@ export class SellerContractsController {
     code: 'CONTRACT_DELETED',
     message: 'Contract deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف قرارداد' })
+  @ApiOperation({ summary: 'Delete contract', description: 'حذف قرارداد' })
   remove(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     return this.contractsService.remove(req.user, id);
   }

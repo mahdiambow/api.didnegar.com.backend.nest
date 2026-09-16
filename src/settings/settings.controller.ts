@@ -45,9 +45,8 @@ export class SettingsController {
 
   @Get()
   @ApiOperation({
-    summary: 'دریافت تنظیمات فوتر',
-    description:
-      'شامل لوگو، متن لوگو، منوی لینک‌ها (با subMenu)، اطلاعات تماس و شبکه‌های اجتماعی',
+    summary: 'Get footer settings',
+    description: 'دریافت تنظیمات فوتر\n\nشامل لوگو، متن لوگو، منوی لینک‌ها (با subMenu)، اطلاعات تماس و شبکه‌های اجتماعی',
   })
   @ApiResponseMeta({
     code: 'FOOTER_FOUND',
@@ -73,12 +72,13 @@ export class SettingsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'ایجاد تنظیمات فوتر' })
+  @ApiOperation({ summary: 'Create footer settings', description: 'ایجاد تنظیمات فوتر' })
   @ApiBody({
     type: CreateFooterDto,
     examples: {
       sample: {
-        summary: 'نمونه کامل فوتر',
+        summary: 'Full footer sample',
+        description: 'نمونه کامل فوتر',
         value: FOOTER_EXAMPLE,
       },
     },
@@ -107,16 +107,18 @@ export class SettingsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'ویرایش تنظیمات فوتر' })
+  @ApiOperation({ summary: 'Update footer settings', description: 'ویرایش تنظیمات فوتر' })
   @ApiBody({
     type: UpdateFooterDto,
     examples: {
       sample: {
-        summary: 'نمونه کامل فوتر',
+        summary: 'Full footer sample',
+        description: 'نمونه کامل فوتر',
         value: FOOTER_EXAMPLE,
       },
       logoAndMenuOnly: {
-        summary: 'فقط لوگو و منو',
+        summary: 'Logo and menu only',
+        description: 'فقط لوگو و منو',
         value: {
           logoUrl: FOOTER_EXAMPLE.logoUrl,
           logoText: FOOTER_EXAMPLE.logoText,
@@ -149,7 +151,7 @@ export class SettingsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'حذف تنظیمات فوتر' })
+  @ApiOperation({ summary: 'Delete footer settings', description: 'حذف تنظیمات فوتر' })
   @ApiResponseMeta({
     code: 'FOOTER_DELETED',
     message: 'Footer settings deleted successfully',

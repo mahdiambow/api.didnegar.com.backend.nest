@@ -58,7 +58,7 @@ export class AdminsController {
     code: 'ADMINS_FOUND',
     message: 'Admins retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست ادمین‌ها (super-admin)' })
+  @ApiOperation({ summary: 'List admins (super-admin)', description: 'لیست ادمین‌ها (super-admin)' })
   @ApiOkResponse({ type: AdminsPaginatedApiResponseDto })
   findAll(
     @Req() req: { user: AuthUser },
@@ -72,7 +72,7 @@ export class AdminsController {
     code: 'ADMIN_FOUND',
     message: 'Admin retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک ادمین' })
+  @ApiOperation({ summary: 'Get one admin', description: 'دریافت یک ادمین' })
   @ApiOkResponse({ type: AdminApiResponseDto })
   findOne(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     return this.adminsService.findOne(req.user, id);
@@ -83,7 +83,7 @@ export class AdminsController {
     code: 'ADMIN_CREATED',
     message: 'Admin created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد ادمین' })
+  @ApiOperation({ summary: 'Create admin', description: 'ایجاد ادمین' })
   @ApiOkResponse({ type: AdminApiResponseDto })
   create(@Req() req: { user: AuthUser }, @Body() dto: CreateAdminDto) {
     return this.adminsService.create(req.user, dto);
@@ -94,7 +94,7 @@ export class AdminsController {
     code: 'ADMIN_UPDATED',
     message: 'Admin updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش ادمین' })
+  @ApiOperation({ summary: 'Update admin', description: 'ویرایش ادمین' })
   @ApiOkResponse({ type: AdminApiResponseDto })
   update(
     @Req() req: { user: AuthUser },
@@ -109,7 +109,7 @@ export class AdminsController {
     code: 'ADMIN_DELETED',
     message: 'Admin deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف ادمین' })
+  @ApiOperation({ summary: 'Delete admin', description: 'حذف ادمین' })
   @ApiOkResponse({
     schema: {
       example: {

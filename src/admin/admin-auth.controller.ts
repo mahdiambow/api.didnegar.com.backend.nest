@@ -42,8 +42,8 @@ export class AdminAuthController {
     message: 'OTP sent successfully',
   })
   @ApiOperation({
-    summary: 'ورود ادمین با موبایل و ارسال OTP',
-    description: 'فقط حساب‌های با نقش admin / super-admin',
+    summary: 'Admin login with mobile and send OTP',
+    description: 'ورود ادمین با موبایل و ارسال OTP\n\nفقط حساب‌های با نقش admin / super-admin',
   })
   @ApiBody({ type: LoginOrSignupDto })
   @ApiOkResponse({ type: LoginOrSignupApiResponseDto })
@@ -59,7 +59,7 @@ export class AdminAuthController {
     code: 'OTP_VERIFIED',
     message: 'OTP verified successfully',
   })
-  @ApiOperation({ summary: 'تایید OTP ادمین و دریافت token' })
+  @ApiOperation({ summary: 'Verify admin OTP and get token', description: 'تایید OTP ادمین و دریافت token' })
   @ApiBody({ type: VerifyOtpDto })
   @ApiOkResponse({ type: VerifyOtpApiResponseDto })
   @ApiTooManyRequestsResponse({ type: ApiErrorResponseDto })
@@ -75,8 +75,8 @@ export class AdminAuthController {
     message: 'Logged in successfully',
   })
   @ApiOperation({
-    summary: 'ورود ادمین با موبایل و رمز عبور',
-    description: 'نمونه سوپرادمین: 09363078987',
+    summary: 'Admin login with mobile and password',
+    description: 'ورود ادمین با موبایل و رمز عبور\n\nنمونه سوپرادمین: 09363078987',
   })
   @ApiBody({ type: LoginWithPasswordDto })
   @ApiOkResponse({ type: LoginWithPasswordApiResponseDto })
@@ -91,7 +91,7 @@ export class AdminAuthController {
     code: 'TOKEN_VALIDATED',
     message: 'Token validated successfully',
   })
-  @ApiOperation({ summary: 'اعتبارسنجی token پورتال ادمین' })
+  @ApiOperation({ summary: 'Validate admin portal token', description: 'اعتبارسنجی token پورتال ادمین' })
   @ApiBody({ type: ValidateTokenDto })
   @ApiOkResponse({ type: ValidateTokenApiResponseDto })
   validateToken(@Body() dto: ValidateTokenDto) {
@@ -109,7 +109,7 @@ export class AdminAuthController {
     message: 'Password set successfully',
   })
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'تنظیم رمز عبور ادمین لاگین‌شده' })
+  @ApiOperation({ summary: 'Set password for logged-in admin', description: 'تنظیم رمز عبور ادمین لاگین‌شده' })
   @ApiBody({ type: SetPasswordDto })
   @ApiOkResponse({ type: SetPasswordApiResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })

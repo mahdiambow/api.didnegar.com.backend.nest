@@ -70,7 +70,7 @@ async function bootstrap() {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Access token دریافتی از verify-otp',
+        description: 'JWT access token from verify-otp\n\nAccess token دریافتی از verify-otp',
       },
       'access-token',
     )

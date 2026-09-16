@@ -72,7 +72,8 @@ export class ProductsPricingController {
     message: 'Product prices adjusted successfully',
   })
   @ApiOperation({
-    summary: 'تغییر قیمت تکی یا گروهی (درصدی / مبلغ ثابت)',
+    summary: 'Change price singly or in bulk (percent / fixed amount)',
+    description: 'تغییر قیمت تکی یا گروهی (درصدی / مبلغ ثابت)',
   })
   @ApiOkResponse({ type: AdjustPricesApiResponseDto })
   adjustPrices(
@@ -83,7 +84,7 @@ export class ProductsPricingController {
   }
 
   @Get('export')
-  @ApiOperation({ summary: 'دانلود اکسل قیمت پیشنهادهای فروش' })
+  @ApiOperation({ summary: 'Download seller-offer prices Excel', description: 'دانلود اکسل قیمت پیشنهادهای فروش' })
   @ApiProduces(
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   )
@@ -105,7 +106,7 @@ export class ProductsPricingController {
   }
 
   @Get('template')
-  @ApiOperation({ summary: 'دانلود اکسل نمونه برای تغییر قیمت' })
+  @ApiOperation({ summary: 'Download sample Excel for price changes', description: 'دانلود اکسل نمونه برای تغییر قیمت' })
   @ApiProduces(
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   )
@@ -144,7 +145,7 @@ export class ProductsPricingController {
     code: 'PRODUCT_PRICES_IMPORTED',
     message: 'Product prices imported successfully',
   })
-  @ApiOperation({ summary: 'آپلود اکسل و اعمال قیمت‌ها بر اساس offerId' })
+  @ApiOperation({ summary: 'Upload Excel and apply prices by offerId', description: 'آپلود اکسل و اعمال قیمت‌ها بر اساس offerId' })
   @ApiOkResponse({ type: ImportPricesApiResponseDto })
   @UseInterceptors(
     FileInterceptor('file', {
