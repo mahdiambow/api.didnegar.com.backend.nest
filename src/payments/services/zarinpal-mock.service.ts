@@ -2,13 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { ConfigService } from '../../config/config.service.js';
 import type {
-  PaymentGatewayAdapter,
+  IBank,
   PaymentRequestResult,
   PaymentVerifyResult,
 } from './payment-gateway.interface.js';
 
 @Injectable()
-export class ZarinpalMockService implements PaymentGatewayAdapter {
+export class ZarinpalMockService implements IBank {
+  readonly kind = 'bank' as const;
   readonly gateway = 'zarinpal' as const;
 
   private readonly sandboxBaseUrl: string;

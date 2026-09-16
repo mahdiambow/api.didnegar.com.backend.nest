@@ -1,5 +1,16 @@
-import { PrimaryColumn, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, UpdateDateColumn } from 'typeorm';
+import {
+  PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  UpdateDateColumn,
+} from 'typeorm';
 import type { User } from '../../auth/entities/user.entity.js';
+import type { UserAddress } from '../../auth/entities/user-address.entity.js';
 import type { OrderItem } from '../../orders/entities/order-item.entity.js';
 import type { Payment } from './payment.entity.js';
 import type { ShippingMethod } from '../../shipping/entities/shipping-method.entity.js';
@@ -15,7 +26,14 @@ export class Order {
   userId: string;
 
   @Column({ type: 'varchar', length: 26, nullable: true })
+  addressId: string | null;
+
+  @Column({ type: 'varchar', length: 26, nullable: true })
   shippingMethodId: string | null;
+
+  /** همه روش‌های ارسال انتخاب‌شده در checkout */
+  @Column({ type: 'json', nullable: true })
+  shippingMethodIds: string[] | null;
 
   @Column({ type: 'decimal', precision: 19, scale: 4 })
   subtotal: number;
@@ -38,6 +56,10 @@ export class Order {
   @ManyToOne('User', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
+
+  @ManyToOne('UserAddress', { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'addressId' })
+  address: UserAddress | null;
 
   @OneToMany('OrderItem', 'order', { cascade: ['insert', 'update'] })
   items: OrderItem[];

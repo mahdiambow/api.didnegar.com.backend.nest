@@ -449,7 +449,7 @@ export class OffersService {
     return {
       offerId: offer.id,
       productId: offer.productId,
-      attributes: {},
+      attributes: offer.attributes ?? {},
       sellerId: offer.sellerId,
       sku: offer.sku,
       quantity,

@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import {
   getPaginationParams,
@@ -18,6 +18,7 @@ import {
 export class ShippingService {
   constructor(
     private readonly shippingMethodRepository: ShippingMethodRepository,
+    @Inject(forwardRef(() => OffersService))
     private readonly offersService: OffersService,
   ) {}
 

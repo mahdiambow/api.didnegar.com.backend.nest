@@ -36,11 +36,17 @@ export class OrderResponseDto {
   @ApiProperty()
   userId: string;
 
+  @ApiPropertyOptional({ nullable: true })
+  addressId: string | null;
+
   @ApiProperty({ type: [OrderProductResponseDto] })
   products: OrderProductResponseDto[];
 
   @ApiPropertyOptional({ nullable: true })
   shippingMethodId: string | null;
+
+  @ApiPropertyOptional({ type: [String], nullable: true })
+  shippingMethodIds: string[] | null;
 
   @ApiProperty()
   subtotal: number;
@@ -74,6 +80,7 @@ export function toOrderResponse(order: Order): OrderResponseDto {
   return {
     id: order.id,
     userId: order.userId,
+    addressId: order.addressId ?? null,
     products: order.items.map((item) => ({
       productId: item.productId,
       offerId: item.offerId ?? null,
@@ -86,6 +93,7 @@ export function toOrderResponse(order: Order): OrderResponseDto {
       subtotal: Number(item.unitPrice) * item.quantity,
     })),
     shippingMethodId: order.shippingMethodId,
+    shippingMethodIds: order.shippingMethodIds ?? null,
     subtotal,
     shippingAmount,
     amount: Number(order.amount),

@@ -1,10 +1,11 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsUUID, Min } from 'class-validator';
+import { IsInt, Min } from 'class-validator';
 
 export class AddShoppingCartItemDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
-  @IsUUID()
+  @ApiProperty({ example: '01JEX000000000000000000010' })
+  @IsULID()
   offerId: string;
 
   @ApiProperty({ example: 1, minimum: 1 })
