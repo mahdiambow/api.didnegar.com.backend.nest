@@ -53,6 +53,7 @@ export class AuthService {
       const defaultRole = await this.rolesSeedService.getDefaultUserRole();
       user = await this.dataSource.transaction(async (manager) => {
         const users = manager.getRepository(User);
+        //TODO: should be moved to verify otp when redis is added
         const created = await users.save(
           users.create({
             username: mobile,
