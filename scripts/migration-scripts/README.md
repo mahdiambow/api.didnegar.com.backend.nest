@@ -41,15 +41,3 @@ possible so existing legacy references remain valid. Countries match by ID or co
 states match by ID or their resolved `(countryId, code)` pair; cities match only by
 ID. Missing relations or a city whose country conflicts with its state's country stop
 and roll back the affected batch.
-
-## Categories
-
-```sh
-npm run db:migrate:categories
-```
-
-Reshapes legacy `categories` into `parent_categories` and legacy `sub_categories`
-into `categories`; the current Nest third level is intentionally left empty. A legacy
-sub-category with a missing or null parent is retained under a generated (or reused)
-`default` parent category. Legacy product-category links are not imported by this
-catalog-only migration.

@@ -31,8 +31,7 @@
     "create:seller": "node scripts/create-seller-user.mjs",
     "db:migrate:users": "node scripts/migration-scripts/migrate-users.mjs",
     "db:migrate:brands": "node scripts/migration-scripts/migrate-brands.mjs",
-    "db:migrate:locations": "node scripts/migration-scripts/migrate-locations.mjs",
-    "db:migrate:categories": "node scripts/migration-scripts/migrate-categories.mjs"
+    "db:migrate:locations": "node scripts/migration-scripts/migrate-locations.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
