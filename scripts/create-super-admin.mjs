@@ -97,15 +97,20 @@ async function ask(rl, question, { secret = false } = {}) {
   return (await rl.question(question)).trim();
 }
 
-async function ensureSuperAdminRole(conn) {
+async function ensureRoleBySlug(conn, slug) {
   const [rows] = await conn.execute(
-    `SELECT id, slug, audience FROM roles WHERE slug = 'super-admin' AND sellerId IS NULL LIMIT 1`,
+    `SELECT id, slug, audience FROM roles WHERE slug = ? AND sellerId IS NULL LIMIT 1`,
+    [slug],
   );
   if (rows[0]) return rows[0];
 
   throw new Error(
-    "نقش super-admin یافت نشد. یک‌بار اپ را بالا بیاورید تا roles seed شود، بعد دوباره این اسکریپت را بزنید.",
+    `نقش ${slug} یافت نشد. یک‌بار اپ را بالا بیاورید تا roles seed شود، بعد دوباره این اسکریپت را بزنید.`,
   );
+}
+
+async function ensureSuperAdminRole(conn) {
+  return ensureRoleBySlug(conn, 'super-admin');
 }
 
 async function upsertAdmin(conn, { phone, name, email }) {
@@ -134,9 +139,11 @@ async function upsertSuperAdminUser(conn, {
   mobile,
   passwordHash,
   roleId,
+  userRoleId,
   adminId,
   name,
 }) {
+  const extraRoleIds = userRoleId ? [userRoleId] : [];
   const [existing] = await conn.execute(
     `SELECT id, username, roleId, adminId FROM users WHERE username = ? LIMIT 1`,
     [mobile],
@@ -146,7 +153,7 @@ async function upsertSuperAdminUser(conn, {
     await conn.execute(
       `UPDATE users
        SET roleId = ?,
-           extraRoleIds = CAST('[]' AS JSON),
+           extraRoleIds = CAST(? AS JSON),
            adminId = ?,
            password = ?,
            displayName = COALESCE(NULLIF(?, ''), displayName),
@@ -155,7 +162,7 @@ async function upsertSuperAdminUser(conn, {
            otpExpiresAt = NULL,
            updatedAt = NOW(6)
        WHERE id = ?`,
-      [roleId, adminId, passwordHash, name, existing[0].id],
+      [roleId, JSON.stringify(extraRoleIds), adminId, passwordHash, name, existing[0].id],
     );
     return { id: existing[0].id, created: false };
   }
@@ -177,7 +184,7 @@ async function upsertSuperAdminUser(conn, {
       passwordHash,
       name,
       roleId,
-      JSON.stringify([]),
+      JSON.stringify(extraRoleIds),
       adminId,
     ],
   );
@@ -233,6 +240,7 @@ async function main() {
       await conn.beginTransaction();
 
       const role = await ensureSuperAdminRole(conn);
+      const userRole = await ensureRoleBySlug(conn, 'user');
       const adminId = await upsertAdmin(conn, {
         phone: mobile,
         name,
@@ -242,6 +250,7 @@ async function main() {
         mobile,
         passwordHash,
         roleId: role.id,
+        userRoleId: userRole.id,
         adminId,
         name,
       });

@@ -50,10 +50,13 @@ export class RolesSeedService {
   }
 
   async getDefaultUserRole() {
-    const role = await this.roleRepository.findBySlug(
+    let role = await this.roleRepository.findBySlug(
       DEFAULT_ROLE_SLUGS.USER,
       null,
     );
+    if (!role) {
+      role = await this.seedSystemRole(DEFAULT_ROLE_SLUGS.USER);
+    }
     if (!role) {
       throw new ApiException(
         'DEFAULT_ROLE_NOT_FOUND',

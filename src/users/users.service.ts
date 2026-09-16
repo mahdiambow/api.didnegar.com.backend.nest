@@ -91,6 +91,7 @@ export class UsersService {
     const saved = await this.userRepository.save(
       this.userRepository.create({
         username: dto.username,
+        role: primaryRole,
         roleId: primaryRole.id,
         extraRoleIds,
         sellerId,
@@ -106,8 +107,8 @@ export class UsersService {
     );
     await this.creditService.init(saved.id);
 
-    const loaded = await this.userRepository.findByIdOrFail(saved.id);
-    return this.toResponse(loaded);
+    const loaded = await this.userRepository.findById(saved.id);
+    return this.toResponse(loaded!);
   }
 
   async update(scope: TenantScope, id: string, dto: UpdateUserDto) {
