@@ -1,3 +1,4 @@
 step one => users
 step two => brands
 step three => locations (countries, states, cities)
+step four => categories (legacy categories, legacy sub_categories)
