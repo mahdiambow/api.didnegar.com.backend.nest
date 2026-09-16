@@ -8,9 +8,9 @@ import { OrdersController } from './orders.controller.js';
 import { OrderRepository } from './repositories/order.repository.js';
 import { ProductsModule } from '../products/products.module.js';
 import { ShippingModule } from '../shipping/shipping.module.js';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { RolesModule } from '../roles/roles.module.js';
-import { UserAddress } from '../auth/entities/user-address.entity.js';
+import { UserAddress } from '../users/entities/user-address.entity.js';
 import { ShoppingCart } from '../shopping-cart/entities/shopping-cart.entity.js';
 import { ShoppingCartItem } from '../shopping-cart/entities/shopping-cart-item.entity.js';
 

@@ -81,8 +81,22 @@ export class ProductImageDto {
 export class ProductPriceDto {
   @ApiPropertyOptional({
     type: [String],
-    example: ['01JEX000000000000000000070'],
-    description: 'شناسه ویژگی‌ها / Attribute IDs',
+    example: ['01JEX000000000000000000080'],
+    description:
+      'شناسه valueAttributeها (Attribute Value IDs) — از GET /attribute-values',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(100)
+  @IsULID({ each: true })
+  valueAttributeIds?: string[];
+
+  /** @deprecated — از valueAttributeIds استفاده کنید */
+  @ApiPropertyOptional({
+    type: [String],
+    deprecated: true,
+    description: 'قدیمی — معادل valueAttributeIds',
   })
   @IsOptional()
   @IsArray()
@@ -272,7 +286,7 @@ export class ProductWritableFieldsDto {
     type: [ProductPriceDto],
     example: [
       {
-        attributeIds: ['01JEX000000000000000000070'],
+        valueAttributeIds: ['01JEX000000000000000000080'],
         price: 68000000,
         discountPercentage: 10,
         discountAmount: 2000000,
@@ -354,7 +368,8 @@ export class ProductWritableFieldsDto {
   @ApiPropertyOptional({
     type: [String],
     example: ['01JEX000000000000000000070'],
-    description: 'شناسه ویژگی‌ها (Attribute IDs) — از GET /attributes',
+    description:
+      'شناسه ویژگی‌های والد (Attribute IDs) — در پاسخ GET به‌جای این، آرایه valueAttributes برمی‌گردد',
   })
   @IsOptional()
   @IsArray()
@@ -401,7 +416,9 @@ function normalizePriceItem(
   price: ProductPriceDto,
 ): ProductPriceData {
   return {
-    attributeIds: [...new Set(price.attributeIds ?? [])],
+    attributeIds: [
+      ...new Set(price.valueAttributeIds ?? price.attributeIds ?? []),
+    ],
     price: price.price ?? null,
     discountPercentage: price.discountPercentage ?? null,
     discountAmount: price.discountAmount ?? null,

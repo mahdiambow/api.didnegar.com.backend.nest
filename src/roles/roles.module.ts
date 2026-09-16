@@ -5,7 +5,7 @@ import { RolesService } from './roles.service.js';
 import { RolesController } from './roles.controller.js';
 import { RolesSeedService } from './roles.seed.service.js';
 import { RoleRepository } from './repositories/role.repository.js';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { SellersModule } from '../sellers/sellers.module.js';
 
 @Module({

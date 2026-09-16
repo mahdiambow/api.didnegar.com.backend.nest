@@ -1,3 +1,7 @@
+import { RoleAudience } from './role-audience.enum.js';
+
+export { RoleAudience } from './role-audience.enum.js';
+
 export const PERMISSIONS = {
   users: {
     read: 'users:read',
@@ -411,6 +415,15 @@ export const DEFAULT_ROLE_SLUGS = {
 
 export type DefaultRoleSlug =
   (typeof DEFAULT_ROLE_SLUGS)[keyof typeof DEFAULT_ROLE_SLUGS];
+
+/** حوزهٔ هر نقش سیستمی — نقش‌های حوزه‌های مختلف قابل ترکیب نیستند */
+export const DEFAULT_ROLE_AUDIENCE: Record<DefaultRoleSlug, RoleAudience> = {
+  [DEFAULT_ROLE_SLUGS.USER]: RoleAudience.USER,
+  [DEFAULT_ROLE_SLUGS.SELLER]: RoleAudience.SELLER,
+  [DEFAULT_ROLE_SLUGS.SUPER_SELLER]: RoleAudience.SELLER,
+  [DEFAULT_ROLE_SLUGS.ADMIN]: RoleAudience.ADMIN,
+  [DEFAULT_ROLE_SLUGS.SUPER_ADMIN]: RoleAudience.ADMIN,
+};
 
 const SELLER_PERMISSIONS: Permission[] = [
   PERMISSIONS.inventory.read,

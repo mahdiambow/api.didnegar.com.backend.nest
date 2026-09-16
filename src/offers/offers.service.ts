@@ -2,8 +2,8 @@ import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
-import type { AuthUser } from '../auth/types/auth-user.type.js';
-import { userHasRole } from '../auth/types/auth-user.type.js';
+import type { AuthUser } from '../utils/auth/types/auth-user.type.js';
+import { userHasRole } from '../utils/auth/types/auth-user.type.js';
 import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
 import {
   getPaginationParams,

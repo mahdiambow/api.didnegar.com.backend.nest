@@ -1,4 +1,6 @@
 import * as dotenv from 'dotenv';
+import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 
 dotenv.config();
 
@@ -38,7 +40,11 @@ async function bootstrap() {
             directives: {
               defaultSrc: [`'self'`],
               styleSrc: [`'self'`, `'unsafe-inline'`],
-              scriptSrc: [`'self'`],
+              // Scalar uses an inline bootstrap module that loads its UI from jsDelivr.
+              scriptSrc: [
+                `'self'`,
+                `'unsafe-inline'`,
+              ],
               imgSrc: [`'self'`, 'data:', 'validator.swagger.io'],
               fontSrc: [`'self'`, 'https://fonts.gstatic.com'],
               connectSrc: [`'self'`],
@@ -79,18 +85,28 @@ async function bootstrap() {
     customSiteTitle: 'Didnegar API',
   });
 
+  // Serve Scalar's standalone bundle locally so the reference page never needs jsDelivr.
+  const express = await import('express');
+  // Resolve from project root — createRequire(import.meta.url) can fail under dist/
+  const requireFromRoot = createRequire(join(process.cwd(), 'package.json'));
+  const scalarAssetsPath = join(
+    dirname(requireFromRoot.resolve('@scalar/api-reference')),
+    'browser',
+  );
+  app.use('/reference-assets', express.default.static(scalarAssetsPath));
+
   // Scalar API Reference — modern alternative to Swagger UI
   app.use(
     '/reference',
     apiReference({
       content: document,
       theme: 'purple',
+      cdn: '/reference-assets/standalone.js',
     }),
   );
 
   const { mediaConfig } = await import('./media/media.config.js');
   if (!mediaConfig.sftp.enabled) {
-    const express = await import('express');
     const { resolve } = await import('node:path');
     app.use(
       '/media-files/staging',

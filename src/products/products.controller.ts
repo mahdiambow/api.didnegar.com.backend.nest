@@ -2,6 +2,7 @@ import { ParseULIDPipe } from '../common/id/index.js';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -9,9 +10,9 @@ import {
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
-import { RoleGuard } from '../auth/guards/role.guard.js';
-import { RequireRole } from '../auth/decorators/require-role.decorator.js';
+import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
+import { RoleGuard } from '../utils/auth/guards/role.guard.js';
+import { RequireRole } from '../utils/auth/decorators/require-role.decorator.js';
 import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
 import { ProductsService } from './products.service.js';
 import { CreateProductDto } from './dto/create-product.dto.js';
@@ -19,8 +20,10 @@ import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ReviewProductDto } from './dto/review-product.dto.js';
 import {
   BrandResponseDto,
+  ProductPriceResponseDto,
   ProductResponseDto,
 } from './dto/product-response.dto.js';
+import { AttributeValueResponseDto } from '../attributes/dto/attribute-value.dto.js';
 import { ListProductsQueryDto } from './dto/list-products-query.dto.js';
 
 const ProductApiResponseDto = createSuccessResponseDto(ProductResponseDto, {
@@ -45,6 +48,11 @@ const BrandsListApiResponseDto = createSuccessResponseDto(BrandResponseDto, {
 });
 
 @ApiTags('Products')
+@ApiExtraModels(
+  ProductResponseDto,
+  ProductPriceResponseDto,
+  AttributeValueResponseDto,
+)
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 @Controller('products')

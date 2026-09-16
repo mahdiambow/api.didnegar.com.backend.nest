@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import ExcelJS from 'exceljs';
-import type { AuthUser } from '../auth/types/auth-user.type.js';
+import type { AuthUser } from '../utils/auth/types/auth-user.type.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import { SellerOffer } from '../offers/entities/seller-offer.entity.js';
 import { assertOfferAccess } from '../offers/offers.service.js';

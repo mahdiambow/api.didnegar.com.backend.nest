@@ -19,9 +19,9 @@ import {
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
-import type { AuthUser } from '../auth/types/auth-user.type.js';
-import { UserResponseDto } from '../auth/dto/user-response.dto.js';
+import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
+import type { AuthUser } from '../utils/auth/types/auth-user.type.js';
+import { UserResponseDto } from '../utils/auth/dto/user-response.dto.js';
 import { UsersService } from './users.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';

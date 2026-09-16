@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { CreditLedger } from './entities/credit-ledger.entity.js';
 import { UserCredit } from './entities/user-credit.entity.js';
 import { CreditService } from './credit.service.js';

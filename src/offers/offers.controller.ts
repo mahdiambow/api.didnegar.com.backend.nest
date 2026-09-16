@@ -7,9 +7,9 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
-import { RoleGuard } from '../auth/guards/role.guard.js';
-import { RequireRole } from '../auth/decorators/require-role.decorator.js';
+import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
+import { RoleGuard } from '../utils/auth/guards/role.guard.js';
+import { RequireRole } from '../utils/auth/decorators/require-role.decorator.js';
 import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
@@ -20,7 +20,7 @@ import {
   ListSellerOffersDto,
   ReviewSellerOfferDto,
 } from './dto/seller-offer.dto.js';
-import type { AuthUser } from '../auth/types/auth-user.type.js';
+import type { AuthUser } from '../utils/auth/types/auth-user.type.js';
 import { OffersService } from './offers.service.js';
 import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 

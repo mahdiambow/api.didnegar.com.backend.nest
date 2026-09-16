@@ -18,6 +18,7 @@ import {
 } from '../common/response/helpers/paginated-response.helper.js';
 import { RoleRepository } from './repositories/role.repository.js';
 import { SellerRepository } from '../sellers/repositories/seller.repository.js';
+import { resolveRoleAudience } from './role-audience.util.js';
 
 @Injectable()
 export class RolesService {
@@ -88,6 +89,11 @@ export class RolesService {
 
     this.assertValidPermissions(dto.permissions, sellerId);
 
+    const audience = resolveRoleAudience({
+      sellerId,
+      audience: dto.audience,
+    });
+
     const role = await this.roleRepository.save(
       this.roleRepository.create({
         slug: dto.slug,
@@ -95,6 +101,7 @@ export class RolesService {
         permissions: dto.permissions,
         isSystem: false,
         sellerId,
+        audience,
       }),
     );
 

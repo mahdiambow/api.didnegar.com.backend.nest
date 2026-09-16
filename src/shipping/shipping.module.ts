@@ -6,7 +6,7 @@ import { ShippingService } from './shipping.service.js';
 import { ShippingController } from './shipping.controller.js';
 import { ShippingSeedService } from './shipping.seed.service.js';
 import { ShippingMethodRepository } from './repositories/shipping-method.repository.js';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { RolesModule } from '../roles/roles.module.js';
 
 @Module({

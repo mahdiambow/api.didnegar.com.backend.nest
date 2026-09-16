@@ -8,7 +8,7 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import type { User } from '../../auth/entities/user.entity.js';
+import type { User } from '../../users/entities/user.entity.js';
 
 @Entity('user_credits')
 export class UserCredit {

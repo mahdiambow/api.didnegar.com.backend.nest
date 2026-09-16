@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserResponseDto } from '../../auth/dto/user-response.dto.js';
+import { UserResponseDto } from '../../utils/auth/dto/user-response.dto.js';
 import { Seller } from '../entities/seller.entity.js';
 import { BusinessType, SellerStatus } from '../entities/seller.enums.js';
 import { SellerContractResponseDto } from './seller-contract-response.dto.js';

@@ -25,13 +25,16 @@ import {
 } from '../../attributes/dto/attribute-response.dto.js';
 import { ATTRIBUTE_RESPONSE_EXAMPLE } from '../../attributes/dto/attribute.examples.js';
 import {
+  AttributeValueResponseDto,
+  toAttributeValueResponse,
+} from '../../attributes/dto/attribute-value.dto.js';
+import {
   SellerResponseDto,
   toSellerResponse,
 } from '../../sellers/dto/seller-response.dto.js';
 import {
   ProductImageDto,
   ProductKeyValDto,
-  ProductPriceDto,
   ProductTableInfoDto,
 } from './product-fields.dto.js';
 import {
@@ -42,12 +45,48 @@ import {
 export { BrandResponseDto, toBrandResponse };
 export { AttributeResponseDto, toAttributeResponse };
 export { SellerResponseDto, toSellerResponse };
+export { AttributeValueResponseDto, toAttributeValueResponse };
 
 export type ProductPopulatedRelations = {
   attributes?: AttributeResponseDto[];
+  valueAttributes?: AttributeValueResponseDto[];
   createdBySeller?: SellerResponseDto | null;
   shippingMethod?: ShippingMethodResponseDto | null;
+  /** valueId → AttributeValue — برای populate کردن price.valueAttributes */
+  attributeValueById?: Map<string, AttributeValueResponseDto>;
 };
+
+export class ProductPriceResponseDto {
+  @ApiProperty({
+    type: [AttributeValueResponseDto],
+    description: 'مقادیر ویژگی مرتبط با این قیمت (به‌جای attributeIds)',
+  })
+  valueAttributes: AttributeValueResponseDto[];
+
+  @ApiPropertyOptional({ example: 68000000, nullable: true })
+  price: number | null;
+
+  @ApiPropertyOptional({ example: 10, nullable: true })
+  discountPercentage: number | null;
+
+  @ApiPropertyOptional({ example: 2000000, nullable: true })
+  discountAmount: number | null;
+
+  @ApiPropertyOptional({
+    example: '2026-12-31T23:59:59.000Z',
+    nullable: true,
+  })
+  expireDate: string | null;
+
+  @ApiPropertyOptional({ example: 5, nullable: true })
+  maxQuantity: number | null;
+
+  @ApiPropertyOptional({ example: 1, nullable: true })
+  minQuantity: number | null;
+
+  @ApiPropertyOptional({ example: 66000000, nullable: true })
+  finalPrice: number | null;
+}
 
 export class ProductResponseDto {
   @ApiProperty()
@@ -130,11 +169,22 @@ export class ProductResponseDto {
   image: ProductImageData;
 
   @ApiPropertyOptional({
-    type: [ProductPriceDto],
+    type: [ProductPriceResponseDto],
     nullable: true,
     example: [
       {
-        attributeIds: ['01JEX000000000000000000070'],
+        valueAttributes: [
+          {
+            id: '01JEX000000000000000000080',
+            attributeId: '01JEX000000000000000000070',
+            value: '256gb',
+            label: '۲۵۶ گیگابایت',
+            sortOrder: 0,
+            isActive: true,
+            createdAt: '2026-09-02T10:00:00.000Z',
+            updatedAt: '2026-09-02T10:00:00.000Z',
+          },
+        ],
         price: 68000000,
         discountPercentage: 10,
         discountAmount: 2000000,
@@ -145,7 +195,7 @@ export class ProductResponseDto {
       },
     ],
   })
-  price: ProductPriceData[];
+  price: ProductPriceResponseDto[];
 
   @ApiPropertyOptional({
     example: '01JEX000000000000000000030',
@@ -200,11 +250,23 @@ export class ProductResponseDto {
   height: number | null;
 
   @ApiProperty({
-    type: [String],
-    example: ['01JEX000000000000000000070'],
-    description: 'شناسه ویژگی‌های محصول (Attribute IDs)',
+    type: [AttributeValueResponseDto],
+    description:
+      'آرایه valueAttributeهای محصول (مقادیر ویژگی) — به‌جای attributeIds',
+    example: [
+      {
+        id: '01JEX000000000000000000080',
+        attributeId: '01JEX000000000000000000070',
+        value: '256gb',
+        label: '۲۵۶ گیگابایت',
+        sortOrder: 0,
+        isActive: true,
+        createdAt: '2026-09-02T10:00:00.000Z',
+        updatedAt: '2026-09-02T10:00:00.000Z',
+      },
+    ],
   })
-  attributeIds: string[];
+  valueAttributes: AttributeValueResponseDto[];
 
   @ApiProperty({
     type: [String],
@@ -235,8 +297,8 @@ export class ProductResponseDto {
 
   @ApiPropertyOptional({
     type: [AttributeResponseDto],
-    example: [ATTRIBUTE_RESPONSE_EXAMPLE],
-    description: 'ویژگی‌های populate‌شده از attributeIds',
+    example: [{ ...ATTRIBUTE_RESPONSE_EXAMPLE, values: [] }],
+    description: 'ویژگی‌های والد با values (valueAttributeها)',
   })
   attributes?: AttributeResponseDto[];
 
@@ -285,6 +347,24 @@ function normalizePriceResponse(
   return [price];
 }
 
+function toPriceResponses(
+  price: Product['price'] | ProductPriceData | null | undefined,
+  attributeValueById?: Map<string, AttributeValueResponseDto>,
+): ProductPriceResponseDto[] {
+  return normalizePriceResponse(price).map((item) => ({
+    valueAttributes: (item.attributeIds ?? [])
+      .map((id) => attributeValueById?.get(id))
+      .filter((value): value is AttributeValueResponseDto => Boolean(value)),
+    price: item.price ?? null,
+    discountPercentage: item.discountPercentage ?? null,
+    discountAmount: item.discountAmount ?? null,
+    expireDate: item.expireDate ?? null,
+    maxQuantity: item.maxQuantity ?? null,
+    minQuantity: item.minQuantity ?? null,
+    finalPrice: item.finalPrice ?? null,
+  }));
+}
+
 export function toProductResponse(
   product: Product,
   includeRelations = false,
@@ -310,7 +390,7 @@ export function toProductResponse(
     stock: product.productStock?.stock ?? 0,
     seo: product.seo ?? [],
     image: normalizeImage(product.image),
-    price: normalizePriceResponse(product.price),
+    price: toPriceResponses(product.price, populated.attributeValueById),
     shippingMethodId: product.shippingMethodId ?? null,
     shippingMethod: includeRelations
       ? (populated.shippingMethod ??
@@ -328,7 +408,9 @@ export function toProductResponse(
     length: product.length !== null ? Number(product.length) : null,
     width: product.width !== null ? Number(product.width) : null,
     height: product.height !== null ? Number(product.height) : null,
-    attributeIds: product.attributeIds ?? [],
+    valueAttributes: includeRelations
+      ? (populated.valueAttributes ?? [])
+      : [],
     sellerIds: product.sellerIds ?? [],
     createdBySellerId: product.createdBySellerId ?? null,
     createdAt: product.createdAt,

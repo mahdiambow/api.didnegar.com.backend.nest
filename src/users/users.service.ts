@@ -8,11 +8,12 @@ import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
-import { toUserResponse } from '../auth/dto/user-response.dto.js';
-import { UserRepository } from '../auth/repositories/user.repository.js';
+import { toUserResponse } from '../utils/auth/dto/user-response.dto.js';
+import { UserRepository } from '../utils/auth/repositories/user.repository.js';
 import { RoleRepository } from '../roles/repositories/role.repository.js';
 import { SellerRepository } from '../sellers/repositories/seller.repository.js';
 import type { Role } from '../roles/entities/role.entity.js';
+import { assertCompatibleRoleAudiences } from '../roles/role-audience.util.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 
@@ -176,6 +177,7 @@ export class UsersService {
     for (const role of ordered) {
       this.assertRoleAssignable(scope, role);
     }
+    assertCompatibleRoleAudiences(ordered);
 
     const [primaryRole, ...extraRoles] = ordered;
     return {

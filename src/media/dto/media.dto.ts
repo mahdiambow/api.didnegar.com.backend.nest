@@ -2,7 +2,7 @@ import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
-import { UserResponseDto } from '../../auth/dto/user-response.dto.js';
+import { UserResponseDto } from '../../utils/auth/dto/user-response.dto.js';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { SellerResponseDto } from '../../sellers/dto/seller-response.dto.js';
 import {

@@ -2,14 +2,16 @@
  * Imports legacy users and roles into the existing Nest users/roles structure.
  * Each 1,000-user batch is committed atomically in its own target transaction.
  */
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import {
   BATCH_SIZE,
   asBoolean,
   asNullableString,
+  assertColumns,
   assertTables,
   openLegacyConnection,
   openTargetConnection,
+  newId,
   requiredEnv,
 } from './shared.mjs';
 
@@ -17,7 +19,7 @@ const ROLE_PRIORITY = ['super-admin', 'admin', 'super-seller', 'seller', 'user']
 const LEGACY_ROLE_MAP = new Map([
   ['customer', 'user'],
   ['shop_manager', 'seller'],
-  ['subscriber', 'admin'],
+  ['subscriber', 'user'],
   ['administrator', 'super-admin'],
   ['dokan_export_order', 'seller'],
   ['edit_users', 'admin'],
@@ -103,7 +105,7 @@ async function loadTargetUsers(target, legacyRows) {
   conditions.push(legacyClauses);
   for (const row of legacyRows) parameters.push(row.legacyTable || 'users', row.legacyId);
   const [rows] = await target.execute(
-    `SELECT id, legacyId, legacyTable, username FROM users WHERE ${conditions.join(' OR ')}`,
+    `SELECT id, legacyId, legacyTable, username, adminId FROM users WHERE ${conditions.join(' OR ')}`,
     parameters,
   );
   return {
@@ -127,21 +129,102 @@ async function ensureSeller(target, row) {
   const name = sellerName(row);
   const email = asNullableString(row.email, 150) || `seller-${row.legacyId}@legacy.invalid`;
   const phone = usernameBase(row.username).slice(0, 20);
-  const values = [name, name.slice(0, 200), email, phone, asBoolean(row.isActive) ? 'active' : 'inactive', row.createdAt, row.updatedAt];
-  const [existing] = await target.execute('SELECT id FROM sellers WHERE slug = ? LIMIT 1', [slug]);
+  const legacyId = Number(row.legacyId);
+  const legacyTable = String(row.legacyTable || 'users');
+  const values = [
+    legacyId,
+    legacyTable,
+    name,
+    name.slice(0, 200),
+    email,
+    phone,
+    asBoolean(row.isActive) ? 'active' : 'inactive',
+    row.createdAt,
+    row.updatedAt,
+  ];
+  let [existing] = await target.execute(
+    'SELECT id FROM sellers WHERE legacyTable = ? AND legacyId = ? LIMIT 1',
+    [legacyTable, legacyId],
+  );
+  if (!existing[0]) {
+    [existing] = await target.execute('SELECT id FROM sellers WHERE slug = ? LIMIT 1', [slug]);
+  }
   if (existing[0]) {
     await target.execute(
-      `UPDATE sellers SET name = ?, businessName = ?, email = ?, phone = ?, status = ?,
-       createdAt = ?, updatedAt = ? WHERE id = ?`,
+      `UPDATE sellers SET legacyId = ?, legacyTable = ?, name = ?, businessName = ?, email = ?,
+       phone = ?, status = ?, createdAt = ?, updatedAt = ? WHERE id = ?`,
       [...values, existing[0].id],
     );
     return { id: existing[0].id, created: false };
   }
-  const id = randomUUID();
+  const id = newId();
   await target.execute(
-    `INSERT INTO sellers (id, name, slug, businessName, businessType, email, phone, status, settings, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, 'other', ?, ?, ?, CAST('{}' AS JSON), ?, ?)`,
-    [id, name, slug, ...values.slice(1)],
+    `INSERT INTO sellers (id, legacyId, legacyTable, name, slug, businessName, businessType, email,
+     phone, status, settings, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, 'other', ?, ?, ?, CAST('{}' AS JSON), ?, ?)`,
+    [id, legacyId, legacyTable, name, slug, ...values.slice(3)],
+  );
+  return { id, created: true };
+}
+
+function adminPhone(row) {
+  const username = usernameBase(row.username);
+  if (username) return username;
+  return `legacy-${createHash('sha1').update(String(row.id)).digest('hex').slice(0, 13)}`;
+}
+
+async function ensureAdmin(target, row, existingAdminId) {
+  const name = sellerName(row);
+  const phone = adminPhone(row);
+  const email = asNullableString(row.email, 150);
+  const legacyId = Number(row.legacyId);
+  const legacyTable = String(row.legacyTable || 'users');
+  let existing = null;
+
+  if (existingAdminId) {
+    const [byId] = await target.execute('SELECT id FROM admins WHERE id = ? LIMIT 1', [existingAdminId]);
+    existing = byId[0] || null;
+  }
+  if (!existing) {
+    const [byLegacy] = await target.execute(
+      'SELECT id FROM admins WHERE legacyTable = ? AND legacyId = ? LIMIT 1',
+      [legacyTable, legacyId],
+    );
+    existing = byLegacy[0] || null;
+  }
+  if (!existing) {
+    const [byPhone] = await target.execute('SELECT id FROM admins WHERE phone = ? LIMIT 1', [phone]);
+    existing = byPhone[0] || null;
+  }
+  if (!existing && email) {
+    const [byEmail] = await target.execute('SELECT id FROM admins WHERE email = ? LIMIT 1', [email]);
+    existing = byEmail[0] || null;
+  }
+
+  const values = [
+    legacyId,
+    legacyTable,
+    name,
+    email,
+    phone,
+    asBoolean(row.isActive) ? 1 : 0,
+    row.createdAt,
+    row.updatedAt,
+  ];
+  if (existing) {
+    await target.execute(
+      `UPDATE admins SET legacyId = ?, legacyTable = ?, name = ?, email = ?, phone = ?, isActive = ?,
+       createdAt = ?, updatedAt = ? WHERE id = ?`,
+      [...values, existing.id],
+    );
+    return { id: existing.id, created: false };
+  }
+
+  const id = newId();
+  await target.execute(
+    `INSERT INTO admins (id, legacyId, legacyTable, name, email, phone, isActive, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, ...values],
   );
   return { id, created: true };
 }
@@ -158,6 +241,8 @@ async function migrateBatch({ source, target, rows, offset, batchNumber, roleByS
     skipped: 0,
     sellersAdded: 0,
     sellersUpdated: 0,
+    adminsAdded: 0,
+    adminsUpdated: 0,
     unmappedRoleLinks: 0,
   };
 
@@ -185,18 +270,23 @@ async function migrateBatch({ source, target, rows, offset, batchNumber, roleByS
       const seller = sellerRole ? await ensureSeller(target, row) : null;
       if (seller?.created) counters.sellersAdded += 1;
       if (seller && !seller.created) counters.sellersUpdated += 1;
+      const adminRole = mappedRoles.some((role) => role.slug === 'admin' || role.slug === 'super-admin');
+      const admin = adminRole ? await ensureAdmin(target, row, existing?.adminId || null) : null;
+      if (admin?.created) counters.adminsAdded += 1;
+      if (admin && !admin.created) counters.adminsUpdated += 1;
       const values = [
         row.legacyId, row.legacyTable || 'users', username,
         asNullableString(row.password, 255), asNullableString(row.email, 150),
         asNullableString(row.displayName, 150), asNullableString(row.firstName, 100),
         asNullableString(row.lastName, 100), asNullableString(row.website, 255),
-        asBoolean(row.isActive) ? 1 : 0, roleId, JSON.stringify(extraRoleIds), seller?.id || null, row.createdAt, row.updatedAt,
+        asBoolean(row.isActive) ? 1 : 0, roleId, JSON.stringify(extraRoleIds), seller?.id || null,
+        admin?.id || null, row.createdAt, row.updatedAt,
       ];
       if (existing) {
         await target.execute(
           `UPDATE users SET legacyId = ?, legacyTable = ?, username = ?, password = ?, email = ?,
            displayName = ?, firstName = ?, lastName = ?, website = ?, isActive = ?, roleId = ?,
-           extraRoleIds = CAST(? AS JSON), sellerId = ?, createdAt = ?, updatedAt = ? WHERE id = ?`,
+           extraRoleIds = CAST(? AS JSON), sellerId = ?, adminId = ?, createdAt = ?, updatedAt = ? WHERE id = ?`,
           [...values, existing.id],
         );
         if (existing.username !== username) usernameOwners.delete(existing.username);
@@ -206,11 +296,11 @@ async function migrateBatch({ source, target, rows, offset, batchNumber, roleByS
         usernameOwners.set(username, existing.id);
         counters.updated += 1;
       } else {
-        const id = randomUUID();
+        const id = newId();
         await target.execute(
           `INSERT INTO users (id, legacyId, legacyTable, username, password, email, displayName,
-           firstName, lastName, website, isActive, roleId, extraRoleIds, sellerId, createdAt, updatedAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?, ?, ?)`,
+           firstName, lastName, website, isActive, roleId, extraRoleIds, sellerId, adminId, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON), ?, ?, ?, ?)`,
           [id, ...values],
         );
         const inserted = { id, legacyId: row.legacyId, legacyTable: row.legacyTable || 'users', username };
@@ -241,11 +331,16 @@ async function main() {
     skipped: 0,
     sellersAdded: 0,
     sellersUpdated: 0,
+    adminsAdded: 0,
+    adminsUpdated: 0,
     unmappedRoleLinks: 0,
   };
   try {
     await assertTables(source, sourceDatabase, ['users', 'user_roles'], 'Legacy');
-    await assertTables(target, targetDatabase, ['users', 'roles', 'sellers'], 'Target');
+    await assertTables(target, targetDatabase, ['users', 'roles', 'sellers', 'admins'], 'Target');
+    await assertColumns(target, targetDatabase, 'users', ['legacyId', 'legacyTable', 'adminId'], 'Target');
+    await assertColumns(target, targetDatabase, 'sellers', ['legacyId', 'legacyTable'], 'Target');
+    await assertColumns(target, targetDatabase, 'admins', ['legacyId', 'legacyTable'], 'Target');
     const [roleRows] = await target.execute('SELECT id, slug FROM roles');
     const roleBySlug = new Map(roleRows.map((role) => [String(role.slug), role]));
     const defaultUserRoleId = roleBySlug.get('user')?.id;

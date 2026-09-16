@@ -12,7 +12,7 @@ import { ProductPricingService } from './product-pricing.service.js';
 import { ProductRepository } from './repositories/product.repository.js';
 import { ProductStockRepository } from './repositories/product-stock.repository.js';
 import { AttributesModule } from '../attributes/attributes.module.js';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { BrandsModule } from '../brands/brands.module.js';
 import { CategoriesModule } from '../categories/categories.module.js';
 import { SellersModule } from '../sellers/sellers.module.js';

@@ -1,0 +1,3 @@
+step one => users
+step two => brands
+step three => locations (countries, states, cities)

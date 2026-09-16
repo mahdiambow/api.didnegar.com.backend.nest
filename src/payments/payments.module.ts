@@ -8,7 +8,7 @@ import { ZibalMockService } from './services/zibal-mock.service.js';
 import { LoanMockService } from './services/loan-mock.service.js';
 import { PaymentRepository } from './repositories/payment.repository.js';
 import { OrdersModule } from '../orders/orders.module.js';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { CreditModule } from '../credit/credit.module.js';
 
 @Module({

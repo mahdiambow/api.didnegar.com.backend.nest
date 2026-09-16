@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import {
+  DEFAULT_ROLE_AUDIENCE,
   DEFAULT_ROLE_PERMISSIONS,
   DEFAULT_ROLE_SLUGS,
   type DefaultRoleSlug,
@@ -31,6 +32,7 @@ export class RolesSeedService {
       existing.name = SYSTEM_ROLE_NAMES[slug];
       existing.isSystem = true;
       existing.sellerId = null;
+      existing.audience = DEFAULT_ROLE_AUDIENCE[slug];
       existing.permissions = [...DEFAULT_ROLE_PERMISSIONS[slug]];
       return this.roleRepository.save(existing);
     }
@@ -41,6 +43,7 @@ export class RolesSeedService {
         name: SYSTEM_ROLE_NAMES[slug],
         isSystem: true,
         sellerId: null,
+        audience: DEFAULT_ROLE_AUDIENCE[slug],
         permissions: [...DEFAULT_ROLE_PERMISSIONS[slug]],
       }),
     );

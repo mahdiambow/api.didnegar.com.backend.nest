@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from '../auth/auth.module.js';
+import { AuthModule } from '../utils/auth/auth.module.js';
 import { OffersModule } from '../offers/offers.module.js';
 import { OrdersModule } from '../orders/orders.module.js';
 import { ShoppingCartItem } from './entities/shopping-cart-item.entity.js';

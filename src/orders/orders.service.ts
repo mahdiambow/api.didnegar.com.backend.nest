@@ -6,7 +6,7 @@ import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
-import { UserAddress } from '../auth/entities/user-address.entity.js';
+import { UserAddress } from '../users/entities/user-address.entity.js';
 import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
 import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
