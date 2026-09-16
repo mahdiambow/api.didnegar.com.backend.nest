@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
@@ -14,6 +14,7 @@ export class ShoppingCartService {
     private readonly carts: Repository<ShoppingCart>,
     @InjectRepository(ShoppingCartItem)
     private readonly items: Repository<ShoppingCartItem>,
+    @Inject(forwardRef(() => OffersService))
     private readonly offersService: OffersService,
   ) {}
 

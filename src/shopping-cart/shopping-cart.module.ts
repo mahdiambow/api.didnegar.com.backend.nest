@@ -10,7 +10,7 @@ import { ShoppingCartService } from './shopping-cart.service.js';
 @Module({
   imports: [
     forwardRef(() => AuthModule),
-    OffersModule,
+    forwardRef(() => OffersModule),
     TypeOrmModule.forFeature([ShoppingCart, ShoppingCartItem]),
   ],
   controllers: [ShoppingCartController],

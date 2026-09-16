@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -29,6 +29,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly rolesSeedService: RolesSeedService,
     private readonly roleRepository: RoleRepository,
+    @Inject(forwardRef(() => ShoppingCartService))
     private readonly shoppingCartService: ShoppingCartService,
     private readonly dataSource: DataSource,
   ) {}
