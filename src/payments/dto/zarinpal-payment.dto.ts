@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsString } from 'class-validator';
 import {
   CreatePaymentDto,
   PaymentResponseDto,
@@ -11,9 +12,11 @@ export class CreateZarinpalPaymentDto extends CreatePaymentDto {}
 
 export class VerifyZarinpalPaymentQueryDto {
   @ApiProperty({ example: 'A000000000000000000000000000000000' })
+  @IsString()
   Authority: string;
 
   @ApiProperty({ example: 'OK' })
+  @IsString()
   Status: string;
 }
 

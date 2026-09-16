@@ -10,6 +10,9 @@ export class PaymentRepository {
   ) {}
 
   findByAuthority(authority: string) {
+    if (!authority) {
+      return Promise.resolve(null);
+    }
     return this.repo.findOne({
       where: { authority },
       relations: {

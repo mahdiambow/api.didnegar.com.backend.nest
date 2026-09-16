@@ -89,7 +89,23 @@ export class PaymentsService {
       const paymentRepo = manager.getRepository(Payment);
       const orderRepo = manager.getRepository(Order);
 
-      let payment = await paymentRepo.findOneBy({ orderId: order.id });
+      // Serialize concurrent pays on the same order (avoids deadlock / double spend)
+      const lockedOrder = await orderRepo.findOne({
+        where: { id: order.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!lockedOrder || lockedOrder.status !== 'pending') {
+        throw new ApiException(
+          'ORDER_ALREADY_PAID',
+          'این سفارش قبلاً پرداخت شده است',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      let payment = await paymentRepo.findOne({
+        where: { orderId: order.id },
+        lock: { mode: 'pessimistic_write' },
+      });
       if (payment?.status === 'success') {
         throw new ApiException(
           'ORDER_ALREADY_PAID',
