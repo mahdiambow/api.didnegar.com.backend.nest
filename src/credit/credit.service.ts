@@ -25,6 +25,11 @@ export class CreditService {
     return Number(wallet?.balance ?? 0);
   }
 
+  /** Create the user's wallet at registration time (balance 0); safe to call repeatedly. */
+  async init(userId: string, manager?: EntityManager): Promise<UserCredit> {
+    return this.ensureWallet(userId, manager);
+  }
+
   /** شارژ کیف پول (مثلاً بعد از موفقیت درگاه) */
   async deposit(
     userId: string,
@@ -140,9 +145,11 @@ export class CreditService {
 
   private async ensureWallet(
     userId: string,
-    manager: EntityManager,
+    manager?: EntityManager,
   ): Promise<UserCredit> {
-    const repo = manager.getRepository(UserCredit);
+    const repo = manager
+      ? manager.getRepository(UserCredit)
+      : this.credits;
     const existing = await repo.findOneBy({ userId });
     if (existing) return existing;
 

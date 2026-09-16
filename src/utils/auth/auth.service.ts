@@ -19,6 +19,7 @@ import {
 import { resolveUserRoles, userHasRole } from './types/auth-user.type.js';
 import { User } from '../../users/entities/user.entity.js';
 import { ShoppingCartService } from '../../shopping-cart/shopping-cart.service.js';
+import { CreditService } from '../../credit/credit.service.js';
 import {
   AUTH_PORTAL_ROLES,
   type AuthPortal,
@@ -35,6 +36,8 @@ export class AuthService {
     private readonly roleRepository: RoleRepository,
     @Inject(forwardRef(() => ShoppingCartService))
     private readonly shoppingCartService: ShoppingCartService,
+    @Inject(forwardRef(() => CreditService))
+    private readonly creditService: CreditService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -62,6 +65,7 @@ export class AuthService {
           }),
         );
         await this.shoppingCartService.init(created.id, manager);
+        await this.creditService.init(created.id, manager);
         return created;
       });
     } else {
