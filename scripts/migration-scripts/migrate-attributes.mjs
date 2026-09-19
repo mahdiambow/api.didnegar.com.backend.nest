@@ -222,10 +222,26 @@ async function migrateValueBatch({
         targetRows.byAttributeValue.set(`${attributeId}:${value}`, existing);
         counters.updated += 1;
       } else {
-        await target.execute(
-          'INSERT INTO attribute_values (id, legacyId, legacyTable, attributeId, value, label, sortOrder, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [sourceId, ...values],
-        );
+        try {
+          await target.execute(
+            'INSERT INTO attribute_values (id, legacyId, legacyTable, attributeId, value, label, sortOrder, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [sourceId, ...values],
+          );
+        } catch (error) {
+          const duplicate =
+            error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062;
+          if (!duplicate) throw error;
+          const [naturalMatches] = await target.execute(
+            'SELECT id, attributeId, legacyId, legacyTable, value FROM attribute_values WHERE attributeId = ? AND value = ? LIMIT 1',
+            [attributeId, value],
+          );
+          if (!naturalMatches[0]) throw error;
+          const match = naturalMatches[0];
+          targetRows.byAttributeValue.set(`${attributeId}:${value}`, match);
+          counters.skipped += 1;
+          counters.duplicateValues += 1;
+          continue;
+        }
         const inserted = {
           id: sourceId,
           legacyId,
