@@ -204,9 +204,29 @@ async function migrateListings(source, target, sellerMap, report) {
             );
             count.updated += 1;
           } else {
+            const insertValues = [
+              newId(),
+              null,
+              'seller_variant_listings',
+              row.id,
+              sellerId,
+              products[0].id,
+              JSON.stringify({}),
+              ...values.slice(2, 11),
+              0,
+              ...values.slice(11, 19),
+              'approved',
+              values[19],
+              values[20],
+            ];
             await target.execute(
-              "INSERT INTO seller_offers (id,legacyId,legacyTable,legacySourceId,sellerId,productId,attributes,sku,price,minPrice,maxPrice,stock,stockStatus,isActive,isVirtual,isDownloadable,isOnSale,taxStatus,taxClass,description,weight,length,width,height,image,approvalStatus,createdAt,updatedAt) VALUES (?,NULL,'seller_variant_listings',?,?,?,CAST('{}' AS JSON),?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,'approved',?,?)",
-              [newId(), row.id, ...values],
+              `INSERT INTO seller_offers (
+                id, legacyId, legacyTable, legacySourceId, sellerId, productId, attributes, sku,
+                price, minPrice, maxPrice, stock, stockStatus, isActive, isVirtual, isDownloadable,
+                isOnSale, taxStatus, taxClass, description, weight, length, width, height, image,
+                approvalStatus, createdAt, updatedAt
+              ) VALUES (${insertValues.map(() => '?').join(', ')})`,
+              insertValues,
             );
             count.added += 1;
           }
