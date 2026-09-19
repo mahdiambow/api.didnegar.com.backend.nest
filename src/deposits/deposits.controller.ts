@@ -6,6 +6,7 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -17,9 +18,11 @@ import {
 } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsString, Min } from 'class-validator';
+import type { Response } from 'express';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
+import { ConfigService } from '../config/config.service.js';
 import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
 import { PermissionsGuard } from '../utils/auth/guards/permissions.guard.js';
 import { RequirePermissions } from '../utils/auth/decorators/require-permissions.decorator.js';
@@ -29,7 +32,6 @@ import {
   CreateDepositDto,
   CreateTopUpDto,
   DepositResponseDto,
-  DepositVerifyResponseDto,
   ListDepositsQueryDto,
   RequestDepositDto,
 } from './dto/deposit.dto.js';
@@ -57,15 +59,6 @@ const DepositApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
   name: 'Deposit',
 });
 
-const DepositVerifyApiResponseDto = createSuccessResponseDto(
-  DepositVerifyResponseDto,
-  {
-    code: 'PAYMENT_VERIFIED',
-    message: 'Payment verified successfully',
-    name: 'DepositVerify',
-  },
-);
-
 const TopUpApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
   code: 'DEPOSIT_CREATED',
   message: 'Deposit created successfully',
@@ -75,7 +68,10 @@ const TopUpApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
 @ApiTags('Deposits')
 @Controller('deposits')
 export class DepositsController {
-  constructor(private readonly depositsService: DepositsService) {}
+  constructor(
+    private readonly depositsService: DepositsService,
+    private readonly config: ConfigService,
+  ) {}
 
   // ─── REST collection ───────────────────────────────────
 
@@ -186,20 +182,24 @@ export class DepositsController {
   }
 
   @Get('zarinpal/verify')
-  @ApiResponseMeta({
-    code: 'PAYMENT_VERIFIED',
-    message: 'Payment verified successfully',
-  })
   @ApiOperation({
-    summary: 'Confirm Zarinpal — deposit then charge from credit',
-    description: 'تأیید زرین‌پال — deposit سپس charge از credit',
+    summary: 'Zarinpal callback — verify then redirect frontend',
+    description:
+      'کال‌بک زرین‌پال: verify سپس ریدایرکت به PAYMENT_SUCCESS/FAILED_REDIRECT_URL',
   })
-  @ApiOkResponse({ type: DepositVerifyApiResponseDto })
-  verifyZarinpalPayment(@Query() query: VerifyZarinpalPaymentQueryDto) {
-    return this.depositsService.verifyZarinpalPayment(
-      query.Authority,
-      query.Status,
-    );
+  async verifyZarinpalPayment(
+    @Query() query: VerifyZarinpalPaymentQueryDto,
+    @Res() res: Response,
+  ) {
+    try {
+      const data = await this.depositsService.verifyZarinpalPayment(
+        query.Authority,
+        query.Status,
+      );
+      return this.redirectPaymentResult(res, true, data);
+    } catch {
+      return this.redirectPaymentResult(res, false);
+    }
   }
 
   @Post('zibal/request')
@@ -225,22 +225,25 @@ export class DepositsController {
   }
 
   @Get('zibal/verify')
-  @ApiResponseMeta({
-    code: 'PAYMENT_VERIFIED',
-    message: 'Payment verified successfully',
-  })
   @ApiOperation({
-    summary: 'Verify Zibal callback then POST /v1/verify',
+    summary: 'Zibal callback — verify then redirect frontend',
     description:
-      'تأیید زیبال مطابق IPG: بعد از callback با success=1 و status=2، سرویس POST gateway.zibal.ir/v1/verify را با merchant و trackId می‌زند (result 100 یا 201).',
+      'کال‌بک زیبال: verify سپس ریدایرکت به PAYMENT_SUCCESS/FAILED_REDIRECT_URL',
   })
-  @ApiOkResponse({ type: DepositVerifyApiResponseDto })
-  verifyZibalPayment(@Query() query: VerifyZibalPaymentQueryDto) {
-    return this.depositsService.verifyZibalPayment(
-      query.trackId,
-      query.success,
-      query.status,
-    );
+  async verifyZibalPayment(
+    @Query() query: VerifyZibalPaymentQueryDto,
+    @Res() res: Response,
+  ) {
+    try {
+      const data = await this.depositsService.verifyZibalPayment(
+        query.trackId,
+        query.success,
+        query.status,
+      );
+      return this.redirectPaymentResult(res, true, data);
+    } catch {
+      return this.redirectPaymentResult(res, false);
+    }
   }
 
   @Post('loan/request')
@@ -266,17 +269,24 @@ export class DepositsController {
   }
 
   @Get('loan/verify')
-  @ApiResponseMeta({
-    code: 'PAYMENT_VERIFIED',
-    message: 'Payment verified successfully',
-  })
   @ApiOperation({
-    summary: 'Confirm loan — deposit then charge from credit',
-    description: 'تأیید وام — deposit سپس charge از credit',
+    summary: 'Loan callback — verify then redirect frontend',
+    description:
+      'کال‌بک وام: verify سپس ریدایرکت به PAYMENT_SUCCESS/FAILED_REDIRECT_URL',
   })
-  @ApiOkResponse({ type: DepositVerifyApiResponseDto })
-  verifyLoanPayment(@Query() query: VerifyLoanPaymentQueryDto) {
-    return this.depositsService.verifyLoanPayment(query.trackId, query.success);
+  async verifyLoanPayment(
+    @Query() query: VerifyLoanPaymentQueryDto,
+    @Res() res: Response,
+  ) {
+    try {
+      const data = await this.depositsService.verifyLoanPayment(
+        query.trackId,
+        query.success,
+      );
+      return this.redirectPaymentResult(res, true, data);
+    } catch {
+      return this.redirectPaymentResult(res, false);
+    }
   }
 
   @Post('credit/request')
@@ -288,7 +298,8 @@ export class DepositsController {
   })
   @ApiOperation({
     summary: 'Pay directly from credit',
-    description: 'پرداخت مستقیم از اعتبار',
+    description:
+      'پرداخت مستقیم از اعتبار — بدون درگاه؛ paymentUrl خالی است. برای sandbox از zarinpal/zibal استفاده کنید.',
   })
   @ApiOkResponse({ type: DepositApiResponseDto })
   requestCreditPayment(
@@ -299,6 +310,30 @@ export class DepositsController {
       req.user.sub,
       this.requireOrderId(dto.orderId),
     );
+  }
+
+  /** ریدایرکت مرورگر به فرانت بعد از کال‌بک درگاه */
+  private redirectPaymentResult(
+    res: Response,
+    ok: boolean,
+    data?: {
+      orderId?: string | null;
+      depositId?: string;
+      amount?: number;
+      refId?: string;
+    },
+  ) {
+    const base = this.config.get(
+      ok ? 'PAYMENT_SUCCESS_REDIRECT_URL' : 'PAYMENT_FAILED_REDIRECT_URL',
+    );
+    const url = new URL(base);
+    if (data?.orderId) url.searchParams.set('orderId', data.orderId);
+    if (data?.depositId) url.searchParams.set('depositId', data.depositId);
+    if (data?.amount != null) {
+      url.searchParams.set('amount', String(data.amount));
+    }
+    if (data?.refId) url.searchParams.set('refId', data.refId);
+    return res.redirect(302, url.toString());
   }
 
   private requireOrderId(orderId?: string): string {

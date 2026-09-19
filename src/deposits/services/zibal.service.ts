@@ -71,6 +71,10 @@ export class ZibalService implements IBank {
       orderId,
     };
 
+    this.logger.log(
+      `Zibal request merchant=${this.merchant} amount=${body.amount} orderId=${orderId}`,
+    );
+
     const data = await this.postJson<ZibalRequestResponse>('v1/request', body);
 
     if (data.result !== 100 || data.trackId == null) {

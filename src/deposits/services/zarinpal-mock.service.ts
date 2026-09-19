@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { ConfigService } from '../../config/config.service.js';
 import type {
   IBank,
@@ -12,10 +12,12 @@ export class ZarinpalMockService implements IBank {
   readonly kind = 'bank' as const;
   readonly gateway = 'zarinpal' as const;
 
-  private readonly callbackUrl: string;
+  private readonly sandboxBaseUrl: string;
 
   constructor(config: ConfigService) {
-    this.callbackUrl = config.get('ZARINPAL_CALLBACK_URL');
+    this.sandboxBaseUrl = config
+      .get('ZARINPAL_SANDBOX_URL')
+      .replace(/\/$/, '');
   }
 
   requestPayment(
@@ -23,7 +25,8 @@ export class ZarinpalMockService implements IBank {
     description: string,
     _orderId: string,
   ): PaymentRequestResult {
-    const trackId = randomBytes(16).toString('hex').slice(0, 36).toUpperCase();
+    // زرین‌پال: Authority باید دقیقاً ۳۶ کاراکتر باشد (UUID)
+    const trackId = randomUUID().toUpperCase();
 
     return {
       trackId,
@@ -33,9 +36,8 @@ export class ZarinpalMockService implements IBank {
   }
 
   verifyPayment(trackId: string, amount: number): PaymentVerifyResult {
-    const refId = String(
-      100000 + (parseInt(trackId.slice(0, 6), 16) % 900000),
-    );
+    const hex = trackId.replace(/-/g, '').slice(0, 6);
+    const refId = String(100000 + (parseInt(hex, 16) % 900000 || 1));
 
     return {
       refId,
@@ -44,13 +46,8 @@ export class ZarinpalMockService implements IBank {
     };
   }
 
-  /** کال‌بک بک‌اند — باز کردن این URL همان verify است */
+  /** آدرس درگاه sandbox — کال‌بک جداگانه با ZARINPAL_CALLBACK_URL است */
   buildPaymentUrl(trackId: string): string {
-    const base =
-      this.callbackUrl || 'http://localhost:3000/deposits/zarinpal/verify';
-    const url = new URL(base);
-    url.searchParams.set('Authority', trackId);
-    url.searchParams.set('Status', 'OK');
-    return url.toString();
+    return `${this.sandboxBaseUrl}/${trackId}`;
   }
 }

@@ -56,6 +56,8 @@ const DEFAULTS: Record<string, string> = {
   ZIBAL_USE_MOCK: 'false',
   LOAN_START_URL: 'https://loan-mock.local/pay',
   LOAN_CALLBACK_URL: '',
+  PAYMENT_SUCCESS_REDIRECT_URL: 'http://localhost:3001/success',
+  PAYMENT_FAILED_REDIRECT_URL: 'http://localhost:3001/failed',
 };
 
 @Injectable()
