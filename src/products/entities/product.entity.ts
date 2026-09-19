@@ -1,4 +1,15 @@
-import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, OneToMany, OneToOne, UpdateDateColumn } from 'typeorm';
+import {
+  PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  UpdateDateColumn,
+} from 'typeorm';
 import type { Brand } from '../../brands/entities/brand.entity.js';
 import type { ProductCategory } from '../../categories/entities/product-category.entity.js';
 import type { ShippingMethod } from '../../shipping/entities/shipping-method.entity.js';
@@ -60,9 +71,9 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   shortDescription: string | null;
 
-  @Index({ unique: true })
-  @Column({ type: 'varchar', length: 100 })
-  sku: string;
+  @Index()
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  sku: string | null;
 
   @Index()
   @Column({ type: 'varchar', length: 50, default: 'publish' })

@@ -54,7 +54,6 @@ async function loadCountries(target, rows) {
 }
 
 async function migrateCountries({
-  source,
   target,
   rows,
   offset,
@@ -136,7 +135,6 @@ async function loadStates(target, rows, countryIds) {
 }
 
 async function migrateStates({
-  source,
   target,
   rows,
   offset,
@@ -402,7 +400,6 @@ async function main() {
         add(
           totals,
           await migrateCountries({
-            source,
             target,
             rows,
             offset,
@@ -419,7 +416,6 @@ async function main() {
         add(
           totals,
           await migrateStates({
-            source,
             target,
             rows,
             offset,

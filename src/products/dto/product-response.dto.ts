@@ -18,7 +18,10 @@ import {
   BrandResponseDto,
   toBrandResponse,
 } from '../../brands/dto/brand-response.dto.js';
-import { BRAND_EXAMPLES, BRAND_RESPONSE_EXAMPLE } from '../../brands/dto/brand.examples.js';
+import {
+  BRAND_EXAMPLES,
+  BRAND_RESPONSE_EXAMPLE,
+} from '../../brands/dto/brand.examples.js';
 import {
   AttributeResponseDto,
   toAttributeResponse,
@@ -114,7 +117,7 @@ export class ProductResponseDto {
   shortDescription: string | null;
 
   @ApiPropertyOptional({ nullable: true, example: 'SAM-S24U-256' })
-  sku: string;
+  sku: string | null;
 
   @ApiProperty()
   status: string;
@@ -408,9 +411,7 @@ export function toProductResponse(
     length: product.length !== null ? Number(product.length) : null,
     width: product.width !== null ? Number(product.width) : null,
     height: product.height !== null ? Number(product.height) : null,
-    valueAttributes: includeRelations
-      ? (populated.valueAttributes ?? [])
-      : [],
+    valueAttributes: includeRelations ? (populated.valueAttributes ?? []) : [],
     sellerIds: product.sellerIds ?? [],
     createdBySellerId: product.createdBySellerId ?? null,
     createdAt: product.createdAt,

@@ -1,7 +1,24 @@
 import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import type { ProductPriceData } from '../entities/product.entity.js';
 
 export function isProductAttributesSchema(value: unknown): boolean {
@@ -219,11 +236,11 @@ export class ProductWritableFieldsDto {
   @IsString()
   shortDescription?: string;
 
-  @ApiProperty({ example: 'SAM-S24U-256', description: 'باید یکتا باشد' })
+  @ApiPropertyOptional({ nullable: true, example: 'SAM-S24U-256' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(100)
-  sku: string;
+  sku?: string | null;
 
   @ApiPropertyOptional({ example: 'publish', default: 'publish' })
   @IsOptional()
@@ -412,9 +429,7 @@ export type ProductWritableData = Omit<
   rejectionReason?: string | null;
 };
 
-function normalizePriceItem(
-  price: ProductPriceDto,
-): ProductPriceData {
+function normalizePriceItem(price: ProductPriceDto): ProductPriceData {
   return {
     attributeIds: [
       ...new Set(price.valueAttributeIds ?? price.attributeIds ?? []),
