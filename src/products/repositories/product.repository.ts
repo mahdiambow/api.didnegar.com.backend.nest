@@ -45,6 +45,22 @@ export class ProductRepository {
     return this.repo.findOne({ where: { sku } });
   }
 
+  async slugExists(slug: string, excludeId?: string) {
+    const qb = this.repo
+      .createQueryBuilder('product')
+      .where('product.slug = :slug', { slug });
+    if (excludeId) qb.andWhere('product.id <> :excludeId', { excludeId });
+    return (await qb.getCount()) > 0;
+  }
+
+  async skuExists(sku: string, excludeId?: string) {
+    const qb = this.repo
+      .createQueryBuilder('product')
+      .where('product.sku = :sku', { sku });
+    if (excludeId) qb.andWhere('product.id <> :excludeId', { excludeId });
+    return (await qb.getCount()) > 0;
+  }
+
   findByFilters(filters: ProductFilters = {}, includeRelations = false) {
     const qb = this.repo
       .createQueryBuilder('product')

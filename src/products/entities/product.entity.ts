@@ -61,7 +61,7 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   excerpt: string | null;
 
-  @Index({ unique: true })
+  @Index()
   @Column({ type: 'varchar', length: 200 })
   slug: string;
 
