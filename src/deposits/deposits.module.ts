@@ -5,6 +5,7 @@ import { Withdraw } from './entities/withdraw.entity.js';
 import { Transaction } from './entities/transaction.entity.js';
 import { DepositsService } from './deposits.service.js';
 import { DepositsController } from './deposits.controller.js';
+import { WithdrawsController } from './withdraws.controller.js';
 import { TransactionService } from './transaction.service.js';
 import { ZarinpalMockService } from './services/zarinpal-mock.service.js';
 import { ZibalService } from './services/zibal.service.js';
@@ -14,6 +15,7 @@ import { DepositRepository } from './repositories/deposit.repository.js';
 import { WithdrawRepository } from './repositories/withdraw.repository.js';
 import { OrdersModule } from '../orders/orders.module.js';
 import { AuthModule } from '../utils/auth/auth.module.js';
+import { RolesModule } from '../roles/roles.module.js';
 import { CreditModule } from '../credit/credit.module.js';
 import { ConfigService } from '../config/config.service.js';
 import type { IBank } from './services/deposit-gateway.interface.js';
@@ -25,8 +27,9 @@ import { ZIBAL_PROVIDER } from './zibal.constants.js';
     OrdersModule,
     CreditModule,
     forwardRef(() => AuthModule),
+    forwardRef(() => RolesModule),
   ],
-  controllers: [DepositsController],
+  controllers: [DepositsController, WithdrawsController],
   providers: [
     DepositsService,
     TransactionService,

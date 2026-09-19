@@ -63,10 +63,10 @@ export const PERMISSIONS = {
   deposits: {
     read: 'deposits:read',
     create: 'deposits:create',
+    update: 'deposits:update',
   },
-  wallet: {
-    read: 'wallet:read',
-    update: 'wallet:update',
+  credit: {
+    read: 'credit:read',
   },
   shipping: {
     read: 'shipping:read',
@@ -299,14 +299,14 @@ export const PERMISSION_DEFINITIONS = [
     group: 'deposits',
   },
   {
-    key: PERMISSIONS.wallet.read,
-    label: 'مشاهده کیف پول‌ها (ادمین)',
-    group: 'wallet',
+    key: PERMISSIONS.deposits.update,
+    label: 'بررسی برداشت',
+    group: 'deposits',
   },
   {
-    key: PERMISSIONS.wallet.update,
-    label: 'بررسی برداشت کیف پول',
-    group: 'wallet',
+    key: PERMISSIONS.credit.read,
+    label: 'مشاهده اعتبار کاربران',
+    group: 'credit',
   },
   {
     key: PERMISSIONS.shipping.read,

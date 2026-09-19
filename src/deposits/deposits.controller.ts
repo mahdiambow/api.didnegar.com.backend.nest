@@ -21,11 +21,16 @@ import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js'
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
+import { PermissionsGuard } from '../utils/auth/guards/permissions.guard.js';
+import { RequirePermissions } from '../utils/auth/decorators/require-permissions.decorator.js';
+import { PERMISSIONS } from '../roles/permissions.js';
 import { DepositsService } from './deposits.service.js';
 import {
   CreateDepositDto,
+  CreateTopUpDto,
   DepositResponseDto,
   DepositVerifyResponseDto,
+  ListDepositsQueryDto,
   RequestDepositDto,
 } from './dto/deposit.dto.js';
 import {
@@ -61,10 +66,77 @@ const DepositVerifyApiResponseDto = createSuccessResponseDto(
   },
 );
 
+const TopUpApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
+  code: 'DEPOSIT_CREATED',
+  message: 'Deposit created successfully',
+  name: 'DepositTopUp',
+});
+
 @ApiTags('Deposits')
 @Controller('deposits')
 export class DepositsController {
   constructor(private readonly depositsService: DepositsService) {}
+
+  // ─── REST collection ───────────────────────────────────
+
+  @Post()
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiResponseMeta({
+    code: 'DEPOSIT_CREATED',
+    message: 'Deposit created successfully',
+  })
+  @ApiOperation({
+    summary: 'Create deposit (top-up credit)',
+    description: 'شارژ اعتبار از طریق درگاه بانکی',
+  })
+  @ApiOkResponse({ type: TopUpApiResponseDto })
+  createTopUp(
+    @Req() req: { user: { sub: string } },
+    @Body() dto: CreateTopUpDto,
+  ) {
+    return this.depositsService.createTopUp(
+      req.user.sub,
+      dto.amount,
+      dto.method,
+    );
+  }
+
+  @Get('me')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiResponseMeta({
+    code: 'DEPOSITS_LISTED',
+    message: 'Deposits listed successfully',
+  })
+  @ApiOperation({
+    summary: 'List my deposits',
+    description: 'لیست واریزهای من',
+  })
+  listMine(
+    @Req() req: { user: { sub: string } },
+    @Query() query: ListDepositsQueryDto,
+  ) {
+    return this.depositsService.listDepositsPaged(query, req.user.sub);
+  }
+
+  @Get()
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.deposits.read)
+  @ApiResponseMeta({
+    code: 'DEPOSITS_LISTED',
+    message: 'Deposits listed successfully',
+  })
+  @ApiOperation({
+    summary: 'List deposits (admin)',
+    description: 'لیست همه واریزها',
+  })
+  listAll(@Query() query: ListDepositsQueryDto) {
+    return this.depositsService.listDepositsPaged(query);
+  }
+
+  // ─── Order payment / gateways ──────────────────────────
 
   @Post('request')
   @ApiBearerAuth('access-token')
@@ -76,7 +148,7 @@ export class DepositsController {
   @ApiOperation({
     summary: 'Request order payment',
     description:
-      'درخواست پرداخت سفارش\n\nuserId از JWT. method: credit | zarinpal | zibal | loan. در موفقیت درگاه، ابتدا credit شارژ و سپس کسر می‌شود.',
+      'درخواست پرداخت سفارش\n\nuserId از JWT. method: credit | zarinpal | zibal | loan.',
   })
   @ApiOkResponse({ type: DepositApiResponseDto })
   requestPayment(
@@ -214,8 +286,8 @@ export class DepositsController {
     message: 'Payment request created successfully',
   })
   @ApiOperation({
-    summary: 'Pay directly from wallet (credit)',
-    description: 'پرداخت مستقیم از کیف پول (credit)',
+    summary: 'Pay directly from credit',
+    description: 'پرداخت مستقیم از اعتبار',
   })
   @ApiOkResponse({ type: DepositApiResponseDto })
   requestCreditPayment(
