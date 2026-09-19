@@ -1,49 +1,284 @@
 /** Imports legacy sellers, products, stock, and seller variant listings as seller offers. */
-import { BATCH_SIZE, assertTables, openLegacyConnection, openTargetConnection, requiredEnv } from './shared.mjs';
+import { appendFile, writeFile } from 'node:fs/promises';
+import {
+  BATCH_SIZE,
+  asBoolean,
+  assertTables,
+  newId,
+  openLegacyConnection,
+  openTargetConnection,
+  requiredEnv,
+} from './shared.mjs';
 
-const add = (total, count) => Object.keys(total).forEach((key) => { total[key] += count[key] || 0; });
+const add = (total, count) =>
+  Object.keys(total).forEach((key) => {
+    total[key] += count[key] || 0;
+  });
 
 async function batches(source, sql, fn) {
-  let offset = 0; let batch = 0;
+  let offset = 0;
+  let batch = 0;
   while (true) {
-    const [rows] = await source.execute(`${sql} LIMIT ? OFFSET ?`, [BATCH_SIZE, offset]);
+    const [rows] = await source.execute(`${sql} LIMIT ? OFFSET ?`, [
+      BATCH_SIZE,
+      offset,
+    ]);
     if (!rows.length) return batch;
-    batch += 1; await fn(rows, offset, batch); offset += rows.length;
+    batch += 1;
+    await fn(rows, offset, batch);
+    offset += rows.length;
     if (rows.length < BATCH_SIZE) return batch;
   }
 }
 
-async function migrateSellers(source, target) {
-  const map = new Map(); const totals = { read: 0, added: 0, updated: 0, skipped: 0 };
-  const batchCount = await batches(source,
-    'SELECT s.id, s.legacyId, s.legacyTable, s.userId, s.isActive, s.createdAt, s.updatedAt, u.legacyId AS userLegacyId, u.username, u.email, u.displayName, u.firstName, u.lastName FROM sellers s INNER JOIN users u ON u.id = s.userId ORDER BY s.legacyId, s.id',
+async function migrateSellers(source, target, report) {
+  const map = new Map();
+  const totals = { read: 0, added: 0, updated: 0, skipped: 0 };
+  const batchCount = await batches(
+    source,
+    'SELECT s.id, s.legacyId, s.legacyTable, s.userId, s.isActive, s.createdAt, s.updatedAt, u.legacyId AS userLegacyId, u.username, u.email, u.displayName, u.firstName, u.lastName FROM sellers s LEFT JOIN users u ON u.id = s.userId ORDER BY s.legacyId, s.id',
     async (rows, offset, batch) => {
-      const count = { read: rows.length, added: 0, updated: 0, skipped: 0 }; await target.beginTransaction();
+      const count = { read: rows.length, added: 0, updated: 0, skipped: 0 };
+      await target.beginTransaction();
       try {
         for (const row of rows) {
-          const [users] = await target.execute('SELECT id, sellerId FROM users WHERE legacyTable = ? AND legacyId = ? LIMIT 1', ['users', row.userLegacyId]);
-          if (!users[0]) throw new Error(`Legacy seller ${row.id} has no imported user.`);
+          if (row.userLegacyId === null) {
+            await report({
+              type: 'missing-legacy-user',
+              legacySellerId: row.id,
+              legacySellerLegacyId: row.legacyId,
+              legacyUserId: row.userId,
+            });
+            count.skipped += 1;
+            continue;
+          }
+          let [users] = await target.execute(
+            'SELECT id, sellerId FROM users WHERE legacyTable = ? AND legacyId = ? LIMIT 1',
+            ['users', row.userLegacyId],
+          );
+          let matchedBy = 'legacy-identity';
+          if (!users[0] && row.username) {
+            [users] = await target.execute(
+              'SELECT id, sellerId FROM users WHERE username = ? LIMIT 1',
+              [String(row.username).trim().slice(0, 20)],
+            );
+            matchedBy = 'username';
+          }
+          if (!users[0] && row.email) {
+            [users] = await target.execute(
+              'SELECT id, sellerId FROM users WHERE email = ? LIMIT 2',
+              [String(row.email).trim().slice(0, 150)],
+            );
+            matchedBy = 'email';
+            if (users.length > 1) {
+              await report({
+                type: 'ambiguous-email',
+                legacySellerId: row.id,
+                legacySellerLegacyId: row.legacyId,
+                legacyUserId: row.userId,
+                legacyUserLegacyId: row.userLegacyId,
+                username: row.username,
+                email: row.email,
+                targetUserIds: users.map((user) => user.id),
+              });
+              count.skipped += 1;
+              continue;
+            }
+          }
+          if (!users[0]) {
+            await report({
+              type: 'missing-imported-user',
+              legacySellerId: row.id,
+              legacySellerLegacyId: row.legacyId,
+              legacyUserId: row.userId,
+              legacyUserLegacyId: row.userLegacyId,
+              username: row.username,
+              email: row.email,
+            });
+            count.skipped += 1;
+            continue;
+          }
           if (!users[0].sellerId) {
-            throw new Error(`Legacy seller ${row.id} maps to user ${users[0].id}, which has no sellerId from the users migration.`);
+            await report({
+              type: 'user-without-seller',
+              legacySellerId: row.id,
+              legacySellerLegacyId: row.legacyId,
+              legacyUserId: row.userId,
+              legacyUserLegacyId: row.userLegacyId,
+              targetUserId: users[0].id,
+              username: row.username,
+              email: row.email,
+              matchedBy,
+            });
+            count.skipped += 1;
+            continue;
           }
           map.set(String(row.id), users[0].sellerId);
+          await report({
+            type: 'seller-mapped',
+            legacySellerId: row.id,
+            targetSellerId: users[0].sellerId,
+            targetUserId: users[0].id,
+            matchedBy,
+          });
           count.updated += 1;
         }
         await target.commit();
-      } catch (error) { await target.rollback(); throw error; }
-      console.log(JSON.stringify({ entity: 'sellers', batch, offset, ...count }, null, 2)); add(totals, count);
-    });
+      } catch (error) {
+        await target.rollback();
+        throw error;
+      }
+      console.log(
+        JSON.stringify({ entity: 'sellers', batch, offset, ...count }, null, 2),
+      );
+      add(totals, count);
+    },
+  );
   return { map, batchCount, totals };
 }
 
-async function main() {
-  const legacyDb = requiredEnv('LEGACY_MIGRATED_DB_DATABASE'); const targetDb = requiredEnv('DB_DATABASE');
-  const source = await openLegacyConnection(); const target = await openTargetConnection();
-  try {
-    await assertTables(source, legacyDb, ['sellers', 'seller_variant_listings', 'products', 'product_variants', 'inventory'], 'Legacy');
-    await assertTables(target, targetDb, ['users', 'sellers', 'products', 'product_stocks', 'seller_offers'], 'Target');
-    const sellers = await migrateSellers(source, target);
-    console.log(JSON.stringify({ complete: true, sellerBatches: sellers.batchCount, sellers: sellers.totals, note: 'Seller import completed. Product and offer import requires the target schema migrations and will be added in the next catalog migration revision.' }, null, 2));
-  } finally { await Promise.all([source.end(), target.end()]); }
+async function migrateListings(source, target, sellerMap, report) {
+  const totals = { read: 0, added: 0, updated: 0, skipped: 0 };
+  const batchCount = await batches(
+    source,
+    'SELECT l.id, l.sellerId, l.productVariantId, l.sku, l.price, l.stockQuantity, l.stockStatus, l.isActive, l.createdAt, l.updatedAt, v.productId AS legacyProductId, p.legacyId AS productLegacyId, p.minPrice, p.maxPrice, p.isVirtual, p.isDownloadable, p.taxStatus, p.taxClass, p.description, p.weight, p.length, p.width, p.height, p.featuredImage FROM seller_variant_listings l INNER JOIN product_variants v ON v.id = l.productVariantId INNER JOIN products p ON p.id = v.productId ORDER BY l.id',
+    async (rows, offset, batch) => {
+      const count = { read: rows.length, added: 0, updated: 0, skipped: 0 };
+      await target.beginTransaction();
+      try {
+        for (const row of rows) {
+          const sellerId = sellerMap.get(String(row.sellerId));
+          if (!sellerId) {
+            await report({
+              type: 'listing-missing-seller',
+              listingId: row.id,
+              legacySellerId: row.sellerId,
+            });
+            count.skipped += 1;
+            continue;
+          }
+          const [products] = await target.execute(
+            'SELECT id FROM products WHERE legacyTable = ? AND legacyId = ? LIMIT 1',
+            ['products', row.productLegacyId],
+          );
+          if (!products[0]) {
+            await report({
+              type: 'listing-missing-product',
+              listingId: row.id,
+              legacyProductId: row.legacyProductId,
+            });
+            count.skipped += 1;
+            continue;
+          }
+          const values = [
+            sellerId,
+            products[0].id,
+            row.sku || null,
+            Number(row.price ?? row.minPrice ?? row.maxPrice ?? 0),
+            row.minPrice,
+            row.maxPrice,
+            Math.max(0, Math.floor(Number(row.stockQuantity) || 0)),
+            row.stockStatus || 'outofstock',
+            asBoolean(row.isActive) ? 1 : 0,
+            asBoolean(row.isVirtual) ? 1 : 0,
+            asBoolean(row.isDownloadable) ? 1 : 0,
+            row.taxStatus,
+            row.taxClass,
+            row.description,
+            row.weight,
+            row.length,
+            row.width,
+            row.height,
+            row.featuredImage,
+            row.createdAt,
+            row.updatedAt,
+          ];
+          const [existing] = await target.execute(
+            'SELECT id FROM seller_offers WHERE legacySourceId = ? LIMIT 1',
+            [row.id],
+          );
+          if (existing[0]) {
+            await target.execute(
+              'UPDATE seller_offers SET sellerId=?,productId=?,sku=?,price=?,minPrice=?,maxPrice=?,stock=?,stockStatus=?,isActive=?,isVirtual=?,isDownloadable=?,taxStatus=?,taxClass=?,description=?,weight=?,length=?,width=?,height=?,image=?,createdAt=?,updatedAt=? WHERE id=?',
+              [...values, existing[0].id],
+            );
+            count.updated += 1;
+          } else {
+            await target.execute(
+              "INSERT INTO seller_offers (id,legacyId,legacyTable,legacySourceId,sellerId,productId,attributes,sku,price,minPrice,maxPrice,stock,stockStatus,isActive,isVirtual,isDownloadable,isOnSale,taxStatus,taxClass,description,weight,length,width,height,image,approvalStatus,createdAt,updatedAt) VALUES (?,NULL,'seller_variant_listings',?,?,?,CAST('{}' AS JSON),?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,'approved',?,?)",
+              [newId(), row.id, ...values],
+            );
+            count.added += 1;
+          }
+        }
+        await target.commit();
+      } catch (error) {
+        await target.rollback();
+        throw error;
+      }
+      console.log(
+        JSON.stringify(
+          { entity: 'seller_offers', batch, offset, ...count },
+          null,
+          2,
+        ),
+      );
+      add(totals, count);
+    },
+  );
+  return { batchCount, totals };
 }
-main().catch((error) => { console.error(error); process.exitCode = 1; });
+
+async function main() {
+  const legacyDb = requiredEnv('LEGACY_MIGRATED_DB_DATABASE');
+  const targetDb = requiredEnv('DB_DATABASE');
+  const source = await openLegacyConnection();
+  const target = await openTargetConnection();
+  const reportPath =
+    process.env.MIGRATION_CATALOG_REPORT_PATH ||
+    'migration-catalog-report.jsonl';
+  await writeFile(
+    reportPath,
+    `${JSON.stringify({ type: 'run-started', at: new Date().toISOString() })}\n`,
+  );
+  const report = (entry) =>
+    appendFile(reportPath, `${JSON.stringify(entry)}\n`);
+  try {
+    await assertTables(
+      source,
+      legacyDb,
+      [
+        'sellers',
+        'seller_variant_listings',
+        'products',
+        'product_variants',
+        'inventory',
+      ],
+      'Legacy',
+    );
+    await assertTables(
+      target,
+      targetDb,
+      ['users', 'sellers', 'products', 'product_stocks', 'seller_offers'],
+      'Target',
+    );
+    const sellers = await migrateSellers(source, target, report);
+    const listings = await migrateListings(source, target, sellers.map, report);
+    const summary = {
+      complete: true,
+      sellerBatches: sellers.batchCount,
+      sellers: sellers.totals,
+      reportPath,
+      listingBatches: listings.batchCount,
+      listings: listings.totals,
+    };
+    await report({ type: 'run-complete', ...summary });
+    console.log(JSON.stringify(summary, null, 2));
+  } finally {
+    await Promise.all([source.end(), target.end()]);
+  }
+}
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
