@@ -83,6 +83,85 @@ export class DepositsService {
     return this.verifyGatewayDeposit('loan', trackId, success === 1);
   }
 
+  /** شارژ کیف پول بدون سفارش — فقط واریز */
+  async createWalletTopUp(
+    userId: string,
+    amount: number,
+    gateway: Exclude<DepositMethod, 'credit'>,
+  ) {
+    const rounded = Math.round(Number(amount));
+    if (!Number.isInteger(rounded) || rounded <= 0) {
+      throw new ApiException(
+        'INVALID_AMOUNT',
+        'مبلغ واریز باید عدد صحیح مثبت باشد',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const provider = this.providers[gateway];
+    const callbackUrl =
+      gateway === 'zarinpal'
+        ? this.config.get('ZARINPAL_CALLBACK_URL')
+        : gateway === 'zibal'
+          ? this.config.get('ZIBAL_CALLBACK_URL')
+          : this.config.get('LOAN_CALLBACK_URL');
+
+    const gatewayResult = await provider.requestPayment(
+      rounded,
+      'شارژ کیف پول',
+      userId,
+    );
+
+    const entity = await this.dataSource.transaction(async (manager) => {
+      const depositRepo = manager.getRepository(Deposit);
+      const deposit = await depositRepo.save(
+        depositRepo.create({
+          userId,
+          orderId: null,
+          gateway,
+          trackId: gatewayResult.trackId,
+          amount: rounded,
+          status: 'pending',
+          callbackUrl,
+        }),
+      );
+
+      await this.transactionService.addTransaction(
+        {
+          userId,
+          amount: rounded,
+          type: 'credit',
+          sourceType: 'DEPOSIT',
+          sourceId: deposit.id,
+          orderId: null,
+          state: 'pending',
+          description: `شارژ کیف پول از ${gateway}`,
+        },
+        manager,
+      );
+
+      return deposit;
+    });
+
+    return toDepositResponse({
+      orderId: null,
+      depositId: entity.id,
+      gateway,
+      trackId: entity.trackId,
+      paymentUrl: provider.buildPaymentUrl(entity.trackId),
+      amount: rounded,
+      gatewayMessage: gatewayResult.message,
+    });
+  }
+
+  listDeposits(
+    offset: number,
+    limit: number,
+    filters: { userId?: string; status?: Deposit['status'] } = {},
+  ) {
+    return this.depositRepository.findPaginated(offset, limit, filters);
+  }
+
   /** پرداخت سفارش از موجودی — فقط transaction (debit)، نه deposit */
   private async payOrderWithCredit(userId: string, orderId: string) {
     const order = await this.requirePayableOrder(userId, orderId);

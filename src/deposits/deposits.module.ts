@@ -11,6 +11,7 @@ import { ZibalService } from './services/zibal.service.js';
 import { ZibalMockService } from './services/zibal-mock.service.js';
 import { LoanMockService } from './services/loan-mock.service.js';
 import { DepositRepository } from './repositories/deposit.repository.js';
+import { WithdrawRepository } from './repositories/withdraw.repository.js';
 import { OrdersModule } from '../orders/orders.module.js';
 import { AuthModule } from '../utils/auth/auth.module.js';
 import { CreditModule } from '../credit/credit.module.js';
@@ -34,6 +35,7 @@ import { ZIBAL_PROVIDER } from './zibal.constants.js';
     ZibalMockService,
     LoanMockService,
     DepositRepository,
+    WithdrawRepository,
     {
       provide: ZIBAL_PROVIDER,
       inject: [ConfigService, ZibalService, ZibalMockService],
@@ -45,6 +47,11 @@ import { ZIBAL_PROVIDER } from './zibal.constants.js';
         config.getBooleanOptional('ZIBAL_USE_MOCK', false) ? mock : real,
     },
   ],
-  exports: [DepositsService, DepositRepository, TransactionService],
+  exports: [
+    DepositsService,
+    DepositRepository,
+    WithdrawRepository,
+    TransactionService,
+  ],
 })
 export class DepositsModule {}

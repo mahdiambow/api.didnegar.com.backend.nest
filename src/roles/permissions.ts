@@ -64,6 +64,10 @@ export const PERMISSIONS = {
     read: 'deposits:read',
     create: 'deposits:create',
   },
+  wallet: {
+    read: 'wallet:read',
+    update: 'wallet:update',
+  },
   shipping: {
     read: 'shipping:read',
     create: 'shipping:create',
@@ -293,6 +297,16 @@ export const PERMISSION_DEFINITIONS = [
     key: PERMISSIONS.deposits.create,
     label: 'ایجاد پرداخت',
     group: 'deposits',
+  },
+  {
+    key: PERMISSIONS.wallet.read,
+    label: 'مشاهده کیف پول‌ها (ادمین)',
+    group: 'wallet',
+  },
+  {
+    key: PERMISSIONS.wallet.update,
+    label: 'بررسی برداشت کیف پول',
+    group: 'wallet',
   },
   {
     key: PERMISSIONS.shipping.read,
