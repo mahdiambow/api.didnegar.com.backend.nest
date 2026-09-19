@@ -65,10 +65,10 @@ export class Product {
   @Column({ type: 'varchar', length: 200 })
   slug: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   description: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   shortDescription: string | null;
 
   @Index()

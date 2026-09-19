@@ -45,7 +45,7 @@ export class SellerOffer {
     string | null;
   @Column({ type: 'varchar', length: 100, nullable: true }) taxClass:
     string | null;
-  @Column({ type: 'text', nullable: true }) description: string | null;
+  @Column({ type: 'longtext', nullable: true }) description: string | null;
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true }) weight:
     number | null;
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true }) length:
