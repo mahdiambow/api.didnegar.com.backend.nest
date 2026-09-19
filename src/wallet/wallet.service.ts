@@ -15,6 +15,7 @@ import type { DepositStatus } from '../deposits/entities/deposit.entity.js';
 import type { WithdrawStatus } from '../deposits/entities/withdraw.entity.js';
 import {
   toWalletDepositItem,
+  toWalletItem,
   toWalletWithdrawItem,
   type CreateWalletDepositDto,
   type CreateWalletWithdrawDto,
@@ -34,6 +35,16 @@ export class WalletService {
 
   getBalance(userId: string) {
     return this.creditService.getBalance(userId);
+  }
+
+  async listWalletsAdmin(query: ListWalletQueryDto) {
+    const { page, limit, offset } = getPaginationParams(query);
+    const [items, total] = await this.creditService.findPaginated(
+      offset,
+      limit,
+      { userId: query.userId },
+    );
+    return paginatedList(items.map(toWalletItem), page, limit, total);
   }
 
   createDeposit(userId: string, dto: CreateWalletDepositDto) {

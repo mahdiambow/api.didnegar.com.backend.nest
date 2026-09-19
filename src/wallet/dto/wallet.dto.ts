@@ -18,6 +18,53 @@ export class WalletBalanceDto {
   lockedAmount: number;
 }
 
+export class WalletItemDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  userId: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  username: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  displayName: string | null;
+
+  @ApiProperty({ example: 1500000 })
+  amount: number;
+
+  @ApiProperty({ example: 0 })
+  lockedAmount: number;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+}
+
+export function toWalletItem(w: {
+  id: string;
+  userId: string;
+  amount: number;
+  lockedAmount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  user?: { username?: string | null; displayName?: string | null } | null;
+}): WalletItemDto {
+  return {
+    id: w.id,
+    userId: w.userId,
+    username: w.user?.username ?? null,
+    displayName: w.user?.displayName ?? null,
+    amount: Number(w.amount),
+    lockedAmount: Number(w.lockedAmount),
+    createdAt: w.createdAt,
+    updatedAt: w.updatedAt,
+  };
+}
+
 export class CreateWalletDepositDto {
   @ApiProperty({ example: 500000, description: 'مبلغ واریز (ریال، عدد صحیح)' })
   @Type(() => Number)

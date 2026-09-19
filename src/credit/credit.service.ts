@@ -30,6 +30,26 @@ export class CreditService {
     };
   }
 
+  /** لیست کیف‌پول‌های ساخته‌شده (ادمین) */
+  findPaginated(
+    offset: number,
+    limit: number,
+    filters: { userId?: string } = {},
+  ): Promise<[UserCredit[], number]> {
+    const qb = this.credits
+      .createQueryBuilder('wallet')
+      .leftJoinAndSelect('wallet.user', 'user')
+      .orderBy('wallet.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit);
+
+    if (filters.userId) {
+      qb.andWhere('wallet.userId = :userId', { userId: filters.userId });
+    }
+
+    return qb.getManyAndCount();
+  }
+
   /** Create the user's wallet at registration (amount/locked = 0); idempotent. */
   async init(userId: string, manager?: EntityManager): Promise<UserCredit> {
     return this.ensureWallet(userId, manager);

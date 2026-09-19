@@ -143,6 +143,21 @@ export class WalletController {
 
   // ─── Admin ──────────────────────────────────────────────
 
+  @Get('admin')
+  @UseGuards(PermissionsGuard)
+  @RequirePermissions(PERMISSIONS.wallet.read)
+  @ApiResponseMeta({
+    code: 'WALLETS_LISTED',
+    message: 'Wallets listed successfully',
+  })
+  @ApiOperation({
+    summary: 'Admin: list user wallets',
+    description: 'لیست کیف‌پول‌های ساخته‌شده برای کاربران',
+  })
+  listWalletsAdmin(@Query() query: ListWalletQueryDto) {
+    return this.walletService.listWalletsAdmin(query);
+  }
+
   @Get('admin/deposits')
   @UseGuards(PermissionsGuard)
   @RequirePermissions(PERMISSIONS.wallet.read)
