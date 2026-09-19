@@ -159,7 +159,13 @@ async function migrateValueBatch({
 }) {
   const startedAt = Date.now();
   const targetRows = await loadValues(target);
-  const counters = { read: rows.length, added: 0, updated: 0, skipped: 0 };
+  const counters = {
+    read: rows.length,
+    added: 0,
+    updated: 0,
+    skipped: 0,
+    duplicateValues: 0,
+  };
   await target.beginTransaction();
   try {
     for (const [index, row] of rows.entries()) {
@@ -178,11 +184,17 @@ async function migrateValueBatch({
         const valueMatch = targetRows.byAttributeValue.get(
           `${attributeId}:${value}`,
         );
-        if (
-          valueMatch &&
-          (!valueMatch.legacyTable || legacyKey(valueMatch) === key)
-        )
-          existing = valueMatch;
+        if (valueMatch) {
+          if (!valueMatch.legacyTable || legacyKey(valueMatch) === key) {
+            existing = valueMatch;
+          } else {
+            // The target only permits one value per attribute. Keep the first
+            // legacy value deterministically and retain the duplicate in logs.
+            counters.skipped += 1;
+            counters.duplicateValues += 1;
+            continue;
+          }
+        }
       }
       const values = [
         legacyId,
@@ -269,7 +281,13 @@ async function main() {
   const source = await openLegacyConnection();
   const target = await openTargetConnection();
   const attributeIds = new Map();
-  const totals = { read: 0, added: 0, updated: 0, skipped: 0 };
+  const totals = {
+    read: 0,
+    added: 0,
+    updated: 0,
+    skipped: 0,
+    duplicateValues: 0,
+  };
   try {
     await assertTables(
       source,
