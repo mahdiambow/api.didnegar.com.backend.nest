@@ -28,7 +28,7 @@ export const transactionStates: TransactionState[] = [
   'pending-admin',
 ];
 
-/** جهت حرکت پول نسبت به کیف پول کاربر */
+/** جهت حرکت پول نسبت به اعتبار کاربر */
 export type TransactionType = 'credit' | 'debit';
 
 export type TransactionUserType = 'user' | 'admin' | 'system';

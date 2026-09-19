@@ -68,6 +68,9 @@ export const PERMISSIONS = {
   credit: {
     read: 'credit:read',
   },
+  transactions: {
+    read: 'transactions:read',
+  },
   shipping: {
     read: 'shipping:read',
     create: 'shipping:create',
@@ -307,6 +310,11 @@ export const PERMISSION_DEFINITIONS = [
     key: PERMISSIONS.credit.read,
     label: 'مشاهده اعتبار کاربران',
     group: 'credit',
+  },
+  {
+    key: PERMISSIONS.transactions.read,
+    label: 'مشاهده تراکنش‌ها',
+    group: 'transactions',
   },
   {
     key: PERMISSIONS.shipping.read,

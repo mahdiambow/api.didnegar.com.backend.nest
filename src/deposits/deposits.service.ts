@@ -10,7 +10,7 @@ import { LoanMockService } from './services/loan-mock.service.js';
 import type { ExternalPaymentProvider } from './services/deposit-gateway.interface.js';
 import { DepositRepository } from './repositories/deposit.repository.js';
 import { WithdrawRepository } from './repositories/withdraw.repository.js';
-import { TransactionService } from './transaction.service.js';
+import { TransactionService } from '../transactions/transaction.service.js';
 import {
   toDepositItem,
   toDepositResponse,

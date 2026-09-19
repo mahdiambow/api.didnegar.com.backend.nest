@@ -94,4 +94,38 @@ export class TransactionService {
       where: { sourceId, state: 'pending' },
     });
   }
+
+  findPaginated(
+    offset: number,
+    limit: number,
+    filters: {
+      userId?: string;
+      state?: TransactionState;
+      sourceType?: TransactionSourceType;
+      orderId?: string;
+    } = {},
+  ): Promise<[Transaction[], number]> {
+    const qb = this.transactions
+      .createQueryBuilder('tx')
+      .orderBy('tx.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit);
+
+    if (filters.userId) {
+      qb.andWhere('tx.userId = :userId', { userId: filters.userId });
+    }
+    if (filters.state) {
+      qb.andWhere('tx.state = :state', { state: filters.state });
+    }
+    if (filters.sourceType) {
+      qb.andWhere('tx.sourceType = :sourceType', {
+        sourceType: filters.sourceType,
+      });
+    }
+    if (filters.orderId) {
+      qb.andWhere('tx.orderId = :orderId', { orderId: filters.orderId });
+    }
+
+    return qb.getManyAndCount();
+  }
 }
