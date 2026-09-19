@@ -157,14 +157,16 @@ export class DepositsController {
     message: 'Payment verified successfully',
   })
   @ApiOperation({
-    summary: 'Confirm Zibal — deposit then charge from credit',
-    description: 'تأیید زیبال — deposit سپس charge از credit',
+    summary: 'Verify Zibal callback then POST /v1/verify',
+    description:
+      'تأیید زیبال مطابق IPG: بعد از callback با success=1 و status=2، سرویس POST gateway.zibal.ir/v1/verify را با merchant و trackId می‌زند (result 100 یا 201).',
   })
   @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyZibalPayment(@Query() query: VerifyZibalPaymentQueryDto) {
     return this.depositsService.verifyZibalPayment(
       query.trackId,
       query.success,
+      query.status,
     );
   }
 

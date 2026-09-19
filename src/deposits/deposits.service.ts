@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ConfigService } from '../config/config.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
@@ -6,7 +6,6 @@ import { toShippingMethodResponse } from '../shipping/dto/shipping.dto.js';
 import { OrderRepository } from '../orders/repositories/order.repository.js';
 import { CreditService } from '../credit/credit.service.js';
 import { ZarinpalMockService } from './services/zarinpal-mock.service.js';
-import { ZibalMockService } from './services/zibal-mock.service.js';
 import { LoanMockService } from './services/loan-mock.service.js';
 import type { ExternalPaymentProvider } from './services/deposit-gateway.interface.js';
 import { DepositRepository } from './repositories/deposit.repository.js';
@@ -17,6 +16,7 @@ import {
 } from './dto/deposit.dto.js';
 import { Deposit } from './entities/deposit.entity.js';
 import { Order } from '../orders/entities/order.entity.js';
+import { ZIBAL_PROVIDER } from './zibal.constants.js';
 
 export type DepositMethod = 'credit' | 'zarinpal' | 'zibal' | 'loan';
 
@@ -35,12 +35,12 @@ export class DepositsService {
     private readonly transactionService: TransactionService,
     private readonly creditService: CreditService,
     zarinpalMockService: ZarinpalMockService,
-    zibalMockService: ZibalMockService,
+    @Inject(ZIBAL_PROVIDER) zibalProvider: ExternalPaymentProvider,
     loanMockService: LoanMockService,
   ) {
     this.providers = {
       zarinpal: zarinpalMockService,
-      zibal: zibalMockService,
+      zibal: zibalProvider,
       loan: loanMockService,
     };
   }
@@ -72,8 +72,11 @@ export class DepositsService {
     return this.verifyGatewayDeposit('zarinpal', trackId, status === 'OK');
   }
 
-  verifyZibalPayment(trackId: number, success: number) {
-    return this.verifyGatewayDeposit('zibal', String(trackId), success === 1);
+  verifyZibalPayment(trackId: number, success: number, status?: number) {
+    // طبق callback زیبال: success=1 و status=2 یعنی کاربر پرداخت را کامل کرده
+    const paidAtGateway =
+      success === 1 && (status == null || Number(status) === 2);
+    return this.verifyGatewayDeposit('zibal', String(trackId), paidAtGateway);
   }
 
   verifyLoanPayment(trackId: string, success: number) {
@@ -166,7 +169,7 @@ export class DepositsService {
         .filter(Boolean)
         .join('، ') || 'سفارش';
 
-    const gatewayResult = provider.requestPayment(
+    const gatewayResult = await provider.requestPayment(
       amount,
       productName,
       order.id,
@@ -314,7 +317,7 @@ export class DepositsService {
     }
 
     const amount = Math.round(Number(deposit.amount));
-    const verifyResult = provider.verifyPayment(trackId, amount);
+    const verifyResult = await provider.verifyPayment(trackId, amount);
     const userId = deposit.userId;
 
     const settled = await this.dataSource.transaction(async (manager) => {

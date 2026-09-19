@@ -7,6 +7,7 @@ import type {
   PaymentVerifyResult,
 } from './deposit-gateway.interface.js';
 
+/** فقط وقتی ZIBAL_USE_MOCK=true — در غیر این صورت از ZibalService واقعی استفاده شود */
 @Injectable()
 export class ZibalMockService implements IBank {
   readonly kind = 'bank' as const;
@@ -41,6 +42,7 @@ export class ZibalMockService implements IBank {
     return {
       refId,
       message: `[MOCK-ZIBAL] پرداخت با trackId ${trackId} به مبلغ ${amount} ریال تأیید شد`,
+      amount,
     };
   }
 

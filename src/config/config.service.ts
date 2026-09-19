@@ -49,8 +49,11 @@ const DEFAULTS: Record<string, string> = {
   MEDIA_UPLOAD_RATE_LIMIT: '10',
   ZARINPAL_SANDBOX_URL: 'https://sandbox.zarinpal.com/pg/StartPay',
   ZARINPAL_CALLBACK_URL: '',
+  ZIBAL_MERCHANT: 'zibal',
+  ZIBAL_API_BASE: 'https://gateway.zibal.ir',
   ZIBAL_START_URL: 'https://gateway.zibal.ir/start',
   ZIBAL_CALLBACK_URL: '',
+  ZIBAL_USE_MOCK: 'false',
   LOAN_START_URL: 'https://loan-mock.local/pay',
   LOAN_CALLBACK_URL: '',
 };
