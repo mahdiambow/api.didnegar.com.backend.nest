@@ -72,9 +72,9 @@ export class PaymentsController {
     message: 'Payment request created successfully',
   })
   @ApiOperation({
-    summary: 'درخواست پرداخت سفارش',
+    summary: 'Request order payment',
     description:
-      'userId از JWT. method: credit | zarinpal | zibal | loan. در موفقیت درگاه، ابتدا credit شارژ و سپس کسر می‌شود.',
+      'درخواست پرداخت سفارش\n\nuserId از JWT. method: credit | zarinpal | zibal | loan. در موفقیت درگاه، ابتدا credit شارژ و سپس کسر می‌شود.',
   })
   @ApiOkResponse({ type: DepositApiResponseDto })
   requestPayment(
@@ -95,7 +95,10 @@ export class PaymentsController {
     code: 'PAYMENT_REQUESTED',
     message: 'Payment request created successfully',
   })
-  @ApiOperation({ summary: 'درخواست پرداخت زرین‌پال (IBank mock)' })
+  @ApiOperation({
+    summary: 'Request Zarinpal payment (IBank mock)',
+    description: 'درخواست پرداخت زرین‌پال (IBank mock)',
+  })
   @ApiOkResponse({ type: DepositApiResponseDto })
   requestZarinpalPayment(
     @Req() req: { user: { sub: string } },
@@ -113,7 +116,8 @@ export class PaymentsController {
     message: 'Payment verified successfully',
   })
   @ApiOperation({
-    summary: 'تأیید زرین‌پال — deposit سپس charge از credit',
+    summary: 'Confirm Zarinpal — deposit then charge from credit',
+    description: 'تأیید زرین‌پال — deposit سپس charge از credit',
   })
   @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyZarinpalPayment(@Query() query: VerifyZarinpalPaymentQueryDto) {
@@ -130,7 +134,10 @@ export class PaymentsController {
     code: 'PAYMENT_REQUESTED',
     message: 'Payment request created successfully',
   })
-  @ApiOperation({ summary: 'درخواست پرداخت زیبال (IBank mock)' })
+  @ApiOperation({
+    summary: 'Request Zibal payment (IBank mock)',
+    description: 'درخواست پرداخت زیبال (IBank mock)',
+  })
   @ApiOkResponse({ type: DepositApiResponseDto })
   requestZibalPayment(
     @Req() req: { user: { sub: string } },
@@ -145,7 +152,8 @@ export class PaymentsController {
     message: 'Payment verified successfully',
   })
   @ApiOperation({
-    summary: 'تأیید زیبال — deposit سپس charge از credit',
+    summary: 'Confirm Zibal — deposit then charge from credit',
+    description: 'تأیید زیبال — deposit سپس charge از credit',
   })
   @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyZibalPayment(@Query() query: VerifyZibalPaymentQueryDto) {
@@ -162,7 +170,10 @@ export class PaymentsController {
     code: 'PAYMENT_REQUESTED',
     message: 'Payment request created successfully',
   })
-  @ApiOperation({ summary: 'درخواست پرداخت وام (ILoan mock)' })
+  @ApiOperation({
+    summary: 'Request loan payment (ILoan mock)',
+    description: 'درخواست پرداخت وام (ILoan mock)',
+  })
   @ApiOkResponse({ type: DepositApiResponseDto })
   requestLoanPayment(
     @Req() req: { user: { sub: string } },
@@ -177,7 +188,8 @@ export class PaymentsController {
     message: 'Payment verified successfully',
   })
   @ApiOperation({
-    summary: 'تأیید وام — deposit سپس charge از credit',
+    summary: 'Confirm loan — deposit then charge from credit',
+    description: 'تأیید وام — deposit سپس charge از credit',
   })
   @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyLoanPayment(@Query() query: VerifyLoanPaymentQueryDto) {
@@ -191,7 +203,10 @@ export class PaymentsController {
     code: 'PAYMENT_REQUESTED',
     message: 'Payment request created successfully',
   })
-  @ApiOperation({ summary: 'پرداخت مستقیم از کیف پول (credit)' })
+  @ApiOperation({
+    summary: 'Pay directly from wallet (credit)',
+    description: 'پرداخت مستقیم از کیف پول (credit)',
+  })
   @ApiOkResponse({ type: DepositApiResponseDto })
   requestCreditPayment(
     @Req() req: { user: { sub: string } },
