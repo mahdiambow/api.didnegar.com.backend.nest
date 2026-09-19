@@ -10,12 +10,6 @@ import {
 } from 'typeorm';
 import type { User } from '../../users/entities/user.entity.js';
 
-const wholeNumber = {
-  to: (value: number) => value,
-  from: (value: string | number | null) =>
-    value == null ? 0 : Number(value),
-};
-
 @Entity('user_credits')
 export class UserCredit {
   @PrimaryColumn({ type: 'varchar', length: 26 })
@@ -26,11 +20,11 @@ export class UserCredit {
   userId: string;
 
   /** موجودی قابل‌خرج (عدد صحیح) */
-  @Column({ type: 'bigint', default: 0, transformer: wholeNumber })
+  @Column({ type: 'bigint', default: 0 })
   amount: number;
 
   /** مبلغ قفل‌شده (قابل‌خرج نیست تا unlock) */
-  @Column({ type: 'bigint', default: 0, transformer: wholeNumber })
+  @Column({ type: 'bigint', default: 0 })
   lockedAmount: number;
 
   @CreateDateColumn()
