@@ -162,16 +162,16 @@ export class CreditService {
     userId: string,
     manager?: EntityManager,
   ): Promise<UserCredit> {
-    const repo = manager ? manager.getRepository(UserCredit) : this.credits;
-    const existing = await repo.findOneBy({ userId });
+    const creditsRepo = manager ? manager.getRepository(UserCredit) : this.credits;
+    const existing = await creditsRepo.findOneBy({ userId });
     if (existing) return existing;
 
     try {
-      return await repo.save(
-        repo.create({ userId, amount: 0, lockedAmount: 0 }),
+      return await creditsRepo.save(
+        creditsRepo.create({ userId, amount: 0, lockedAmount: 0 }),
       );
     } catch {
-      const again = await repo.findOneBy({ userId });
+      const again = await creditsRepo.findOneBy({ userId });
       if (again) return again;
       throw new ApiException(
         'CREDIT_WALLET_ERROR',
