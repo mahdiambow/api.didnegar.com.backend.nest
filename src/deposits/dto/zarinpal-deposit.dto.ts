@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString } from 'class-validator';
-import { CreateDepositDto } from './payment.dto.js';
+import { CreateDepositDto } from './deposit.dto.js';
 
 export class CreateZarinpalPaymentDto extends CreateDepositDto {}
 

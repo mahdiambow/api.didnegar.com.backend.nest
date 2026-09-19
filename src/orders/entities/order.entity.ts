@@ -6,13 +6,12 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  OneToOne,
   UpdateDateColumn,
 } from 'typeorm';
 import type { User } from '../../users/entities/user.entity.js';
 import type { UserAddress } from '../../users/entities/user-address.entity.js';
-import type { OrderItem } from '../../orders/entities/order-item.entity.js';
-import type { Deposit } from './deposit.entity.js';
+import type { OrderItem } from './order-item.entity.js';
+import type { Deposit } from '../../deposits/entities/deposit.entity.js';
 import type { ShippingMethod } from '../../shipping/entities/shipping-method.entity.js';
 
 export type OrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled';
@@ -68,6 +67,6 @@ export class Order {
   @JoinColumn({ name: 'shippingMethodId' })
   shippingMethod: ShippingMethod | null;
 
-  @OneToOne('Deposit', 'order')
-  deposit: Deposit;
+  @OneToMany('Deposit', 'order')
+  deposits: Deposit[];
 }

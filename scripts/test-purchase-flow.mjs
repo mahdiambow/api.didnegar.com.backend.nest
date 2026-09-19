@@ -135,14 +135,14 @@ async function main() {
   console.log('5) Order', { id: order.id, amount: order.amount, status: order.status });
   assert(order.status === 'pending', 'order pending');
 
-  r = await api('POST', '/payments/credit/request', {
+  r = await api('POST', '/deposits/credit/request', {
     token,
     body: { orderId: order.id },
   });
   console.log('6) Credit pay (empty wallet) status', r.status, r.json?.code || r.json?.message);
   assert(r.status >= 400, 'credit pay must fail with empty wallet');
 
-  r = await api('POST', '/payments/zarinpal/request', {
+  r = await api('POST', '/deposits/zarinpal/request', {
     token,
     body: { orderId: order.id },
   });
@@ -152,7 +152,7 @@ async function main() {
 
   r = await api(
     'GET',
-    `/payments/zarinpal/verify?Authority=${encodeURIComponent(authority)}&Status=OK`,
+    `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authority)}&Status=OK`,
   );
   assert(r.status < 400, `zarinpal verify failed: ${JSON.stringify(r.json)}`);
   console.log('8) Verify', {
@@ -196,7 +196,7 @@ async function main() {
   const order2 = r.json.data;
   console.log('    order2', order2.id, order2.amount);
 
-  r = await api('POST', '/payments/loan/request', {
+  r = await api('POST', '/deposits/loan/request', {
     token,
     body: { orderId: order2.id },
   });
@@ -204,7 +204,7 @@ async function main() {
   const loanAuth = r.json.data.trackId;
   r = await api(
     'GET',
-    `/payments/loan/verify?trackId=${encodeURIComponent(loanAuth)}&success=1`,
+    `/deposits/loan/verify?trackId=${encodeURIComponent(loanAuth)}&success=1`,
   );
   assert(r.status < 400, `loan verify failed: ${JSON.stringify(r.json)}`);
   assert(r.json.data?.status === 'success', 'loan verify success');

@@ -17,7 +17,7 @@ import { CreateOrderDto, OrderProductDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { toOrderResponse } from './dto/order-response.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
-import { Order } from '../payments/entities/order.entity.js';
+import { Order } from './entities/order.entity.js';
 import type { CheckoutCartDto } from '../shopping-cart/dto/checkout-cart.dto.js';
 
 @Injectable()

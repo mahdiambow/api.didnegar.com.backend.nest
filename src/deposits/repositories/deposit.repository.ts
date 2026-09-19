@@ -17,12 +17,16 @@ export class DepositRepository {
       where: { trackId },
       relations: {
         order: { items: { product: true }, shippingMethod: true },
+        user: true,
       },
     });
   }
 
   findByOrderId(orderId: string) {
-    return this.repo.findOne({ where: { orderId } });
+    return this.repo.find({
+      where: { orderId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   create(data: Partial<Deposit>) {

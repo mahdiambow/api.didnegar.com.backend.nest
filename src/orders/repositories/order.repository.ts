@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { type DeepPartial, Repository } from 'typeorm';
-import { Order } from '../../payments/entities/order.entity.js';
+import { Order } from '../entities/order.entity.js';
 
 @Injectable()
 export class OrderRepository {
@@ -14,7 +14,7 @@ export class OrderRepository {
       where: { id },
       relations: {
         items: { product: true },
-        deposit: true,
+        deposits: true,
         shippingMethod: true,
         address: true,
       },
@@ -26,7 +26,7 @@ export class OrderRepository {
       where: { id, userId },
       relations: {
         items: { product: true },
-        deposit: true,
+        deposits: true,
         shippingMethod: true,
         address: true,
       },
@@ -43,7 +43,7 @@ export class OrderRepository {
       .leftJoinAndSelect('order.items', 'item')
       .leftJoinAndSelect('item.product', 'product')
       .leftJoinAndSelect('order.shippingMethod', 'shippingMethod')
-      .leftJoinAndSelect('order.deposit', 'deposit')
+      .leftJoinAndSelect('order.deposits', 'deposit')
       .orderBy('order.createdAt', 'DESC')
       .skip(offset)
       .take(limit);

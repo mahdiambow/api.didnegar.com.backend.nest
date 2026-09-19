@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpStatus,
   Post,
   Query,
   Req,
@@ -18,19 +19,20 @@ import { Type } from 'class-transformer';
 import { IsInt, IsString, Min } from 'class-validator';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
+import { ApiException } from '../common/exceptions/api.exception.js';
 import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
-import { PaymentsService } from './payments.service.js';
+import { DepositsService } from './deposits.service.js';
 import {
   CreateDepositDto,
   DepositResponseDto,
   DepositVerifyResponseDto,
   RequestDepositDto,
-} from './dto/payment.dto.js';
+} from './dto/deposit.dto.js';
 import {
   CreateZarinpalPaymentDto,
   VerifyZarinpalPaymentQueryDto,
-} from './dto/zarinpal-payment.dto.js';
-import { VerifyZibalPaymentQueryDto } from './dto/zibal-payment.dto.js';
+} from './dto/zarinpal-deposit.dto.js';
+import { VerifyZibalPaymentQueryDto } from './dto/zibal-deposit.dto.js';
 
 class VerifyLoanPaymentQueryDto {
   @ApiProperty()
@@ -59,10 +61,10 @@ const DepositVerifyApiResponseDto = createSuccessResponseDto(
   },
 );
 
-@ApiTags('Payments')
-@Controller('payments')
-export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+@ApiTags('Deposits')
+@Controller('deposits')
+export class DepositsController {
+  constructor(private readonly depositsService: DepositsService) {}
 
   @Post('request')
   @ApiBearerAuth('access-token')
@@ -81,9 +83,9 @@ export class PaymentsController {
     @Req() req: { user: { sub: string } },
     @Body() dto: RequestDepositDto,
   ) {
-    return this.paymentsService.requestPayment(
+    return this.depositsService.requestPayment(
       req.user.sub,
-      dto.orderId,
+      this.requireOrderId(dto.orderId),
       dto.method,
     );
   }
@@ -104,9 +106,9 @@ export class PaymentsController {
     @Req() req: { user: { sub: string } },
     @Body() dto: CreateZarinpalPaymentDto,
   ) {
-    return this.paymentsService.createZarinpalPayment(
+    return this.depositsService.createZarinpalPayment(
       req.user.sub,
-      dto.orderId,
+      this.requireOrderId(dto.orderId),
     );
   }
 
@@ -121,7 +123,7 @@ export class PaymentsController {
   })
   @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyZarinpalPayment(@Query() query: VerifyZarinpalPaymentQueryDto) {
-    return this.paymentsService.verifyZarinpalPayment(
+    return this.depositsService.verifyZarinpalPayment(
       query.Authority,
       query.Status,
     );
@@ -143,7 +145,10 @@ export class PaymentsController {
     @Req() req: { user: { sub: string } },
     @Body() dto: CreateDepositDto,
   ) {
-    return this.paymentsService.createZibalPayment(req.user.sub, dto.orderId);
+    return this.depositsService.createZibalPayment(
+      req.user.sub,
+      this.requireOrderId(dto.orderId),
+    );
   }
 
   @Get('zibal/verify')
@@ -157,7 +162,7 @@ export class PaymentsController {
   })
   @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyZibalPayment(@Query() query: VerifyZibalPaymentQueryDto) {
-    return this.paymentsService.verifyZibalPayment(
+    return this.depositsService.verifyZibalPayment(
       query.trackId,
       query.success,
     );
@@ -179,7 +184,10 @@ export class PaymentsController {
     @Req() req: { user: { sub: string } },
     @Body() dto: CreateDepositDto,
   ) {
-    return this.paymentsService.createLoanPayment(req.user.sub, dto.orderId);
+    return this.depositsService.createLoanPayment(
+      req.user.sub,
+      this.requireOrderId(dto.orderId),
+    );
   }
 
   @Get('loan/verify')
@@ -193,7 +201,7 @@ export class PaymentsController {
   })
   @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyLoanPayment(@Query() query: VerifyLoanPaymentQueryDto) {
-    return this.paymentsService.verifyLoanPayment(query.trackId, query.success);
+    return this.depositsService.verifyLoanPayment(query.trackId, query.success);
   }
 
   @Post('credit/request')
@@ -212,6 +220,20 @@ export class PaymentsController {
     @Req() req: { user: { sub: string } },
     @Body() dto: CreateDepositDto,
   ) {
-    return this.paymentsService.createCreditPayment(req.user.sub, dto.orderId);
+    return this.depositsService.createCreditPayment(
+      req.user.sub,
+      this.requireOrderId(dto.orderId),
+    );
+  }
+
+  private requireOrderId(orderId?: string): string {
+    if (!orderId) {
+      throw new ApiException(
+        'ORDER_ID_REQUIRED',
+        'orderId برای پرداخت سفارش الزامی است',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return orderId;
   }
 }

@@ -163,7 +163,7 @@ async function main() {
   // --- A) Replay verify (sequential) ---
   console.log('\nA) Sequential double verify');
   const orderA = await checkout(token, fx.offerId, fx.addressId, fx.shippingId, conn);
-  let r = await api('POST', '/payments/zarinpal/request', {
+  let r = await api('POST', '/deposits/zarinpal/request', {
     token,
     body: { orderId: orderA.id },
   });
@@ -173,13 +173,13 @@ async function main() {
 
   const v1 = await api(
     'GET',
-    `/payments/zarinpal/verify?Authority=${encodeURIComponent(authorityA)}&Status=OK`,
+    `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authorityA)}&Status=OK`,
   );
   assert(v1.status < 400 && v1.json.data?.status === 'success', 'first verify must succeed');
 
   const v2 = await api(
     'GET',
-    `/payments/zarinpal/verify?Authority=${encodeURIComponent(authorityA)}&Status=OK`,
+    `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authorityA)}&Status=OK`,
   );
   assert(v2.status < 400 && v2.json.data?.status === 'success', 'replay verify should be idempotent OK');
   assert(
@@ -194,7 +194,7 @@ async function main() {
   assert(counts.in === 1 && counts.out === 1, 'replay must not create second in/out');
 
   // pay again on same order
-  r = await api('POST', '/payments/zarinpal/request', {
+  r = await api('POST', '/deposits/zarinpal/request', {
     token,
     body: { orderId: orderA.id },
   });
@@ -207,7 +207,7 @@ async function main() {
     `expect ORDER_ALREADY_PAID or ORDER_NOT_PAYABLE, got ${r.code || r.json?.code}`,
   );
 
-  r = await api('POST', '/payments/credit/request', {
+  r = await api('POST', '/deposits/credit/request', {
     token,
     body: { orderId: orderA.id },
   });
@@ -223,7 +223,7 @@ async function main() {
   // --- B) Concurrent verify race ---
   console.log('\nB) Concurrent double verify race');
   const orderB = await checkout(token, fx.offerId, fx.addressId, fx.shippingId, conn);
-  r = await api('POST', '/payments/zarinpal/request', {
+  r = await api('POST', '/deposits/zarinpal/request', {
     token,
     body: { orderId: orderB.id },
   });
@@ -234,15 +234,15 @@ async function main() {
   const race = await Promise.all([
     api(
       'GET',
-      `/payments/zarinpal/verify?Authority=${encodeURIComponent(authorityB)}&Status=OK`,
+      `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authorityB)}&Status=OK`,
     ),
     api(
       'GET',
-      `/payments/zarinpal/verify?Authority=${encodeURIComponent(authorityB)}&Status=OK`,
+      `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authorityB)}&Status=OK`,
     ),
     api(
       'GET',
-      `/payments/zarinpal/verify?Authority=${encodeURIComponent(authorityB)}&Status=OK`,
+      `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authorityB)}&Status=OK`,
     ),
   ]);
   const ok = race.filter((x) => x.status < 400 && x.json.data?.status === 'success');
@@ -277,9 +277,9 @@ async function main() {
   );
 
   const creditRace = await Promise.all([
-    api('POST', '/payments/credit/request', { token, body: { orderId: orderC.id } }),
-    api('POST', '/payments/credit/request', { token, body: { orderId: orderC.id } }),
-    api('POST', '/payments/credit/request', { token, body: { orderId: orderC.id } }),
+    api('POST', '/deposits/credit/request', { token, body: { orderId: orderC.id } }),
+    api('POST', '/deposits/credit/request', { token, body: { orderId: orderC.id } }),
+    api('POST', '/deposits/credit/request', { token, body: { orderId: orderC.id } }),
   ]);
   const creditOk = creditRace.filter((x) => x.status < 400);
   const creditFail = creditRace.filter((x) => x.status >= 400);

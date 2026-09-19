@@ -5,7 +5,7 @@ import type {
   IBank,
   PaymentRequestResult,
   PaymentVerifyResult,
-} from './payment-gateway.interface.js';
+} from './deposit-gateway.interface.js';
 
 @Injectable()
 export class ZarinpalMockService implements IBank {

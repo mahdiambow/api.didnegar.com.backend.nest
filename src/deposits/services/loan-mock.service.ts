@@ -5,7 +5,7 @@ import type {
   ILoan,
   PaymentExternalRequestResult,
   PaymentExternalVerifyResult,
-} from './payment-gateway.interface.js';
+} from './deposit-gateway.interface.js';
 
 @Injectable()
 export class LoanMockService implements ILoan {

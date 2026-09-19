@@ -1,18 +1,27 @@
 import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn } from 'class-validator';
+import { IsIn, IsOptional } from 'class-validator';
 import { ShippingMethodResponseDto } from '../../shipping/dto/shipping.dto.js';
 
+/** شارژ کیف پول / درخواست درگاه — orderId اختیاری (مثلاً فقط شارژ wallet) */
 export class CreateDepositDto {
-  @ApiProperty({ example: '01JEX000000000000000000010' })
+  @ApiPropertyOptional({
+    example: '01JEX000000000000000000010',
+    description: 'اختیاری — برای شارژ کیف پول بدون سفارش خالی بگذارید',
+  })
+  @IsOptional()
   @IsULID()
-  orderId: string;
+  orderId?: string;
 }
 
 export class RequestDepositDto {
-  @ApiProperty({ example: '01JEX000000000000000000010' })
+  @ApiPropertyOptional({
+    example: '01JEX000000000000000000010',
+    description: 'اختیاری — پرداخت سفارش یا فقط شارژ',
+  })
+  @IsOptional()
   @IsULID()
-  orderId: string;
+  orderId?: string;
 
   @ApiProperty({
     enum: ['credit', 'zarinpal', 'zibal', 'loan'],
@@ -24,11 +33,16 @@ export class RequestDepositDto {
 }
 
 export class DepositResponseDto {
-  @ApiProperty()
-  orderId: string;
+  @ApiPropertyOptional({ nullable: true })
+  orderId?: string | null;
 
-  @ApiProperty()
-  depositId: string;
+  @ApiPropertyOptional({
+    description: 'شناسه واریز — برای پرداخت credit خالی است',
+  })
+  depositId?: string;
+
+  @ApiPropertyOptional({ description: 'شناسه transaction ثبت‌شده برای این عملیات' })
+  transactionId?: string;
 
   @ApiProperty({ enum: ['zarinpal', 'zibal', 'loan', 'credit'] })
   gateway: string;
@@ -44,14 +58,14 @@ export class DepositResponseDto {
   @ApiProperty()
   amount: number;
 
-  @ApiProperty()
-  subtotal: number;
+  @ApiPropertyOptional()
+  subtotal?: number;
 
-  @ApiProperty()
-  shippingAmount: number;
+  @ApiPropertyOptional()
+  shippingAmount?: number;
 
-  @ApiProperty()
-  displayTotal: number;
+  @ApiPropertyOptional()
+  displayTotal?: number;
 
   @ApiPropertyOptional({ type: ShippingMethodResponseDto, nullable: true })
   shippingMethod?: ShippingMethodResponseDto | null;
@@ -59,16 +73,19 @@ export class DepositResponseDto {
   @ApiProperty()
   gatewayMessage: string;
 
-  @ApiPropertyOptional({ description: 'موجودی کیف پول بعد از پرداخت credit' })
+  @ApiPropertyOptional({ description: 'موجودی کیف پول بعد از عملیات' })
   creditBalance?: number;
 }
 
 export class DepositVerifyResponseDto {
-  @ApiProperty()
-  orderId: string;
+  @ApiPropertyOptional({ nullable: true })
+  orderId?: string | null;
 
   @ApiProperty()
   depositId: string;
+
+  @ApiPropertyOptional()
+  transactionId?: string;
 
   @ApiProperty({ enum: ['zarinpal', 'zibal', 'loan', 'credit'] })
   gateway: string;
@@ -82,14 +99,14 @@ export class DepositVerifyResponseDto {
   @ApiProperty()
   amount: number;
 
-  @ApiProperty()
-  subtotal: number;
+  @ApiPropertyOptional()
+  subtotal?: number;
 
-  @ApiProperty()
-  shippingAmount: number;
+  @ApiPropertyOptional()
+  shippingAmount?: number;
 
-  @ApiProperty()
-  displayTotal: number;
+  @ApiPropertyOptional()
+  displayTotal?: number;
 
   @ApiPropertyOptional({ type: ShippingMethodResponseDto, nullable: true })
   shippingMethod?: ShippingMethodResponseDto | null;

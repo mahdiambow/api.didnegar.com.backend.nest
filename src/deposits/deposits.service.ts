@@ -1,6 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { randomBytes } from 'node:crypto';
 import { ConfigService } from '../config/config.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import { toShippingMethodResponse } from '../shipping/dto/shipping.dto.js';
@@ -9,19 +8,20 @@ import { CreditService } from '../credit/credit.service.js';
 import { ZarinpalMockService } from './services/zarinpal-mock.service.js';
 import { ZibalMockService } from './services/zibal-mock.service.js';
 import { LoanMockService } from './services/loan-mock.service.js';
-import type { ExternalPaymentProvider } from './services/payment-gateway.interface.js';
+import type { ExternalPaymentProvider } from './services/deposit-gateway.interface.js';
 import { DepositRepository } from './repositories/deposit.repository.js';
+import { TransactionService } from './transaction.service.js';
 import {
   toDepositResponse,
   toDepositVerifyResponse,
-} from './dto/payment.dto.js';
+} from './dto/deposit.dto.js';
 import { Deposit } from './entities/deposit.entity.js';
-import { Order } from './entities/order.entity.js';
+import { Order } from '../orders/entities/order.entity.js';
 
 export type DepositMethod = 'credit' | 'zarinpal' | 'zibal' | 'loan';
 
 @Injectable()
-export class PaymentsService {
+export class DepositsService {
   private readonly providers: Record<
     Exclude<DepositMethod, 'credit'>,
     ExternalPaymentProvider
@@ -32,6 +32,7 @@ export class PaymentsService {
     private readonly dataSource: DataSource,
     private readonly orderRepository: OrderRepository,
     private readonly depositRepository: DepositRepository,
+    private readonly transactionService: TransactionService,
     private readonly creditService: CreditService,
     zarinpalMockService: ZarinpalMockService,
     zibalMockService: ZibalMockService,
@@ -62,32 +63,31 @@ export class PaymentsService {
 
   requestPayment(userId: string, orderId: string, method: DepositMethod) {
     if (method === 'credit') {
-      return this.payWithCredit(userId, orderId);
+      return this.payOrderWithCredit(userId, orderId);
     }
-    return this.createExternalDeposit(userId, orderId, method);
+    return this.createOrderGatewayDeposit(userId, orderId, method);
   }
 
   verifyZarinpalPayment(trackId: string, status: string) {
-    return this.verifyExternalDeposit('zarinpal', trackId, status === 'OK');
+    return this.verifyGatewayDeposit('zarinpal', trackId, status === 'OK');
   }
 
   verifyZibalPayment(trackId: number, success: number) {
-    return this.verifyExternalDeposit('zibal', String(trackId), success === 1);
+    return this.verifyGatewayDeposit('zibal', String(trackId), success === 1);
   }
 
   verifyLoanPayment(trackId: string, success: number) {
-    return this.verifyExternalDeposit('loan', trackId, success === 1);
+    return this.verifyGatewayDeposit('loan', trackId, success === 1);
   }
 
-  private async payWithCredit(userId: string, orderId: string) {
+  /** پرداخت سفارش از موجودی — فقط transaction (debit)، نه deposit */
+  private async payOrderWithCredit(userId: string, orderId: string) {
     const order = await this.requirePayableOrder(userId, orderId);
     const amount = Math.round(Number(order.amount));
     const breakdown = this.getOrderBreakdown(order);
 
     const result = await this.dataSource.transaction(async (manager) => {
-      const depositRepo = manager.getRepository(Deposit);
       const orderRepo = manager.getRepository(Order);
-
       const lockedOrder = await orderRepo.findOne({
         where: { id: order.id },
         lock: { mode: 'pessimistic_write' },
@@ -100,61 +100,41 @@ export class PaymentsService {
         );
       }
 
-      let deposit = await depositRepo.findOne({
-        where: { orderId: order.id },
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (deposit?.status === 'success') {
-        throw new ApiException(
-          'ORDER_ALREADY_PAID',
-          'این سفارش قبلاً پرداخت شده است',
-          HttpStatus.CONFLICT,
-        );
-      }
-
-      const trackId = `CREDIT-${randomBytes(10).toString('hex').toUpperCase()}`;
-      if (deposit) {
-        Object.assign(deposit, {
-          gateway: 'credit' as const,
-          trackId,
+      const tx = await this.transactionService.addTransaction(
+        {
+          userId,
           amount,
-          status: 'pending' as const,
-          refId: null,
-          callbackUrl: null,
-        });
-      } else {
-        deposit = depositRepo.create({
+          type: 'debit',
+          sourceType: 'ORDER_PAYMENT',
           orderId: order.id,
-          gateway: 'credit',
-          trackId,
-          amount,
-          status: 'pending',
-          callbackUrl: null,
-        });
-      }
-      deposit = await depositRepo.save(deposit);
+          state: 'pending',
+          description: 'پرداخت سفارش از کیف پول',
+        },
+        manager,
+      );
 
       const wallet = await this.creditService.decrementTotalAmount(
         userId,
         amount,
-        { sourceId: deposit.id },
+        { sourceId: tx.id },
         manager,
       );
 
-      deposit.status = 'success';
-      deposit.refId = `CR-${deposit.id.slice(-8)}`;
-      await depositRepo.save(deposit);
-
+      await this.transactionService.updateTransactions(
+        [tx.id],
+        'executed',
+        manager,
+      );
       await orderRepo.update({ id: order.id }, { status: 'paid' });
 
-      return { deposit, amountAfter: Number(wallet.amount) };
+      return { transactionId: tx.id, amountAfter: Number(wallet.amount) };
     });
 
     return toDepositResponse({
       orderId: order.id,
-      depositId: result.deposit.id,
+      transactionId: result.transactionId,
       gateway: 'credit',
-      trackId: result.deposit.trackId,
+      trackId: `TX-${result.transactionId.slice(-10)}`,
       paymentUrl: '',
       amount,
       ...breakdown,
@@ -166,7 +146,7 @@ export class PaymentsService {
     });
   }
 
-  private async createExternalDeposit(
+  private async createOrderGatewayDeposit(
     userId: string,
     orderId: string,
     gateway: Exclude<DepositMethod, 'credit'>,
@@ -202,11 +182,23 @@ export class PaymentsService {
     const deposit = await this.dataSource.transaction(async (manager) => {
       const depositRepo = manager.getRepository(Deposit);
       const existing = await depositRepo.findOne({
-        where: { orderId: order.id },
+        where: {
+          userId,
+          orderId: order.id,
+          gateway,
+          status: 'pending',
+        },
         lock: { mode: 'pessimistic_write' },
       });
 
-      if (existing?.status === 'success') {
+      if (existing) {
+        return { reuse: true as const, entity: existing };
+      }
+
+      const successExists = await depositRepo.findOne({
+        where: { orderId: order.id, status: 'success' },
+      });
+      if (successExists) {
         throw new ApiException(
           'ORDER_ALREADY_PAID',
           'این سفارش قبلاً پرداخت شده است',
@@ -214,38 +206,33 @@ export class PaymentsService {
         );
       }
 
-      if (existing?.status === 'pending' && existing.gateway === gateway) {
-        return { reuse: true as const, entity: existing };
-      }
-
-      if (existing) {
-        Object.assign(existing, {
+      const entity = await depositRepo.save(
+        depositRepo.create({
+          userId,
+          orderId: order.id,
           gateway,
           trackId: gatewayResult.trackId,
           amount,
-          status: 'pending' as const,
-          refId: null,
+          status: 'pending',
           callbackUrl,
-        });
-        return {
-          reuse: false as const,
-          entity: await depositRepo.save(existing),
-        };
-      }
+        }),
+      );
 
-      return {
-        reuse: false as const,
-        entity: await depositRepo.save(
-          depositRepo.create({
-            orderId: order.id,
-            gateway,
-            trackId: gatewayResult.trackId,
-            amount,
-            status: 'pending',
-            callbackUrl,
-          }),
-        ),
-      };
+      await this.transactionService.addTransaction(
+        {
+          userId,
+          amount,
+          type: 'credit',
+          sourceType: 'DEPOSIT',
+          sourceId: entity.id,
+          orderId: order.id,
+          state: 'pending',
+          description: `درخواست واریز از ${gateway}`,
+        },
+        manager,
+      );
+
+      return { reuse: false as const, entity };
     });
 
     const entity = deposit.entity;
@@ -259,12 +246,12 @@ export class PaymentsService {
       ...breakdown,
       shippingMethod,
       gatewayMessage: deposit.reuse
-        ? 'درخواست پرداخت قبلی برای این سفارش فعال است'
+        ? 'درخواست واریز قبلی برای این سفارش فعال است'
         : gatewayResult.message,
     });
   }
 
-  private async verifyExternalDeposit(
+  private async verifyGatewayDeposit(
     gateway: Exclude<DepositMethod, 'credit'>,
     trackId: string,
     isSuccess: boolean,
@@ -274,7 +261,7 @@ export class PaymentsService {
     if (!deposit) {
       throw new ApiException(
         'PAYMENT_NOT_FOUND',
-        'تراکنش یافت نشد',
+        'واریز یافت نشد',
         HttpStatus.NOT_FOUND,
       );
     }
@@ -282,13 +269,13 @@ export class PaymentsService {
     if (deposit.gateway !== gateway) {
       throw new ApiException(
         'PAYMENT_GATEWAY_MISMATCH',
-        'درگاه پرداخت با تراکنش مطابقت ندارد',
+        'درگاه با واریز مطابقت ندارد',
         HttpStatus.BAD_REQUEST,
       );
     }
 
     const provider = this.providers[gateway];
-    const orderBreakdown = this.getOrderBreakdown(deposit.order);
+    const orderBreakdown = this.getOrderBreakdown(deposit.order ?? undefined);
 
     if (deposit.status === 'success') {
       return toDepositVerifyResponse({
@@ -303,7 +290,7 @@ export class PaymentsService {
           ?.map((item) => item.product?.name)
           .filter(Boolean)
           .join('، '),
-        gatewayMessage: 'این تراکنش قبلاً تأیید شده است',
+        gatewayMessage: 'این واریز قبلاً تأیید شده است',
       });
     }
 
@@ -312,7 +299,7 @@ export class PaymentsService {
         await manager
           .getRepository(Deposit)
           .update({ id: deposit.id }, { status: 'failed' });
-        if (deposit.order) {
+        if (deposit.orderId) {
           await manager
             .getRepository(Order)
             .update({ id: deposit.orderId }, { status: 'failed' });
@@ -328,16 +315,8 @@ export class PaymentsService {
 
     const amount = Math.round(Number(deposit.amount));
     const verifyResult = provider.verifyPayment(trackId, amount);
-    const userId = deposit.order?.userId;
-    if (!userId) {
-      throw new ApiException(
-        'ORDER_NOT_FOUND',
-        'سفارش تراکنش یافت نشد',
-        HttpStatus.NOT_FOUND,
-      );
-    }
+    const userId = deposit.userId;
 
-    // ACID: verify → credit increment → credit decrement → mark paid
     const settled = await this.dataSource.transaction(async (manager) => {
       const depositRepo = manager.getRepository(Deposit);
       const locked = await depositRepo.findOne({
@@ -347,12 +326,16 @@ export class PaymentsService {
       if (!locked) {
         throw new ApiException(
           'PAYMENT_NOT_FOUND',
-          'تراکنش یافت نشد',
+          'واریز یافت نشد',
           HttpStatus.NOT_FOUND,
         );
       }
       if (locked.status === 'success') {
-        return { already: true as const, amountAfter: null as number | null };
+        return {
+          already: true as const,
+          amountAfter: null as number | null,
+          transactionId: null as string | null,
+        };
       }
 
       await this.creditService.incrementTotalAmount(
@@ -361,26 +344,93 @@ export class PaymentsService {
         { sourceId: locked.id },
         manager,
       );
-      const wallet = await this.creditService.decrementTotalAmount(
-        userId,
-        amount,
-        { sourceId: locked.id },
-        manager,
-      );
+
+      const pendingDepositTx =
+        await this.transactionService.findPendingBySourceId(
+          locked.id,
+          manager,
+        );
+      let depositTxId: string;
+      if (pendingDepositTx) {
+        await this.transactionService.updateTransactions(
+          [pendingDepositTx.id],
+          'executed',
+          manager,
+        );
+        depositTxId = pendingDepositTx.id;
+      } else {
+        const depositTx = await this.transactionService.addTransaction(
+          {
+            userId,
+            amount,
+            type: 'credit',
+            sourceType: 'DEPOSIT',
+            sourceId: locked.id,
+            orderId: locked.orderId,
+            state: 'executed',
+            description: `واریز موفق از ${gateway}`,
+          },
+          manager,
+        );
+        depositTxId = depositTx.id;
+      }
 
       locked.status = 'success';
       locked.refId = verifyResult.refId;
       await depositRepo.save(locked);
-      await manager
-        .getRepository(Order)
-        .update({ id: locked.orderId }, { status: 'paid' });
 
-      return { already: false as const, amountAfter: Number(wallet.amount) };
+      let amountAfter = 0;
+      let paymentTxId: string | null = null;
+
+      if (locked.orderId) {
+        const paymentTx = await this.transactionService.addTransaction(
+          {
+            userId,
+            amount,
+            type: 'debit',
+            sourceType: 'ORDER_PAYMENT',
+            sourceId: locked.id,
+            orderId: locked.orderId,
+            state: 'pending',
+            description: 'پرداخت سفارش پس از واریز درگاه',
+          },
+          manager,
+        );
+
+        const wallet = await this.creditService.decrementTotalAmount(
+          userId,
+          amount,
+          { sourceId: paymentTx.id },
+          manager,
+        );
+        amountAfter = Number(wallet.amount);
+
+        await this.transactionService.updateTransactions(
+          [paymentTx.id],
+          'executed',
+          manager,
+        );
+        paymentTxId = paymentTx.id;
+
+        await manager
+          .getRepository(Order)
+          .update({ id: locked.orderId }, { status: 'paid' });
+      } else {
+        const wallet = await this.creditService.getBalance(userId);
+        amountAfter = wallet.amount;
+      }
+
+      return {
+        already: false as const,
+        amountAfter,
+        transactionId: paymentTxId ?? depositTxId,
+      };
     });
 
     return toDepositVerifyResponse({
       orderId: deposit.orderId,
       depositId: deposit.id,
+      transactionId: settled.transactionId ?? undefined,
       gateway,
       refId: verifyResult.refId,
       status: 'success',
@@ -391,8 +441,10 @@ export class PaymentsService {
         .filter(Boolean)
         .join('، '),
       gatewayMessage: settled.already
-        ? 'این تراکنش قبلاً تأیید شده است'
-        : `${verifyResult.message} — مبلغ ابتدا به کیف پول واریز و سپس کسر شد`,
+        ? 'این واریز قبلاً تأیید شده است'
+        : deposit.orderId
+          ? `${verifyResult.message} — واریز به کیف پول سپس پرداخت سفارش`
+          : `${verifyResult.message} — کیف پول شارژ شد`,
       creditBalance: settled.amountAfter ?? undefined,
     });
   }
@@ -425,14 +477,22 @@ export class PaymentsService {
     amount?: number;
     shippingMethod?: Parameters<typeof toShippingMethodResponse>[0] | null;
   }) {
-    const subtotal = Number(order?.subtotal ?? order?.amount ?? 0);
-    const shippingAmount = Number(order?.shippingAmount ?? 0);
+    if (!order) {
+      return {
+        subtotal: undefined,
+        shippingAmount: undefined,
+        displayTotal: undefined,
+        shippingMethod: undefined,
+      };
+    }
+    const subtotal = Number(order.subtotal ?? order.amount ?? 0);
+    const shippingAmount = Number(order.shippingAmount ?? 0);
 
     return {
       subtotal,
       shippingAmount,
       displayTotal: subtotal + shippingAmount,
-      shippingMethod: order?.shippingMethod
+      shippingMethod: order.shippingMethod
         ? toShippingMethodResponse(order.shippingMethod)
         : undefined,
     };

@@ -60,9 +60,9 @@ export const PERMISSIONS = {
     adjustPrices: 'products:adjust-prices',
     importPrices: 'products:import-prices',
   },
-  payments: {
-    read: 'payments:read',
-    create: 'payments:create',
+  deposits: {
+    read: 'deposits:read',
+    create: 'deposits:create',
   },
   shipping: {
     read: 'shipping:read',
@@ -285,14 +285,14 @@ export const PERMISSION_DEFINITIONS = [
     group: 'products',
   },
   {
-    key: PERMISSIONS.payments.read,
+    key: PERMISSIONS.deposits.read,
     label: 'مشاهده پرداخت‌ها',
-    group: 'payments',
+    group: 'deposits',
   },
   {
-    key: PERMISSIONS.payments.create,
+    key: PERMISSIONS.deposits.create,
     label: 'ایجاد پرداخت',
-    group: 'payments',
+    group: 'deposits',
   },
   {
     key: PERMISSIONS.shipping.read,
@@ -455,8 +455,8 @@ const SELLER_PERMISSIONS: Permission[] = [
   PERMISSIONS.products.create,
   PERMISSIONS.products.update,
   PERMISSIONS.products.delete,
-  PERMISSIONS.payments.read,
-  PERMISSIONS.payments.create,
+  PERMISSIONS.deposits.read,
+  PERMISSIONS.deposits.create,
   PERMISSIONS.shipping.read,
   PERMISSIONS.categories.read,
   PERMISSIONS.attributes.read,

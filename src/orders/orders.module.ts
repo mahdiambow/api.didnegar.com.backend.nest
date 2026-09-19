@@ -1,7 +1,7 @@
 import { OffersModule } from '../offers/offers.module.js';
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Order } from '../payments/entities/order.entity.js';
+import { Order } from './entities/order.entity.js';
 import { OrderItem } from './entities/order-item.entity.js';
 import { OrdersService } from './orders.service.js';
 import { OrdersController } from './orders.controller.js';

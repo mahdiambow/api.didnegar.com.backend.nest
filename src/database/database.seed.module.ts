@@ -8,7 +8,7 @@ import { AttributesModule } from '../attributes/attributes.module.js';
 import { CategoriesModule } from '../categories/categories.module.js';
 import { ProductsModule } from '../products/products.module.js';
 import { OrdersModule } from '../orders/orders.module.js';
-import { PaymentsModule } from '../payments/payments.module.js';
+import { DepositsModule } from '../deposits/deposits.module.js';
 import { DatabaseSeedService } from './database.seed.service.js';
 
 @Module({
@@ -22,7 +22,7 @@ import { DatabaseSeedService } from './database.seed.service.js';
     CategoriesModule,
     ProductsModule,
     OrdersModule,
-    PaymentsModule,
+    DepositsModule,
   ],
   providers: [DatabaseSeedService],
 })
