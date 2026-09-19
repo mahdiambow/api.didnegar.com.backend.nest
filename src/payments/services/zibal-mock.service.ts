@@ -26,25 +26,25 @@ export class ZibalMockService implements IBank {
     const trackId = String(randomInt(100000000, 999999999));
 
     return {
-      authority: trackId,
+      trackId,
       paymentUrl: this.buildPaymentUrl(trackId),
       message: `[MOCK-ZIBAL] درخواست پرداخت «${description}» برای سفارش ${orderId} با مبلغ ${amount} ریال ثبت شد`,
     };
   }
 
-  verifyPayment(authority: string, amount: number): PaymentVerifyResult {
+  verifyPayment(trackId: string, amount: number): PaymentVerifyResult {
     const refId = String(
       200000 +
-        (parseInt(authority.slice(-6), 10) % 800000 || randomInt(1, 99999)),
+        (parseInt(trackId.slice(-6), 10) % 800000 || randomInt(1, 99999)),
     );
 
     return {
       refId,
-      message: `[MOCK-ZIBAL] پرداخت با trackId ${authority} به مبلغ ${amount} ریال تأیید شد`,
+      message: `[MOCK-ZIBAL] پرداخت با trackId ${trackId} به مبلغ ${amount} ریال تأیید شد`,
     };
   }
 
-  buildPaymentUrl(authority: string): string {
-    return `${this.startBaseUrl}/${authority}`;
+  buildPaymentUrl(trackId: string): string {
+    return `${this.startBaseUrl}/${trackId}`;
   }
 }

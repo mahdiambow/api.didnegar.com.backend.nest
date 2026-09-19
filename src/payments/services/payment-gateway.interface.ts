@@ -7,8 +7,8 @@ export interface IBank {
     description: string,
     orderId: string,
   ): PaymentExternalRequestResult;
-  verifyPayment(authority: string, amount: number): PaymentExternalVerifyResult;
-  buildPaymentUrl(authority: string): string;
+  verifyPayment(trackId: string, amount: number): PaymentExternalVerifyResult;
+  buildPaymentUrl(trackId: string): string;
 }
 
 /** وام / اقساط شخص ثالث */
@@ -20,14 +20,14 @@ export interface ILoan {
     description: string,
     orderId: string,
   ): PaymentExternalRequestResult;
-  verifyPayment(authority: string, amount: number): PaymentExternalVerifyResult;
-  buildPaymentUrl(authority: string): string;
+  verifyPayment(trackId: string, amount: number): PaymentExternalVerifyResult;
+  buildPaymentUrl(trackId: string): string;
 }
 
 export type ExternalPaymentProvider = IBank | ILoan;
 
 export interface PaymentExternalRequestResult {
-  authority: string;
+  trackId: string;
   paymentUrl: string;
   message: string;
 }
@@ -41,7 +41,7 @@ export interface PaymentExternalVerifyResult {
 export type PaymentGatewayId = 'zarinpal' | 'zibal' | 'loan' | 'credit';
 
 export interface PaymentRequestResult {
-  authority: string;
+  trackId: string;
   paymentUrl: string;
   message: string;
 }
@@ -58,6 +58,6 @@ export interface PaymentGatewayAdapter {
     description: string,
     orderId: string,
   ): PaymentRequestResult;
-  verifyPayment(authority: string, amount: number): PaymentVerifyResult;
-  buildPaymentUrl(authority: string): string;
+  verifyPayment(trackId: string, amount: number): PaymentVerifyResult;
+  buildPaymentUrl(trackId: string): string;
 }

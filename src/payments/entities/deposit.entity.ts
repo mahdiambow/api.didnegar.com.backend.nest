@@ -10,11 +10,11 @@ import {
 } from 'typeorm';
 import type { Order } from './order.entity.js';
 
-export type PaymentStatus = 'pending' | 'success' | 'failed';
-export type PaymentGateway = 'zarinpal' | 'zibal' | 'loan' | 'credit';
+export type DepositStatus = 'pending' | 'success' | 'failed';
+export type DepositGateway = 'zarinpal' | 'zibal' | 'loan' | 'credit';
 
-@Entity('payments')
-export class Payment {
+@Entity('deposits')
+export class Deposit {
   @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
@@ -22,11 +22,11 @@ export class Payment {
   orderId: string;
 
   @Column({ type: 'varchar', length: 20, default: 'zarinpal' })
-  gateway: PaymentGateway;
+  gateway: DepositGateway;
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 100 })
-  authority: string;
+  trackId: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   refId: string | null;
@@ -35,7 +35,7 @@ export class Payment {
   amount: number;
 
   @Column({ type: 'varchar', length: 20, default: 'pending' })
-  status: PaymentStatus;
+  status: DepositStatus;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   callbackUrl: string | null;
@@ -46,7 +46,7 @@ export class Payment {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToOne('Order', 'payment', { onDelete: 'CASCADE' })
+  @OneToOne('Order', 'deposit', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'orderId' })
   order: Order;
 }

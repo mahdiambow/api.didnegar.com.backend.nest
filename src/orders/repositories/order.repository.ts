@@ -14,7 +14,7 @@ export class OrderRepository {
       where: { id },
       relations: {
         items: { product: true },
-        payment: true,
+        deposit: true,
         shippingMethod: true,
         address: true,
       },
@@ -26,7 +26,7 @@ export class OrderRepository {
       where: { id, userId },
       relations: {
         items: { product: true },
-        payment: true,
+        deposit: true,
         shippingMethod: true,
         address: true,
       },
@@ -43,7 +43,7 @@ export class OrderRepository {
       .leftJoinAndSelect('order.items', 'item')
       .leftJoinAndSelect('item.product', 'product')
       .leftJoinAndSelect('order.shippingMethod', 'shippingMethod')
-      .leftJoinAndSelect('order.payment', 'payment')
+      .leftJoinAndSelect('order.deposit', 'deposit')
       .orderBy('order.createdAt', 'DESC')
       .skip(offset)
       .take(limit);

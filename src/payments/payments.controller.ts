@@ -11,31 +11,31 @@ import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
+  ApiProperty,
   ApiTags,
 } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import { IsInt, IsString, Min } from 'class-validator';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
 import { PaymentsService } from './payments.service.js';
 import {
-  PaymentResponseDto,
-  PaymentVerifyResponseDto,
-  RequestPaymentDto,
-  CreatePaymentDto,
+  CreateDepositDto,
+  DepositResponseDto,
+  DepositVerifyResponseDto,
+  RequestDepositDto,
 } from './dto/payment.dto.js';
 import {
   CreateZarinpalPaymentDto,
   VerifyZarinpalPaymentQueryDto,
 } from './dto/zarinpal-payment.dto.js';
 import { VerifyZibalPaymentQueryDto } from './dto/zibal-payment.dto.js';
-import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsInt, IsString, Min } from 'class-validator';
 
 class VerifyLoanPaymentQueryDto {
   @ApiProperty()
   @IsString()
-  authority: string;
+  trackId: string;
 
   @ApiProperty({ example: 1 })
   @Type(() => Number)
@@ -44,18 +44,18 @@ class VerifyLoanPaymentQueryDto {
   success: number;
 }
 
-const PaymentApiResponseDto = createSuccessResponseDto(PaymentResponseDto, {
+const DepositApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
   code: 'PAYMENT_REQUESTED',
   message: 'Payment request created successfully',
-  name: 'Payment',
+  name: 'Deposit',
 });
 
-const PaymentVerifyApiResponseDto = createSuccessResponseDto(
-  PaymentVerifyResponseDto,
+const DepositVerifyApiResponseDto = createSuccessResponseDto(
+  DepositVerifyResponseDto,
   {
     code: 'PAYMENT_VERIFIED',
     message: 'Payment verified successfully',
-    name: 'PaymentVerify',
+    name: 'DepositVerify',
   },
 );
 
@@ -76,10 +76,10 @@ export class PaymentsController {
     description:
       'userId از JWT. method: credit | zarinpal | zibal | loan. در موفقیت درگاه، ابتدا credit شارژ و سپس کسر می‌شود.',
   })
-  @ApiOkResponse({ type: PaymentApiResponseDto })
+  @ApiOkResponse({ type: DepositApiResponseDto })
   requestPayment(
     @Req() req: { user: { sub: string } },
-    @Body() dto: RequestPaymentDto,
+    @Body() dto: RequestDepositDto,
   ) {
     return this.paymentsService.requestPayment(
       req.user.sub,
@@ -96,7 +96,7 @@ export class PaymentsController {
     message: 'Payment request created successfully',
   })
   @ApiOperation({ summary: 'درخواست پرداخت زرین‌پال (IBank mock)' })
-  @ApiOkResponse({ type: PaymentApiResponseDto })
+  @ApiOkResponse({ type: DepositApiResponseDto })
   requestZarinpalPayment(
     @Req() req: { user: { sub: string } },
     @Body() dto: CreateZarinpalPaymentDto,
@@ -115,7 +115,7 @@ export class PaymentsController {
   @ApiOperation({
     summary: 'تأیید زرین‌پال — deposit سپس charge از credit',
   })
-  @ApiOkResponse({ type: PaymentVerifyApiResponseDto })
+  @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyZarinpalPayment(@Query() query: VerifyZarinpalPaymentQueryDto) {
     return this.paymentsService.verifyZarinpalPayment(
       query.Authority,
@@ -131,10 +131,10 @@ export class PaymentsController {
     message: 'Payment request created successfully',
   })
   @ApiOperation({ summary: 'درخواست پرداخت زیبال (IBank mock)' })
-  @ApiOkResponse({ type: PaymentApiResponseDto })
+  @ApiOkResponse({ type: DepositApiResponseDto })
   requestZibalPayment(
     @Req() req: { user: { sub: string } },
-    @Body() dto: CreatePaymentDto,
+    @Body() dto: CreateDepositDto,
   ) {
     return this.paymentsService.createZibalPayment(req.user.sub, dto.orderId);
   }
@@ -147,7 +147,7 @@ export class PaymentsController {
   @ApiOperation({
     summary: 'تأیید زیبال — deposit سپس charge از credit',
   })
-  @ApiOkResponse({ type: PaymentVerifyApiResponseDto })
+  @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyZibalPayment(@Query() query: VerifyZibalPaymentQueryDto) {
     return this.paymentsService.verifyZibalPayment(
       query.trackId,
@@ -163,10 +163,10 @@ export class PaymentsController {
     message: 'Payment request created successfully',
   })
   @ApiOperation({ summary: 'درخواست پرداخت وام (ILoan mock)' })
-  @ApiOkResponse({ type: PaymentApiResponseDto })
+  @ApiOkResponse({ type: DepositApiResponseDto })
   requestLoanPayment(
     @Req() req: { user: { sub: string } },
-    @Body() dto: CreatePaymentDto,
+    @Body() dto: CreateDepositDto,
   ) {
     return this.paymentsService.createLoanPayment(req.user.sub, dto.orderId);
   }
@@ -179,12 +179,9 @@ export class PaymentsController {
   @ApiOperation({
     summary: 'تأیید وام — deposit سپس charge از credit',
   })
-  @ApiOkResponse({ type: PaymentVerifyApiResponseDto })
+  @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyLoanPayment(@Query() query: VerifyLoanPaymentQueryDto) {
-    return this.paymentsService.verifyLoanPayment(
-      query.authority,
-      query.success,
-    );
+    return this.paymentsService.verifyLoanPayment(query.trackId, query.success);
   }
 
   @Post('credit/request')
@@ -195,10 +192,10 @@ export class PaymentsController {
     message: 'Payment request created successfully',
   })
   @ApiOperation({ summary: 'پرداخت مستقیم از کیف پول (credit)' })
-  @ApiOkResponse({ type: PaymentApiResponseDto })
+  @ApiOkResponse({ type: DepositApiResponseDto })
   requestCreditPayment(
     @Req() req: { user: { sub: string } },
-    @Body() dto: CreatePaymentDto,
+    @Body() dto: CreateDepositDto,
   ) {
     return this.paymentsService.createCreditPayment(req.user.sub, dto.orderId);
   }

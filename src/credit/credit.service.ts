@@ -36,7 +36,7 @@ export class CreditService {
   }
 
   /** شارژ موجودی قابل‌خرج */
-  async in(
+  async incrementTotalAmount(
     userId: string,
     amount: number,
     meta: CreditTxMeta,
@@ -46,7 +46,7 @@ export class CreditService {
   }
 
   /** کسر از موجودی قابل‌خرج */
-  async out(
+  async decrementTotalAmount(
     userId: string,
     amount: number,
     meta: CreditTxMeta,
@@ -75,34 +75,6 @@ export class CreditService {
     return this.apply(userId, amount, CreditSourceType.UNLOCK, meta, manager);
   }
 
-  /**
-   * پرداخت سفارش از credit:
-   * - gateway: in سپس out
-   * - کیف پول مستقیم: فقط out
-   */
-  async payOrderViaCredit(
-    userId: string,
-    amount: number,
-    meta: CreditTxMeta & { depositFromGateway?: boolean },
-    manager: EntityManager,
-  ): Promise<{ amount: number; lockedAmount: number }> {
-    if (meta.depositFromGateway) {
-      await this.in(userId, amount, { sourceId: meta.sourceId }, manager);
-    }
-
-    const wallet = await this.out(
-      userId,
-      amount,
-      { sourceId: meta.sourceId },
-      manager,
-    );
-
-    return {
-      amount: Number(wallet.amount),
-      lockedAmount: Number(wallet.lockedAmount),
-    };
-  }
-
   private async apply(
     userId: string,
     amount: number,
@@ -110,7 +82,7 @@ export class CreditService {
     meta: CreditTxMeta,
     manager: EntityManager,
   ): Promise<UserCredit> {
-    this.assertPositiveAmount(amount);
+    this.assertPositiveWholeAmount(amount);
     const wallet = await this.ensureWallet(userId, manager);
     const amountBefore = Number(wallet.amount);
     const lockedBefore = Number(wallet.lockedAmount);
@@ -209,11 +181,11 @@ export class CreditService {
     }
   }
 
-  private assertPositiveAmount(amount: number) {
-    if (!Number.isFinite(amount) || amount <= 0) {
+  private assertPositiveWholeAmount(amount: number) {
+    if (!Number.isInteger(amount) || amount <= 0) {
       throw new ApiException(
         'INVALID_CREDIT_AMOUNT',
-        'مبلغ اعتبار نامعتبر است',
+        'مبلغ اعتبار باید عدد صحیح مثبت باشد',
         HttpStatus.BAD_REQUEST,
       );
     }

@@ -8,7 +8,6 @@ import { CreateOrderDto } from './dto/create-order.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
 import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
-import { ProductStockRepository } from '../products/repositories/product-stock.repository.js';
 
 const offerId = '01JEX000000000000000000010';
 const secondId = '01JEX000000000000000000040';
@@ -31,7 +30,7 @@ function setup(isCod = false) {
       quantity,
       unitPrice: id === offerId ? 100 : 250,
     })),
-    tryDecrementStock: vi.fn(async () => true),
+    decrementStockForPurchase: vi.fn(async () => undefined),
   };
   const shipping = {
     resolveShippingMethod: vi.fn(async () => ({
@@ -39,9 +38,6 @@ function setup(isCod = false) {
       price: 50,
       isCod,
     })),
-  };
-  const productStock = {
-    tryDecrement: vi.fn(async () => true),
   };
   const dataSource = {
     transaction: vi.fn(async (cb: (manager: unknown) => Promise<unknown>) =>
@@ -56,19 +52,22 @@ function setup(isCod = false) {
       }),
     ),
   };
+  const addresses = { findOneBy: vi.fn() };
+  const carts = { findOne: vi.fn() };
   const service = new OrdersService(
     dataSource as unknown as DataSource,
     repository as unknown as OrderRepository,
     products as unknown as OffersService,
     shipping as unknown as ShippingService,
-    productStock as unknown as ProductStockRepository,
+    addresses as never,
+    carts as never,
   );
-  return { service, repository, products, productStock, dataSource };
+  return { service, repository, products, dataSource };
 }
 
 describe('multi-product orders', () => {
   it.each([false, true])('charges shipping once, COD=%s', async (isCod) => {
-    const { service, dataSource, products, productStock } = setup(isCod);
+    const { service, dataSource, products } = setup(isCod);
     const result = await service.create('user', {
       products: [{ offerId, quantity: 2 }, { offerId: secondId }],
       shippingMethodId,
@@ -85,8 +84,7 @@ describe('multi-product orders', () => {
     expect(result.displayTotal).toBe(500);
     expect(result.amount).toBe(isCod ? 450 : 500);
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
-    expect(products.tryDecrementStock).toHaveBeenCalled();
-    expect(productStock.tryDecrement).toHaveBeenCalled();
+    expect(products.decrementStockForPurchase).toHaveBeenCalled();
   });
 
   it('does not save when any selected offer is unavailable', async () => {

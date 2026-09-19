@@ -80,13 +80,18 @@ function setup(patch = {}) {
       approvalStatus: 'approved',
     })),
   };
+  const productStockRepository = {
+    tryDecrement: vi.fn(async () => true),
+    tryIncrement: vi.fn(async () => true),
+  };
   const service = new OffersService(
     repo as unknown as Repository<SellerOffer>,
     { existsBy: vi.fn(async () => true) } as unknown as Repository<Seller>,
     products as unknown as Repository<Product>,
     productsService as never,
+    productStockRepository as never,
   );
-  return { service, repo, products, productsService };
+  return { service, repo, products, productsService, productStockRepository };
 }
 
 describe('seller offers', () => {

@@ -168,7 +168,7 @@ async function main() {
     body: { orderId: orderA.id },
   });
   assert(r.status < 400, `payA: ${JSON.stringify(r.json)}`);
-  const authorityA = r.json.data.authority;
+  const authorityA = r.json.data.trackId;
   const paymentIdA = r.json.data.paymentId;
 
   const v1 = await api(
@@ -228,7 +228,7 @@ async function main() {
     body: { orderId: orderB.id },
   });
   assert(r.status < 400, `payB: ${JSON.stringify(r.json)}`);
-  const authorityB = r.json.data.authority;
+  const authorityB = r.json.data.trackId;
   const paymentIdB = r.json.data.paymentId;
 
   const race = await Promise.all([

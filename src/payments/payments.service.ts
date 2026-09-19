@@ -10,21 +10,20 @@ import { ZarinpalMockService } from './services/zarinpal-mock.service.js';
 import { ZibalMockService } from './services/zibal-mock.service.js';
 import { LoanMockService } from './services/loan-mock.service.js';
 import type { ExternalPaymentProvider } from './services/payment-gateway.interface.js';
-import { PaymentRepository } from './repositories/payment.repository.js';
+import { DepositRepository } from './repositories/deposit.repository.js';
 import {
-  toPaymentResponse,
-  toPaymentVerifyResponse,
+  toDepositResponse,
+  toDepositVerifyResponse,
 } from './dto/payment.dto.js';
-import type { PaymentGateway } from './entities/payment.entity.js';
-import { Payment } from './entities/payment.entity.js';
+import { Deposit } from './entities/deposit.entity.js';
 import { Order } from './entities/order.entity.js';
 
-export type PaymentMethod = 'credit' | 'zarinpal' | 'zibal' | 'loan';
+export type DepositMethod = 'credit' | 'zarinpal' | 'zibal' | 'loan';
 
 @Injectable()
 export class PaymentsService {
   private readonly providers: Record<
-    Exclude<PaymentMethod, 'credit'>,
+    Exclude<DepositMethod, 'credit'>,
     ExternalPaymentProvider
   >;
 
@@ -32,7 +31,7 @@ export class PaymentsService {
     private readonly config: ConfigService,
     private readonly dataSource: DataSource,
     private readonly orderRepository: OrderRepository,
-    private readonly paymentRepository: PaymentRepository,
+    private readonly depositRepository: DepositRepository,
     private readonly creditService: CreditService,
     zarinpalMockService: ZarinpalMockService,
     zibalMockService: ZibalMockService,
@@ -61,35 +60,34 @@ export class PaymentsService {
     return this.requestPayment(userId, orderId, 'credit');
   }
 
-  requestPayment(userId: string, orderId: string, method: PaymentMethod) {
+  requestPayment(userId: string, orderId: string, method: DepositMethod) {
     if (method === 'credit') {
       return this.payWithCredit(userId, orderId);
     }
-    return this.createExternalPayment(userId, orderId, method);
+    return this.createExternalDeposit(userId, orderId, method);
   }
 
-  verifyZarinpalPayment(authority: string, status: string) {
-    return this.verifyExternalPayment('zarinpal', authority, status === 'OK');
+  verifyZarinpalPayment(trackId: string, status: string) {
+    return this.verifyExternalDeposit('zarinpal', trackId, status === 'OK');
   }
 
   verifyZibalPayment(trackId: number, success: number) {
-    return this.verifyExternalPayment('zibal', String(trackId), success === 1);
+    return this.verifyExternalDeposit('zibal', String(trackId), success === 1);
   }
 
-  verifyLoanPayment(authority: string, success: number) {
-    return this.verifyExternalPayment('loan', authority, success === 1);
+  verifyLoanPayment(trackId: string, success: number) {
+    return this.verifyExternalDeposit('loan', trackId, success === 1);
   }
 
   private async payWithCredit(userId: string, orderId: string) {
     const order = await this.requirePayableOrder(userId, orderId);
-    const amount = Number(order.amount);
+    const amount = Math.round(Number(order.amount));
     const breakdown = this.getOrderBreakdown(order);
 
     const result = await this.dataSource.transaction(async (manager) => {
-      const paymentRepo = manager.getRepository(Payment);
+      const depositRepo = manager.getRepository(Deposit);
       const orderRepo = manager.getRepository(Order);
 
-      // Serialize concurrent pays on the same order (avoids deadlock / double spend)
       const lockedOrder = await orderRepo.findOne({
         where: { id: order.id },
         lock: { mode: 'pessimistic_write' },
@@ -102,11 +100,11 @@ export class PaymentsService {
         );
       }
 
-      let payment = await paymentRepo.findOne({
+      let deposit = await depositRepo.findOne({
         where: { orderId: order.id },
         lock: { mode: 'pessimistic_write' },
       });
-      if (payment?.status === 'success') {
+      if (deposit?.status === 'success') {
         throw new ApiException(
           'ORDER_ALREADY_PAID',
           'این سفارش قبلاً پرداخت شده است',
@@ -114,53 +112,49 @@ export class PaymentsService {
         );
       }
 
-      const authority = `CREDIT-${randomBytes(10).toString('hex').toUpperCase()}`;
-      if (payment) {
-        Object.assign(payment, {
+      const trackId = `CREDIT-${randomBytes(10).toString('hex').toUpperCase()}`;
+      if (deposit) {
+        Object.assign(deposit, {
           gateway: 'credit' as const,
-          authority,
+          trackId,
           amount,
           status: 'pending' as const,
           refId: null,
           callbackUrl: null,
         });
       } else {
-        payment = paymentRepo.create({
+        deposit = depositRepo.create({
           orderId: order.id,
           gateway: 'credit',
-          authority,
+          trackId,
           amount,
           status: 'pending',
           callbackUrl: null,
         });
       }
-      payment = await paymentRepo.save(payment);
+      deposit = await depositRepo.save(deposit);
 
-      // مسیر واحد credit: فقط out از موجودی فعلی
-      const wallet = await this.creditService.payOrderViaCredit(
+      const wallet = await this.creditService.decrementTotalAmount(
         userId,
         amount,
-        {
-          sourceId: payment.id,
-          depositFromGateway: false,
-        },
+        { sourceId: deposit.id },
         manager,
       );
 
-      payment.status = 'success';
-      payment.refId = `CR-${payment.id.slice(-8)}`;
-      await paymentRepo.save(payment);
+      deposit.status = 'success';
+      deposit.refId = `CR-${deposit.id.slice(-8)}`;
+      await depositRepo.save(deposit);
 
       await orderRepo.update({ id: order.id }, { status: 'paid' });
 
-      return { payment, amountAfter: wallet.amount };
+      return { deposit, amountAfter: Number(wallet.amount) };
     });
 
-    return toPaymentResponse({
+    return toDepositResponse({
       orderId: order.id,
-      paymentId: result.payment.id,
+      depositId: result.deposit.id,
       gateway: 'credit',
-      authority: result.payment.authority,
+      trackId: result.deposit.trackId,
       paymentUrl: '',
       amount,
       ...breakdown,
@@ -172,48 +166,20 @@ export class PaymentsService {
     });
   }
 
-  private async createExternalPayment(
+  private async createExternalDeposit(
     userId: string,
     orderId: string,
-    gateway: Exclude<PaymentMethod, 'credit'>,
+    gateway: Exclude<DepositMethod, 'credit'>,
   ) {
     const provider = this.providers[gateway];
     const order = await this.requirePayableOrder(userId, orderId);
-    const existingPayment = await this.paymentRepository.findByOrderId(
-      order.id,
-    );
-
-    if (existingPayment?.status === 'success') {
-      throw new ApiException(
-        'ORDER_ALREADY_PAID',
-        'این سفارش قبلاً پرداخت شده است',
-        HttpStatus.CONFLICT,
-      );
-    }
 
     const breakdown = this.getOrderBreakdown(order);
     const shippingMethod = order.shippingMethod
       ? toShippingMethodResponse(order.shippingMethod)
       : null;
 
-    if (
-      existingPayment?.status === 'pending' &&
-      existingPayment.gateway === gateway
-    ) {
-      return toPaymentResponse({
-        orderId: order.id,
-        paymentId: existingPayment.id,
-        gateway,
-        authority: existingPayment.authority,
-        paymentUrl: provider.buildPaymentUrl(existingPayment.authority),
-        amount: Number(existingPayment.amount),
-        ...breakdown,
-        shippingMethod,
-        gatewayMessage: 'درخواست پرداخت قبلی برای این سفارش فعال است',
-      });
-    }
-
-    const amount = Number(order.amount);
+    const amount = Math.round(Number(order.amount));
     const productName =
       order.items
         ?.map((item) => item.product?.name)
@@ -233,49 +199,79 @@ export class PaymentsService {
           ? this.config.get('ZIBAL_CALLBACK_URL')
           : this.config.get('LOAN_CALLBACK_URL');
 
-    const payment = existingPayment
-      ? await this.paymentRepository.save(
-          Object.assign(existingPayment, {
-            gateway,
-            authority: gatewayResult.authority,
-            amount,
-            status: 'pending' as const,
-            refId: null,
-            callbackUrl,
-          }),
-        )
-      : await this.paymentRepository.save(
-          this.paymentRepository.create({
+    const deposit = await this.dataSource.transaction(async (manager) => {
+      const depositRepo = manager.getRepository(Deposit);
+      const existing = await depositRepo.findOne({
+        where: { orderId: order.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (existing?.status === 'success') {
+        throw new ApiException(
+          'ORDER_ALREADY_PAID',
+          'این سفارش قبلاً پرداخت شده است',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      if (existing?.status === 'pending' && existing.gateway === gateway) {
+        return { reuse: true as const, entity: existing };
+      }
+
+      if (existing) {
+        Object.assign(existing, {
+          gateway,
+          trackId: gatewayResult.trackId,
+          amount,
+          status: 'pending' as const,
+          refId: null,
+          callbackUrl,
+        });
+        return {
+          reuse: false as const,
+          entity: await depositRepo.save(existing),
+        };
+      }
+
+      return {
+        reuse: false as const,
+        entity: await depositRepo.save(
+          depositRepo.create({
             orderId: order.id,
             gateway,
-            authority: gatewayResult.authority,
+            trackId: gatewayResult.trackId,
             amount,
             status: 'pending',
             callbackUrl,
           }),
-        );
+        ),
+      };
+    });
 
-    return toPaymentResponse({
+    const entity = deposit.entity;
+    return toDepositResponse({
       orderId: order.id,
-      paymentId: payment.id,
+      depositId: entity.id,
       gateway,
-      authority: gatewayResult.authority,
-      paymentUrl: gatewayResult.paymentUrl,
-      amount,
+      trackId: entity.trackId,
+      paymentUrl: provider.buildPaymentUrl(entity.trackId),
+      amount: Number(entity.amount),
       ...breakdown,
       shippingMethod,
-      gatewayMessage: gatewayResult.message,
+      gatewayMessage: deposit.reuse
+        ? 'درخواست پرداخت قبلی برای این سفارش فعال است'
+        : gatewayResult.message,
     });
   }
 
-  private async verifyExternalPayment(
-    gateway: Exclude<PaymentMethod, 'credit'>,
-    authority: string,
+  private async verifyExternalDeposit(
+    gateway: Exclude<DepositMethod, 'credit'>,
+    trackId: string,
     isSuccess: boolean,
   ) {
-    const payment = await this.paymentRepository.findByAuthority(authority);
+    const deposit = await this.depositRepository.findByTrackId(trackId);
 
-    if (!payment) {
+    if (!deposit) {
       throw new ApiException(
         'PAYMENT_NOT_FOUND',
         'تراکنش یافت نشد',
@@ -283,7 +279,7 @@ export class PaymentsService {
       );
     }
 
-    if (payment.gateway !== gateway) {
+    if (deposit.gateway !== gateway) {
       throw new ApiException(
         'PAYMENT_GATEWAY_MISMATCH',
         'درگاه پرداخت با تراکنش مطابقت ندارد',
@@ -292,18 +288,18 @@ export class PaymentsService {
     }
 
     const provider = this.providers[gateway];
-    const orderBreakdown = this.getOrderBreakdown(payment.order);
+    const orderBreakdown = this.getOrderBreakdown(deposit.order);
 
-    if (payment.status === 'success') {
-      return toPaymentVerifyResponse({
-        orderId: payment.orderId,
-        paymentId: payment.id,
+    if (deposit.status === 'success') {
+      return toDepositVerifyResponse({
+        orderId: deposit.orderId,
+        depositId: deposit.id,
         gateway,
-        refId: payment.refId ?? '',
+        refId: deposit.refId ?? '',
         status: 'success',
-        amount: Number(payment.amount),
+        amount: Number(deposit.amount),
         ...orderBreakdown,
-        productName: payment.order?.items
+        productName: deposit.order?.items
           ?.map((item) => item.product?.name)
           .filter(Boolean)
           .join('، '),
@@ -314,12 +310,12 @@ export class PaymentsService {
     if (!isSuccess) {
       await this.dataSource.transaction(async (manager) => {
         await manager
-          .getRepository(Payment)
-          .update({ id: payment.id }, { status: 'failed' });
-        if (payment.order) {
+          .getRepository(Deposit)
+          .update({ id: deposit.id }, { status: 'failed' });
+        if (deposit.order) {
           await manager
             .getRepository(Order)
-            .update({ id: payment.orderId }, { status: 'failed' });
+            .update({ id: deposit.orderId }, { status: 'failed' });
         }
       });
 
@@ -330,9 +326,9 @@ export class PaymentsService {
       );
     }
 
-    const amount = Number(payment.amount);
-    const verifyResult = provider.verifyPayment(authority, amount);
-    const userId = payment.order?.userId;
+    const amount = Math.round(Number(deposit.amount));
+    const verifyResult = provider.verifyPayment(trackId, amount);
+    const userId = deposit.order?.userId;
     if (!userId) {
       throw new ApiException(
         'ORDER_NOT_FOUND',
@@ -341,11 +337,11 @@ export class PaymentsService {
       );
     }
 
-    // ACID: verify → credit in → credit out → mark paid
+    // ACID: verify → credit increment → credit decrement → mark paid
     const settled = await this.dataSource.transaction(async (manager) => {
-      const paymentRepo = manager.getRepository(Payment);
-      const locked = await paymentRepo.findOne({
-        where: { id: payment.id },
+      const depositRepo = manager.getRepository(Deposit);
+      const locked = await depositRepo.findOne({
+        where: { id: deposit.id },
         lock: { mode: 'pessimistic_write' },
       });
       if (!locked) {
@@ -359,35 +355,38 @@ export class PaymentsService {
         return { already: true as const, amountAfter: null as number | null };
       }
 
-      const wallet = await this.creditService.payOrderViaCredit(
+      await this.creditService.incrementTotalAmount(
         userId,
         amount,
-        {
-          sourceId: locked.id,
-          depositFromGateway: true,
-        },
+        { sourceId: locked.id },
+        manager,
+      );
+      const wallet = await this.creditService.decrementTotalAmount(
+        userId,
+        amount,
+        { sourceId: locked.id },
         manager,
       );
 
       locked.status = 'success';
       locked.refId = verifyResult.refId;
-      await paymentRepo.save(locked);
+      await depositRepo.save(locked);
       await manager
         .getRepository(Order)
         .update({ id: locked.orderId }, { status: 'paid' });
 
-      return { already: false as const, amountAfter: wallet.amount };
+      return { already: false as const, amountAfter: Number(wallet.amount) };
     });
 
-    return toPaymentVerifyResponse({
-      orderId: payment.orderId,
-      paymentId: payment.id,
+    return toDepositVerifyResponse({
+      orderId: deposit.orderId,
+      depositId: deposit.id,
       gateway,
       refId: verifyResult.refId,
       status: 'success',
       amount,
       ...orderBreakdown,
-      productName: payment.order?.items
+      productName: deposit.order?.items
         ?.map((item) => item.product?.name)
         .filter(Boolean)
         .join('، '),

@@ -147,7 +147,7 @@ async function main() {
     body: { orderId: order.id },
   });
   assert(r.status < 400, `zarinpal request failed: ${JSON.stringify(r.json)}`);
-  const authority = r.json.data.authority;
+  const authority = r.json.data.trackId;
   console.log('7) Zarinpal authority', authority);
 
   r = await api(
@@ -201,10 +201,10 @@ async function main() {
     body: { orderId: order2.id },
   });
   assert(r.status < 400, `loan request failed: ${JSON.stringify(r.json)}`);
-  const loanAuth = r.json.data.authority;
+  const loanAuth = r.json.data.trackId;
   r = await api(
     'GET',
-    `/payments/loan/verify?authority=${encodeURIComponent(loanAuth)}&success=1`,
+    `/payments/loan/verify?trackId=${encodeURIComponent(loanAuth)}&success=1`,
   );
   assert(r.status < 400, `loan verify failed: ${JSON.stringify(r.json)}`);
   assert(r.json.data?.status === 'success', 'loan verify success');

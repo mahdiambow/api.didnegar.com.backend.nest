@@ -10,6 +10,12 @@ import {
 import type { User } from '../../users/entities/user.entity.js';
 import { CreditSourceType } from '../credit-source-type.enum.js';
 
+const wholeNumber = {
+  to: (value: number) => value,
+  from: (value: string | number | null) =>
+    value == null ? 0 : Number(value),
+};
+
 @Entity('credit_logs')
 export class CreditLog {
   @PrimaryColumn({ type: 'varchar', length: 26 })
@@ -19,8 +25,8 @@ export class CreditLog {
   @Column({ type: 'varchar', length: 26 })
   userId: string;
 
-  /** مبلغ این عملیات (همیشه مثبت) */
-  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  /** مبلغ این عملیات (همیشه مثبت، عدد صحیح) */
+  @Column({ type: 'bigint', transformer: wholeNumber })
   amount: number;
 
   @Column({ type: 'varchar', length: 20 })
@@ -30,16 +36,16 @@ export class CreditLog {
   @Column({ type: 'varchar', length: 26, nullable: true })
   sourceId: string | null;
 
-  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  @Column({ type: 'bigint', transformer: wholeNumber })
   amountBefore: number;
 
-  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  @Column({ type: 'bigint', transformer: wholeNumber })
   amountAfter: number;
 
-  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  @Column({ type: 'bigint', transformer: wholeNumber })
   lockedBefore: number;
 
-  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  @Column({ type: 'bigint', transformer: wholeNumber })
   lockedAfter: number;
 
   @CreateDateColumn()

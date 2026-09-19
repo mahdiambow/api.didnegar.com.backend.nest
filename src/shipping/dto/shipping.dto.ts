@@ -1,5 +1,6 @@
 import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import BigNumber from 'bignumber.js';
 import { IsInt, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ShippingMethod } from '../entities/shipping-method.entity.js';
@@ -113,15 +114,15 @@ export function calculateOrderAmounts(
   shippingPrice: number,
   isCod: boolean,
 ): OrderAmountBreakdown {
-  const subtotal = unitPrice * quantity;
-  const shippingAmount = shippingPrice;
-  const displayTotal = subtotal + shippingAmount;
+  const subtotal = new BigNumber(unitPrice).times(quantity);
+  const shippingAmount = new BigNumber(shippingPrice);
+  const displayTotal = subtotal.plus(shippingAmount);
   const payableAmount = isCod ? subtotal : displayTotal;
 
   return {
-    subtotal,
-    shippingAmount,
-    displayTotal,
-    payableAmount,
+    subtotal: subtotal.toNumber(),
+    shippingAmount: shippingAmount.toNumber(),
+    displayTotal: displayTotal.toNumber(),
+    payableAmount: payableAmount.toNumber(),
   };
 }

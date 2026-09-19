@@ -3,13 +3,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn } from 'class-validator';
 import { ShippingMethodResponseDto } from '../../shipping/dto/shipping.dto.js';
 
-export class CreatePaymentDto {
+export class CreateDepositDto {
   @ApiProperty({ example: '01JEX000000000000000000010' })
   @IsULID()
   orderId: string;
 }
 
-export class RequestPaymentDto {
+export class RequestDepositDto {
   @ApiProperty({ example: '01JEX000000000000000000010' })
   @IsULID()
   orderId: string;
@@ -23,18 +23,18 @@ export class RequestPaymentDto {
   method: 'credit' | 'zarinpal' | 'zibal' | 'loan';
 }
 
-export class PaymentResponseDto {
+export class DepositResponseDto {
   @ApiProperty()
   orderId: string;
 
   @ApiProperty()
-  paymentId: string;
+  depositId: string;
 
   @ApiProperty({ enum: ['zarinpal', 'zibal', 'loan', 'credit'] })
   gateway: string;
 
-  @ApiProperty({ description: 'authority / trackId / credit token' })
-  authority: string;
+  @ApiProperty({ description: 'trackId (درگاه / وام / credit token)' })
+  trackId: string;
 
   @ApiProperty({
     description: 'برای credit خالی است؛ برای درگاه/وام URL هدایت',
@@ -63,12 +63,12 @@ export class PaymentResponseDto {
   creditBalance?: number;
 }
 
-export class PaymentVerifyResponseDto {
+export class DepositVerifyResponseDto {
   @ApiProperty()
   orderId: string;
 
   @ApiProperty()
-  paymentId: string;
+  depositId: string;
 
   @ApiProperty({ enum: ['zarinpal', 'zibal', 'loan', 'credit'] })
   gateway: string;
@@ -104,12 +104,12 @@ export class PaymentVerifyResponseDto {
   creditBalance?: number;
 }
 
-export function toPaymentResponse(data: PaymentResponseDto): PaymentResponseDto {
+export function toDepositResponse(data: DepositResponseDto): DepositResponseDto {
   return data;
 }
 
-export function toPaymentVerifyResponse(
-  data: PaymentVerifyResponseDto,
-): PaymentVerifyResponseDto {
+export function toDepositVerifyResponse(
+  data: DepositVerifyResponseDto,
+): DepositVerifyResponseDto {
   return data;
 }

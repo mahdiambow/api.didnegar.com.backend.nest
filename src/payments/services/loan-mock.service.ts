@@ -23,26 +23,26 @@ export class LoanMockService implements ILoan {
     description: string,
     _orderId: string,
   ): PaymentExternalRequestResult {
-    const authority = `LOAN-${randomBytes(12).toString('hex').toUpperCase()}`;
+    const trackId = `LOAN-${randomBytes(12).toString('hex').toUpperCase()}`;
     return {
-      authority,
-      paymentUrl: this.buildPaymentUrl(authority),
+      trackId,
+      paymentUrl: this.buildPaymentUrl(trackId),
       message: `[MOCK-LOAN] درخواست وام «${description}» با مبلغ ${amount} ریال ثبت شد`,
     };
   }
 
   verifyPayment(
-    authority: string,
+    trackId: string,
     amount: number,
   ): PaymentExternalVerifyResult {
-    const refId = `LN-${authority.slice(-8)}`;
+    const refId = `LN-${trackId.slice(-8)}`;
     return {
       refId,
-      message: `[MOCK-LOAN] پرداخت وام ${authority} به مبلغ ${amount} ریال تأیید شد`,
+      message: `[MOCK-LOAN] پرداخت وام ${trackId} به مبلغ ${amount} ریال تأیید شد`,
     };
   }
 
-  buildPaymentUrl(authority: string): string {
-    return `${this.startUrl}/${authority}`;
+  buildPaymentUrl(trackId: string): string {
+    return `${this.startUrl}/${trackId}`;
   }
 }

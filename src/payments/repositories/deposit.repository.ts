@@ -1,20 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Payment } from '../entities/payment.entity.js';
+import { Deposit } from '../entities/deposit.entity.js';
 
 @Injectable()
-export class PaymentRepository {
+export class DepositRepository {
   constructor(
-    @InjectRepository(Payment) private readonly repo: Repository<Payment>,
+    @InjectRepository(Deposit) private readonly repo: Repository<Deposit>,
   ) {}
 
-  findByAuthority(authority: string) {
-    if (!authority) {
+  findByTrackId(trackId: string) {
+    if (!trackId) {
       return Promise.resolve(null);
     }
     return this.repo.findOne({
-      where: { authority },
+      where: { trackId },
       relations: {
         order: { items: { product: true }, shippingMethod: true },
       },
@@ -25,11 +25,11 @@ export class PaymentRepository {
     return this.repo.findOne({ where: { orderId } });
   }
 
-  create(data: Partial<Payment>) {
+  create(data: Partial<Deposit>) {
     return this.repo.create(data);
   }
 
-  save(payment: Payment) {
-    return this.repo.save(payment);
+  save(deposit: Deposit) {
+    return this.repo.save(deposit);
   }
 }

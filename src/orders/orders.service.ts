@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import BigNumber from 'bignumber.js';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import {
@@ -10,7 +11,6 @@ import { UserAddress } from '../users/entities/user-address.entity.js';
 import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
 import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
-import { ProductStockRepository } from '../products/repositories/product-stock.repository.js';
 import { ShoppingCart } from '../shopping-cart/entities/shopping-cart.entity.js';
 import { ShoppingCartItem } from '../shopping-cart/entities/shopping-cart-item.entity.js';
 import { CreateOrderDto, OrderProductDto } from './dto/create-order.dto.js';
@@ -27,7 +27,6 @@ export class OrdersService {
     private readonly orderRepository: OrderRepository,
     private readonly offersService: OffersService,
     private readonly shippingService: ShippingService,
-    private readonly productStockRepository: ProductStockRepository,
     @InjectRepository(UserAddress)
     private readonly addresses: Repository<UserAddress>,
     @InjectRepository(ShoppingCart)
@@ -61,7 +60,7 @@ export class OrdersService {
     const amounts = this.calculateAmounts(items, [shippingMethod]);
 
     const orderId = await this.dataSource.transaction(async (manager) => {
-      await this.decrementStock(items, manager);
+      await this.offersService.decrementStockForPurchase(items, manager);
       return this.insertOrder(manager, {
         userId,
         items,
@@ -118,7 +117,7 @@ export class OrdersService {
     const amounts = this.calculateAmounts(items, shippingMethods);
 
     const orderId = await this.dataSource.transaction(async (manager) => {
-      await this.decrementStock(items, manager);
+      await this.offersService.decrementStockForPurchase(items, manager);
 
       const createdId = await this.insertOrder(manager, {
         userId,
@@ -239,7 +238,9 @@ export class OrdersService {
       order.status = dto.status;
     }
 
-    const updated = await this.orderRepository.save(order);
+    const updated = await this.dataSource.transaction(async (manager) => {
+      return manager.getRepository(Order).save(order);
+    });
     const saved = await this.orderRepository.findById(updated.id);
     return toOrderResponse(saved!);
   }
@@ -250,39 +251,6 @@ export class OrdersService {
         this.offersService.resolvePurchasable(item.offerId, item.quantity ?? 1),
       ),
     );
-  }
-
-  private async decrementStock(
-    items: { offerId: string; productId: string; quantity: number }[],
-    manager: EntityManager,
-  ) {
-    for (const item of items) {
-      const offerOk = await this.offersService.tryDecrementStock(
-        item.offerId,
-        item.quantity,
-        manager,
-      );
-      if (!offerOk) {
-        throw new ApiException(
-          'OFFER_UNAVAILABLE',
-          'پیشنهاد فروش یا موجودی موردنیاز در دسترس نیست',
-          HttpStatus.CONFLICT,
-        );
-      }
-
-      const productOk = await this.productStockRepository.tryDecrement(
-        item.productId,
-        item.quantity,
-        manager,
-      );
-      if (!productOk) {
-        throw new ApiException(
-          'PRODUCT_OUT_OF_STOCK',
-          'موجودی محصول کافی نیست',
-          HttpStatus.CONFLICT,
-        );
-      }
-    }
   }
 
   private async insertOrder(
@@ -328,14 +296,20 @@ export class OrdersService {
     shippingMethods: { price: number; isCod: boolean }[],
   ) {
     const subtotal = items.reduce(
-      (sum, item) => sum + Number(item.unitPrice) * item.quantity,
-      0,
+      (sum, item) =>
+        sum.plus(new BigNumber(item.unitPrice).times(item.quantity)),
+      new BigNumber(0),
     );
     const shippingAmount = shippingMethods.reduce(
-      (sum, method) => sum + Number(method.price),
-      0,
+      (sum, method) => sum.plus(new BigNumber(method.price)),
+      new BigNumber(0),
     );
     const allCod = shippingMethods.every((method) => method.isCod);
-    return calculateOrderAmounts(subtotal, 1, shippingAmount, allCod);
+    return calculateOrderAmounts(
+      subtotal.toNumber(),
+      1,
+      shippingAmount.toNumber(),
+      allCod,
+    );
   }
 }

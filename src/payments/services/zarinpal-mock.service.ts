@@ -23,27 +23,27 @@ export class ZarinpalMockService implements IBank {
     description: string,
     _orderId: string,
   ): PaymentRequestResult {
-    const authority = randomBytes(16).toString('hex').slice(0, 36).toUpperCase();
+    const trackId = randomBytes(16).toString('hex').slice(0, 36).toUpperCase();
 
     return {
-      authority,
-      paymentUrl: this.buildPaymentUrl(authority),
+      trackId,
+      paymentUrl: this.buildPaymentUrl(trackId),
       message: `[MOCK-ZARINPAL] درخواست پرداخت «${description}» با مبلغ ${amount} ریال ثبت شد`,
     };
   }
 
-  verifyPayment(authority: string, amount: number): PaymentVerifyResult {
+  verifyPayment(trackId: string, amount: number): PaymentVerifyResult {
     const refId = String(
-      100000 + (parseInt(authority.slice(0, 6), 16) % 900000),
+      100000 + (parseInt(trackId.slice(0, 6), 16) % 900000),
     );
 
     return {
       refId,
-      message: `[MOCK-ZARINPAL] پرداخت با authority ${authority} به مبلغ ${amount} ریال تأیید شد`,
+      message: `[MOCK-ZARINPAL] پرداخت با trackId ${trackId} به مبلغ ${amount} ریال تأیید شد`,
     };
   }
 
-  buildPaymentUrl(authority: string): string {
-    return `${this.sandboxBaseUrl}/${authority}`;
+  buildPaymentUrl(trackId: string): string {
+    return `${this.sandboxBaseUrl}/${trackId}`;
   }
 }
