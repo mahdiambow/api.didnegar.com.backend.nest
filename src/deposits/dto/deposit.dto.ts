@@ -1,52 +1,62 @@
 import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { ShippingMethodResponseDto } from '../../shipping/dto/shipping.dto.js';
+import { DepositMethod, BankPaymentMethod } from '../deposit-method.enum.js';
 
-/** شارژ اعتبار از درگاه — بدون سفارش */
+/** فقط شارژ اعتبار — بدون سفارش؛ فقط درگاه بانکی */
 export class CreateTopUpDto {
-  @ApiProperty({ example: 500000, description: 'مبلغ واریز (ریال، عدد صحیح)' })
+  @ApiProperty({ example: 500000, description: 'مبلغ واریز (ریال)' })
   @Type(() => Number)
   @IsInt()
   @Min(1000)
   amount: number;
 
   @ApiProperty({
-    enum: ['zarinpal', 'zibal'],
-    description: 'درگاه بانکی برای شارژ اعتبار',
+    enum: BankPaymentMethod,
+    example: BankPaymentMethod.ZIBAL,
+    description: 'روش پرداخت بانکی (zarinpal | zibal) — loan/credit مجاز نیست',
   })
-  @IsIn(['zarinpal', 'zibal'])
-  method: 'zarinpal' | 'zibal';
+  @IsEnum(BankPaymentMethod)
+  paymentMethod: BankPaymentMethod;
 }
 
-/** شارژ اعتبار / درخواست درگاه — orderId اختیاری */
-export class CreateDepositDto {
-  @ApiPropertyOptional({
-    example: '01JEX000000000000000000010',
-    description: 'اختیاری — برای شارژ اعتبار بدون سفارش خالی بگذارید',
-  })
+/** کال‌بک یکپارچه درگاه‌ها — GET /deposits/verify/:method */
+export class VerifyDepositQueryDto {
+  @ApiPropertyOptional({ description: 'زرین‌پال — Authority' })
   @IsOptional()
-  @IsULID()
-  orderId?: string;
-}
+  @IsString()
+  Authority?: string;
 
-export class RequestDepositDto {
-  @ApiPropertyOptional({
-    example: '01JEX000000000000000000010',
-    description: 'اختیاری — پرداخت سفارش یا فقط شارژ',
-  })
+  @ApiPropertyOptional({ description: 'زرین‌پال — Status (OK/NOK)' })
   @IsOptional()
-  @IsULID()
-  orderId?: string;
+  @IsString()
+  Status?: string;
 
-  @ApiProperty({
-    enum: ['credit', 'zarinpal', 'zibal', 'loan'],
-    description:
-      'credit = اعتبار | zarinpal/zibal = درگاه بانکی (IBank) | loan = وام شخص ثالث (ILoan)',
-  })
-  @IsIn(['credit', 'zarinpal', 'zibal', 'loan'])
-  method: 'credit' | 'zarinpal' | 'zibal' | 'loan';
+  @ApiPropertyOptional({ description: 'زیبال / وام — trackId' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  trackId?: number;
+
+  @ApiPropertyOptional({ description: 'زیبال / وام — success (1/0)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  success?: number;
+
+  @ApiPropertyOptional({ description: 'زیبال — status درگاه (2=موفق)' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  status?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  orderId?: string;
 }
 
 export class DepositItemDto {
@@ -59,7 +69,7 @@ export class DepositItemDto {
   @ApiPropertyOptional({ nullable: true })
   orderId: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ enum: DepositMethod })
   gateway: string;
 
   @ApiProperty()
@@ -137,25 +147,19 @@ export class DepositResponseDto {
   @ApiPropertyOptional({ nullable: true })
   orderId?: string | null;
 
-  @ApiPropertyOptional({
-    description: 'شناسه واریز — برای پرداخت credit خالی است',
-  })
+  @ApiPropertyOptional()
   depositId?: string;
 
-  @ApiPropertyOptional({
-    description: 'شناسه transaction ثبت‌شده برای این عملیات',
-  })
+  @ApiPropertyOptional()
   transactionId?: string;
 
-  @ApiProperty({ enum: ['zarinpal', 'zibal', 'loan', 'credit'] })
-  gateway: string;
+  @ApiProperty({ enum: DepositMethod })
+  gateway: DepositMethod | string;
 
-  @ApiProperty({ description: 'trackId (درگاه / وام / credit token)' })
+  @ApiProperty()
   trackId: string;
 
-  @ApiProperty({
-    description: 'برای credit خالی است؛ برای درگاه/وام URL هدایت',
-  })
+  @ApiProperty()
   paymentUrl: string;
 
   @ApiProperty()
@@ -176,7 +180,7 @@ export class DepositResponseDto {
   @ApiProperty()
   gatewayMessage: string;
 
-  @ApiPropertyOptional({ description: 'موجودی اعتبار بعد از عملیات' })
+  @ApiPropertyOptional()
   creditBalance?: number;
 }
 
@@ -190,8 +194,8 @@ export class DepositVerifyResponseDto {
   @ApiPropertyOptional()
   transactionId?: string;
 
-  @ApiProperty({ enum: ['zarinpal', 'zibal', 'loan', 'credit'] })
-  gateway: string;
+  @ApiProperty({ enum: DepositMethod })
+  gateway: DepositMethod | string;
 
   @ApiProperty()
   refId: string;

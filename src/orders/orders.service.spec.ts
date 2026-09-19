@@ -8,6 +8,7 @@ import { CreateOrderDto } from './dto/create-order.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
 import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
+import { DepositMethod } from '../deposits/deposit-method.enum.js';
 
 const offerId = '01JEX000000000000000000010';
 const secondId = '01JEX000000000000000000040';
@@ -54,15 +55,28 @@ function setup(isCod = false) {
   };
   const addresses = { findOneBy: vi.fn() };
   const carts = { findOne: vi.fn() };
+  const deposits = {
+    requestPayment: vi.fn(async () => ({
+      paymentUrl: '',
+      depositId: undefined,
+      transactionId: 'tx-1',
+      trackId: 'TX-1',
+      gatewayMessage: 'ok',
+      creditBalance: 0,
+      gateway: 'credit',
+      amount: 0,
+    })),
+  };
   const service = new OrdersService(
     dataSource as unknown as DataSource,
     repository as unknown as OrderRepository,
     products as unknown as OffersService,
     shipping as unknown as ShippingService,
+    deposits as never,
     addresses as never,
     carts as never,
   );
-  return { service, repository, products, dataSource };
+  return { service, repository, products, dataSource, deposits };
 }
 
 describe('multi-product orders', () => {
@@ -71,6 +85,7 @@ describe('multi-product orders', () => {
     const result = await service.create('user', {
       products: [{ offerId, quantity: 2 }, { offerId: secondId }],
       shippingMethodId,
+      paymentMethod: DepositMethod.CREDIT,
     });
     expect(result.products).toHaveLength(2);
     expect(result.products.map((item) => item.offerId)).toEqual([
@@ -96,6 +111,7 @@ describe('multi-product orders', () => {
       service.create('user', {
         products: [{ offerId }, { offerId: secondId }],
         shippingMethodId,
+        paymentMethod: DepositMethod.CREDIT,
       }),
     ).rejects.toThrow();
     expect(dataSource.transaction).not.toHaveBeenCalled();
@@ -106,6 +122,7 @@ describe('multi-product orders', () => {
     await service.create('user', {
       products: [{ offerId, quantity: 2 }, { offerId: secondId }],
       shippingMethodId,
+      paymentMethod: DepositMethod.CREDIT,
     });
     products.resolvePurchasable.mockClear();
     const shippingUpdate = await service.updateAdmin('order', {

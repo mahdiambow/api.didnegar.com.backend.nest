@@ -15,10 +15,14 @@ import { ShoppingCart } from '../shopping-cart/entities/shopping-cart.entity.js'
 import { ShoppingCartItem } from '../shopping-cart/entities/shopping-cart-item.entity.js';
 import { CreateOrderDto, OrderProductDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
-import { toOrderResponse } from './dto/order-response.dto.js';
+import {
+  toOrderResponse,
+  type CreateOrderResponseDto,
+} from './dto/order-response.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
 import { Order } from './entities/order.entity.js';
 import type { CheckoutCartDto } from '../shopping-cart/dto/checkout-cart.dto.js';
+import { DepositsService } from '../deposits/deposits.service.js';
 
 @Injectable()
 export class OrdersService {
@@ -27,6 +31,7 @@ export class OrdersService {
     private readonly orderRepository: OrderRepository,
     private readonly offersService: OffersService,
     private readonly shippingService: ShippingService,
+    private readonly depositsService: DepositsService,
     @InjectRepository(UserAddress)
     private readonly addresses: Repository<UserAddress>,
     @InjectRepository(ShoppingCart)
@@ -52,7 +57,7 @@ export class OrdersService {
     return paginatedList(items.map(toOrderResponse), page, limit, total);
   }
 
-  async create(userId: string, dto: CreateOrderDto) {
+  async create(userId: string, dto: CreateOrderDto): Promise<CreateOrderResponseDto> {
     const items = await this.resolveProducts(dto.products);
     const shippingMethod = await this.shippingService.resolveShippingMethod(
       dto.shippingMethodId,
@@ -73,8 +78,25 @@ export class OrdersService {
       });
     });
 
+    const payment = await this.depositsService.requestPayment(
+      userId,
+      orderId,
+      dto.paymentMethod,
+    );
+
     const saved = await this.orderRepository.findById(orderId);
-    return toOrderResponse(saved!);
+    const order = toOrderResponse(saved!);
+
+    return {
+      ...order,
+      paymentMethod: dto.paymentMethod,
+      paymentUrl: payment.paymentUrl || undefined,
+      depositId: payment.depositId,
+      transactionId: payment.transactionId,
+      trackId: payment.trackId,
+      gatewayMessage: payment.gatewayMessage,
+      creditBalance: payment.creditBalance,
+    };
   }
 
   /** ساخت سفارش از سبد خرید + آدرس + روش(های) ارسال — کامل در یک تراکنش */

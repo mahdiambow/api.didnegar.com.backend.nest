@@ -73,6 +73,30 @@ export class OrderResponseDto {
   updatedAt: Date;
 }
 
+/** پاسخ ایجاد سفارش + نتیجه پرداخت */
+export class CreateOrderResponseDto extends OrderResponseDto {
+  @ApiProperty({ enum: ['credit', 'zarinpal', 'zibal', 'loan'] })
+  paymentMethod: string;
+
+  @ApiPropertyOptional({ description: 'URL درگاه — برای credit خالی است' })
+  paymentUrl?: string;
+
+  @ApiPropertyOptional()
+  depositId?: string;
+
+  @ApiPropertyOptional()
+  transactionId?: string;
+
+  @ApiPropertyOptional()
+  trackId?: string;
+
+  @ApiPropertyOptional()
+  gatewayMessage?: string;
+
+  @ApiPropertyOptional()
+  creditBalance?: number;
+}
+
 export function toOrderResponse(order: Order): OrderResponseDto {
   const subtotal = Number(order.subtotal);
   const shippingAmount = Number(order.shippingAmount);

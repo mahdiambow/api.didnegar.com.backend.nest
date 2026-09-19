@@ -22,14 +22,18 @@ import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
-import type { ListDepositsQueryDto } from './dto/deposit.dto.js';
-
-export type DepositMethod = 'credit' | 'zarinpal' | 'zibal' | 'loan';
+import type { ListDepositsQueryDto, VerifyDepositQueryDto } from './dto/deposit.dto.js';
+import {
+  DepositMethod,
+  BankPaymentMethod,
+  isDepositGatewayMethod,
+  type DepositGatewayMethod,
+} from './deposit-method.enum.js';
 
 @Injectable()
 export class DepositsService {
   private readonly providers: Record<
-    Exclude<DepositMethod, 'credit'>,
+    DepositGatewayMethod,
     ExternalPaymentProvider
   >;
 
@@ -45,55 +49,101 @@ export class DepositsService {
     loanMockService: LoanMockService,
   ) {
     this.providers = {
-      zarinpal: zarinpalMockService,
-      zibal: zibalProvider,
-      loan: loanMockService,
+      [DepositMethod.ZARINPAL]: zarinpalMockService,
+      [DepositMethod.ZIBAL]: zibalProvider,
+      [DepositMethod.LOAN]: loanMockService,
     };
   }
 
-  createZarinpalPayment(userId: string, orderId: string) {
-    return this.requestPayment(userId, orderId, 'zarinpal');
-  }
-
-  createZibalPayment(userId: string, orderId: string) {
-    return this.requestPayment(userId, orderId, 'zibal');
-  }
-
-  createLoanPayment(userId: string, orderId: string) {
-    return this.requestPayment(userId, orderId, 'loan');
-  }
-
-  createCreditPayment(userId: string, orderId: string) {
-    return this.requestPayment(userId, orderId, 'credit');
-  }
-
   requestPayment(userId: string, orderId: string, method: DepositMethod) {
-    if (method === 'credit') {
+    if (method === DepositMethod.CREDIT) {
       return this.payOrderWithCredit(userId, orderId);
+    }
+    if (!isDepositGatewayMethod(method)) {
+      throw new ApiException(
+        'INVALID_DEPOSIT_METHOD',
+        'روش پرداخت نامعتبر است',
+        HttpStatus.BAD_REQUEST,
+      );
     }
     return this.createOrderGatewayDeposit(userId, orderId, method);
   }
 
+  verifyByMethod(method: DepositMethod, query: VerifyDepositQueryDto) {
+    if (method === DepositMethod.ZARINPAL) {
+      if (!query.Authority) {
+        throw new ApiException(
+          'AUTHORITY_REQUIRED',
+          'Authority الزامی است',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return this.verifyZarinpalPayment(query.Authority, query.Status ?? 'NOK');
+    }
+    if (method === DepositMethod.ZIBAL) {
+      if (query.trackId == null) {
+        throw new ApiException(
+          'TRACK_ID_REQUIRED',
+          'trackId الزامی است',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return this.verifyZibalPayment(
+        query.trackId,
+        query.success ?? 0,
+        query.status,
+      );
+    }
+    if (method === DepositMethod.LOAN) {
+      const trackId =
+        query.trackId != null ? String(query.trackId) : query.Authority;
+      if (!trackId) {
+        throw new ApiException(
+          'TRACK_ID_REQUIRED',
+          'trackId الزامی است',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return this.verifyLoanPayment(trackId, query.success ?? 0);
+    }
+    throw new ApiException(
+      'INVALID_VERIFY_METHOD',
+      'روش verify نامعتبر است',
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+
   verifyZarinpalPayment(trackId: string, status: string) {
-    return this.verifyGatewayDeposit('zarinpal', trackId, status === 'OK');
+    return this.verifyGatewayDeposit(
+      DepositMethod.ZARINPAL,
+      trackId,
+      status === 'OK',
+    );
   }
 
   verifyZibalPayment(trackId: number, success: number, status?: number) {
-    // طبق callback زیبال: success=1 و status=2 یعنی کاربر پرداخت را کامل کرده
     const paidAtGateway =
       success === 1 && (status == null || Number(status) === 2);
-    return this.verifyGatewayDeposit('zibal', String(trackId), paidAtGateway);
+    return this.verifyGatewayDeposit(
+      DepositMethod.ZIBAL,
+      String(trackId),
+      paidAtGateway,
+    );
   }
 
   verifyLoanPayment(trackId: string, success: number) {
-    return this.verifyGatewayDeposit('loan', trackId, success === 1);
+    return this.verifyGatewayDeposit(
+      DepositMethod.LOAN,
+      trackId,
+      success === 1,
+    );
   }
 
-  /** شارژ اعتبار بدون سفارش — فقط واریز */
+  /** شارژ اعتبار بدون سفارش — فقط درگاه بانکی؛ همیشه paymentUrl برمی‌گردد */
   async createTopUp(
     userId: string,
     amount: number,
-    gateway: Exclude<DepositMethod, 'credit'>,
+    paymentMethod: BankPaymentMethod,
   ) {
     const rounded = Math.round(Number(amount));
     if (!Number.isInteger(rounded) || rounded <= 0) {
@@ -104,13 +154,15 @@ export class DepositsService {
       );
     }
 
+    const gateway =
+      paymentMethod === BankPaymentMethod.ZARINPAL
+        ? DepositMethod.ZARINPAL
+        : DepositMethod.ZIBAL;
     const provider = this.providers[gateway];
     const callbackUrl =
-      gateway === 'zarinpal'
+      gateway === DepositMethod.ZARINPAL
         ? this.config.get('ZARINPAL_CALLBACK_URL')
-        : gateway === 'zibal'
-          ? this.config.get('ZIBAL_CALLBACK_URL')
-          : this.config.get('LOAN_CALLBACK_URL');
+        : this.config.get('ZIBAL_CALLBACK_URL');
 
     const gatewayResult = await provider.requestPayment(
       rounded,
@@ -149,55 +201,37 @@ export class DepositsService {
       return deposit;
     });
 
-    // Mock: کال‌بک verify را خود بک‌اند می‌زند تا اعتبار بلافاصله شارژ شود
-    if (this.shouldAutoVerifyMock(gateway)) {
-      const verified = await this.invokeMockVerifyCallback(
-        gateway,
-        entity.trackId,
-      );
-      return toDepositResponse({
-        orderId: null,
-        depositId: entity.id,
-        transactionId: verified.transactionId,
-        gateway,
-        trackId: entity.trackId,
-        paymentUrl: '',
-        amount: rounded,
-        gatewayMessage: verified.gatewayMessage,
-        creditBalance: verified.creditBalance,
-      });
-    }
-
     return toDepositResponse({
       orderId: null,
       depositId: entity.id,
       gateway,
       trackId: entity.trackId,
-      paymentUrl: provider.buildPaymentUrl(entity.trackId),
+      paymentUrl:
+        gatewayResult.paymentUrl || provider.buildPaymentUrl(entity.trackId),
       amount: rounded,
       gatewayMessage: gatewayResult.message,
     });
   }
 
   /** درگاه mock: verify را سمت سرور به‌صورت کال‌بک اجرا کن */
-  private shouldAutoVerifyMock(
-    gateway: Exclude<DepositMethod, 'credit'>,
-  ): boolean {
-    if (gateway === 'zibal') {
+  private shouldAutoVerifyMock(gateway: DepositGatewayMethod): boolean {
+    if (gateway === DepositMethod.ZIBAL) {
       return this.config.getBooleanOptional('ZIBAL_USE_MOCK', false);
     }
     // zarinpal و loan فعلاً همیشه mock هستند
-    return gateway === 'zarinpal' || gateway === 'loan';
+    return (
+      gateway === DepositMethod.ZARINPAL || gateway === DepositMethod.LOAN
+    );
   }
 
   private invokeMockVerifyCallback(
-    gateway: Exclude<DepositMethod, 'credit'>,
+    gateway: DepositGatewayMethod,
     trackId: string,
   ) {
-    if (gateway === 'zibal') {
+    if (gateway === DepositMethod.ZIBAL) {
       return this.verifyZibalPayment(Number(trackId), 1, 2);
     }
-    if (gateway === 'zarinpal') {
+    if (gateway === DepositMethod.ZARINPAL) {
       return this.verifyZarinpalPayment(trackId, 'OK');
     }
     return this.verifyLoanPayment(trackId, 1);
@@ -293,7 +327,7 @@ export class DepositsService {
   private async createOrderGatewayDeposit(
     userId: string,
     orderId: string,
-    gateway: Exclude<DepositMethod, 'credit'>,
+    gateway: DepositGatewayMethod,
   ) {
     const provider = this.providers[gateway];
     const order = await this.requirePayableOrder(userId, orderId);
@@ -317,9 +351,9 @@ export class DepositsService {
     );
 
     const callbackUrl =
-      gateway === 'zarinpal'
+      gateway === DepositMethod.ZARINPAL
         ? this.config.get('ZARINPAL_CALLBACK_URL')
-        : gateway === 'zibal'
+        : gateway === DepositMethod.ZIBAL
           ? this.config.get('ZIBAL_CALLBACK_URL')
           : this.config.get('LOAN_CALLBACK_URL');
 
@@ -396,7 +430,7 @@ export class DepositsService {
   }
 
   private async verifyGatewayDeposit(
-    gateway: Exclude<DepositMethod, 'credit'>,
+    gateway: DepositGatewayMethod,
     trackId: string,
     isSuccess: boolean,
   ) {
