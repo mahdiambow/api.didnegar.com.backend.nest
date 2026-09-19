@@ -22,7 +22,7 @@ import { PermissionsGuard } from '../utils/auth/guards/permissions.guard.js';
 import { RequirePermissions } from '../utils/auth/decorators/require-permissions.decorator.js';
 import { PERMISSIONS } from '../roles/permissions.js';
 import { ParseULIDPipe } from '../common/id/index.js';
-import { DepositsService } from './deposits.service.js';
+import { WithdrawsService } from './withdraws.service.js';
 import {
   CreateWithdrawDto,
   ListWithdrawsQueryDto,
@@ -41,7 +41,7 @@ const WithdrawApiDto = createSuccessResponseDto(WithdrawItemDto, {
 @UseGuards(JwtAuthGuard)
 @Controller('withdraws')
 export class WithdrawsController {
-  constructor(private readonly depositsService: DepositsService) {}
+  constructor(private readonly withdrawsService: WithdrawsService) {}
 
   @Post()
   @ApiResponseMeta({
@@ -57,7 +57,7 @@ export class WithdrawsController {
     @Req() req: { user: { sub: string } },
     @Body() dto: CreateWithdrawDto,
   ) {
-    return this.depositsService.createWithdraw(req.user.sub, dto);
+    return this.withdrawsService.create(req.user.sub, dto);
   }
 
   @Get('me')
@@ -73,12 +73,12 @@ export class WithdrawsController {
     @Req() req: { user: { sub: string } },
     @Query() query: ListWithdrawsQueryDto,
   ) {
-    return this.depositsService.listWithdrawsPaged(query, req.user.sub);
+    return this.withdrawsService.listPaged(query, req.user.sub);
   }
 
   @Get()
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(PERMISSIONS.deposits.read)
+  @RequirePermissions(PERMISSIONS.withdraws.read)
   @ApiResponseMeta({
     code: 'WITHDRAWS_LISTED',
     message: 'Withdraws listed successfully',
@@ -88,12 +88,12 @@ export class WithdrawsController {
     description: 'لیست همه برداشت‌ها',
   })
   listAll(@Query() query: ListWithdrawsQueryDto) {
-    return this.depositsService.listWithdrawsPaged(query);
+    return this.withdrawsService.listPaged(query);
   }
 
   @Patch(':id')
   @UseGuards(PermissionsGuard)
-  @RequirePermissions(PERMISSIONS.deposits.update)
+  @RequirePermissions(PERMISSIONS.withdraws.update)
   @ApiResponseMeta({
     code: 'WITHDRAW_REVIEWED',
     message: 'Withdraw reviewed successfully',
@@ -107,6 +107,6 @@ export class WithdrawsController {
     @Param('id', ParseULIDPipe) id: string,
     @Body() dto: ReviewWithdrawDto,
   ) {
-    return this.depositsService.reviewWithdraw(id, dto.action);
+    return this.withdrawsService.review(id, dto.action);
   }
 }

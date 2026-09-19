@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  Withdraw,
-  type WithdrawStatus,
-} from '../entities/withdraw.entity.js';
+import { Withdraw, type WithdrawStatus } from '../entities/withdraw.entity.js';
 
 @Injectable()
 export class WithdrawRepository {

@@ -12,7 +12,7 @@ import type { User } from '../../users/entities/user.entity.js';
 
 export type WithdrawStatus = 'pending' | 'success' | 'failed' | 'rejected';
 
-/** برداشت از کیف پول */
+/** برداشت از اعتبار */
 @Entity('withdraws')
 export class Withdraw {
   @PrimaryColumn({ type: 'varchar', length: 26 })

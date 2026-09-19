@@ -26,6 +26,7 @@ import { UlidSubscriber } from './common/id/ulid.subscriber.js';
 import { ShoppingCartModule } from './shopping-cart/shopping-cart.module.js';
 import { CreditModule } from './credit/credit.module.js';
 import { TransactionsModule } from './transactions/transactions.module.js';
+import { WithdrawsModule } from './withdraws/withdraws.module.js';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { TransactionsModule } from './transactions/transactions.module.js';
     ShoppingCartModule,
     CreditModule,
     TransactionsModule,
+    WithdrawsModule,
     OrdersModule,
     DepositsModule,
     ShippingModule,

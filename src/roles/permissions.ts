@@ -63,7 +63,10 @@ export const PERMISSIONS = {
   deposits: {
     read: 'deposits:read',
     create: 'deposits:create',
-    update: 'deposits:update',
+  },
+  withdraws: {
+    read: 'withdraws:read',
+    update: 'withdraws:update',
   },
   credit: {
     read: 'credit:read',
@@ -302,9 +305,14 @@ export const PERMISSION_DEFINITIONS = [
     group: 'deposits',
   },
   {
-    key: PERMISSIONS.deposits.update,
+    key: PERMISSIONS.withdraws.read,
+    label: 'مشاهده برداشت‌ها',
+    group: 'withdraws',
+  },
+  {
+    key: PERMISSIONS.withdraws.update,
     label: 'بررسی برداشت',
-    group: 'deposits',
+    group: 'withdraws',
   },
   {
     key: PERMISSIONS.credit.read,
