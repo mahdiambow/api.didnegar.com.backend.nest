@@ -53,3 +53,12 @@ Legacy `categories` remain Nest `categories`; legacy `sub_categories` remain Nes
 parent-category, ordered by `sort`, then `name`. If none exists, the importer creates a
 `default` parent category. Orphan legacy sub-categories attach to a generated or reused
 `default` Nest category beneath that same parent.
+
+## Attributes
+
+```sh
+npm run db:migrate:attributes
+```
+
+Imports legacy `attributes` and `attribute_values`. Legacy value `slug` becomes the
+target value label when present; value ordering is deterministic by legacy order.
