@@ -50,10 +50,39 @@ async function migrateSellers(source, target, report) {
             count.skipped += 1;
             continue;
           }
-          const [users] = await target.execute(
+          let [users] = await target.execute(
             'SELECT id, sellerId FROM users WHERE legacyTable = ? AND legacyId = ? LIMIT 1',
             ['users', row.userLegacyId],
           );
+          let matchedBy = 'legacy-identity';
+          if (!users[0] && row.username) {
+            [users] = await target.execute(
+              'SELECT id, sellerId FROM users WHERE username = ? LIMIT 1',
+              [String(row.username).trim().slice(0, 20)],
+            );
+            matchedBy = 'username';
+          }
+          if (!users[0] && row.email) {
+            [users] = await target.execute(
+              'SELECT id, sellerId FROM users WHERE email = ? LIMIT 2',
+              [String(row.email).trim().slice(0, 150)],
+            );
+            matchedBy = 'email';
+            if (users.length > 1) {
+              await report({
+                type: 'ambiguous-email',
+                legacySellerId: row.id,
+                legacySellerLegacyId: row.legacyId,
+                legacyUserId: row.userId,
+                legacyUserLegacyId: row.userLegacyId,
+                username: row.username,
+                email: row.email,
+                targetUserIds: users.map((user) => user.id),
+              });
+              count.skipped += 1;
+              continue;
+            }
+          }
           if (!users[0]) {
             await report({
               type: 'missing-imported-user',
@@ -62,6 +91,7 @@ async function migrateSellers(source, target, report) {
               legacyUserId: row.userId,
               legacyUserLegacyId: row.userLegacyId,
               username: row.username,
+              email: row.email,
             });
             count.skipped += 1;
             continue;
@@ -75,11 +105,20 @@ async function migrateSellers(source, target, report) {
               legacyUserLegacyId: row.userLegacyId,
               targetUserId: users[0].id,
               username: row.username,
+              email: row.email,
+              matchedBy,
             });
             count.skipped += 1;
             continue;
           }
           map.set(String(row.id), users[0].sellerId);
+          await report({
+            type: 'seller-mapped',
+            legacySellerId: row.id,
+            targetSellerId: users[0].sellerId,
+            targetUserId: users[0].id,
+            matchedBy,
+          });
           count.updated += 1;
         }
         await target.commit();
