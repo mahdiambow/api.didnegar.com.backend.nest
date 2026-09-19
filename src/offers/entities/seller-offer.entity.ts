@@ -23,6 +23,9 @@ export class SellerOffer {
   @Column({ type: 'bigint', nullable: true }) legacyId: number | null;
   @Column({ type: 'varchar', length: 255, nullable: true }) legacyTable:
     string | null;
+  @Index({ unique: true })
+  @Column({ type: 'varchar', length: 26, nullable: true })
+  legacySourceId: string | null;
   @Column({ type: 'varchar', length: 26 }) sellerId: string;
   @Column({ type: 'varchar', length: 26 }) productId: string;
   @Column({ type: 'json', default: {} }) attributes: Record<string, string>;

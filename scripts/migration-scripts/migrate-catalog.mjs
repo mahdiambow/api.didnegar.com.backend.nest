@@ -307,7 +307,16 @@ async function migrateProducts(source, target) {
             count.updated += 1;
           } else {
             await target.execute(
-              "INSERT INTO products (id,legacyId,legacyTable,name,slug,description,shortDescription,sku,status,approvalStatus,brandId,isVirtual,isDownloadable,isActive,isFeatured,seo,image,price,tableInfo,ratingCount,averageRating,totalSales,taxStatus,taxClass,globalUniqueId,weight,length,width,height,attributeIds,sellerIds,createdAt,updatedAt) VALUES (?,?,?,?,?,?,?,?,?,'approved',NULL,?,?,1,0,CAST('[]' AS JSON),CAST(? AS JSON),CAST(? AS JSON),CAST('[]' AS JSON),?,?,?,?,?,?,?,?,?,?,?,CAST('[]' AS JSON),CAST('[]' AS JSON),?,?)",
+              `INSERT INTO products (
+                id, legacyId, legacyTable, name, slug, description, shortDescription, sku, status,
+                approvalStatus, brandId, isVirtual, isDownloadable, isActive, isFeatured, seo, image,
+                price, tableInfo, ratingCount, averageRating, totalSales, taxStatus, taxClass,
+                globalUniqueId, weight, length, width, height, attributeIds, sellerIds, createdAt, updatedAt
+              ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', NULL, ?, ?, 1, 0, CAST('[]' AS JSON),
+                CAST(? AS JSON), CAST(? AS JSON), CAST('[]' AS JSON), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                CAST('[]' AS JSON), CAST('[]' AS JSON), ?, ?
+              )`,
               [id, ...values],
             );
             count.added += 1;
