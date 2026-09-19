@@ -149,6 +149,25 @@ export class DepositsService {
       return deposit;
     });
 
+    // Mock: کال‌بک verify را خود بک‌اند می‌زند تا اعتبار بلافاصله شارژ شود
+    if (this.shouldAutoVerifyMock(gateway)) {
+      const verified = await this.invokeMockVerifyCallback(
+        gateway,
+        entity.trackId,
+      );
+      return toDepositResponse({
+        orderId: null,
+        depositId: entity.id,
+        transactionId: verified.transactionId,
+        gateway,
+        trackId: entity.trackId,
+        paymentUrl: '',
+        amount: rounded,
+        gatewayMessage: verified.gatewayMessage,
+        creditBalance: verified.creditBalance,
+      });
+    }
+
     return toDepositResponse({
       orderId: null,
       depositId: entity.id,
@@ -158,6 +177,30 @@ export class DepositsService {
       amount: rounded,
       gatewayMessage: gatewayResult.message,
     });
+  }
+
+  /** درگاه mock: verify را سمت سرور به‌صورت کال‌بک اجرا کن */
+  private shouldAutoVerifyMock(
+    gateway: Exclude<DepositMethod, 'credit'>,
+  ): boolean {
+    if (gateway === 'zibal') {
+      return this.config.getBooleanOptional('ZIBAL_USE_MOCK', false);
+    }
+    // zarinpal و loan فعلاً همیشه mock هستند
+    return gateway === 'zarinpal' || gateway === 'loan';
+  }
+
+  private invokeMockVerifyCallback(
+    gateway: Exclude<DepositMethod, 'credit'>,
+    trackId: string,
+  ) {
+    if (gateway === 'zibal') {
+      return this.verifyZibalPayment(Number(trackId), 1, 2);
+    }
+    if (gateway === 'zarinpal') {
+      return this.verifyZarinpalPayment(trackId, 'OK');
+    }
+    return this.verifyLoanPayment(trackId, 1);
   }
 
   listDeposits(

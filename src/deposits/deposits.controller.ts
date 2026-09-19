@@ -88,7 +88,8 @@ export class DepositsController {
   })
   @ApiOperation({
     summary: 'Create deposit (top-up credit)',
-    description: 'شارژ اعتبار از طریق درگاه بانکی',
+    description:
+      'شارژ اعتبار از طریق درگاه. در حالت mock، verify به‌صورت کال‌بک داخلی بک‌اند انجام می‌شود و اعتبار بلافاصله شارژ می‌شود.',
   })
   @ApiOkResponse({ type: TopUpApiResponseDto })
   createTopUp(

@@ -12,10 +12,10 @@ export class ZarinpalMockService implements IBank {
   readonly kind = 'bank' as const;
   readonly gateway = 'zarinpal' as const;
 
-  private readonly sandboxBaseUrl: string;
+  private readonly callbackUrl: string;
 
   constructor(config: ConfigService) {
-    this.sandboxBaseUrl = config.get('ZARINPAL_SANDBOX_URL');
+    this.callbackUrl = config.get('ZARINPAL_CALLBACK_URL');
   }
 
   requestPayment(
@@ -40,10 +40,17 @@ export class ZarinpalMockService implements IBank {
     return {
       refId,
       message: `[MOCK-ZARINPAL] پرداخت با trackId ${trackId} به مبلغ ${amount} ریال تأیید شد`,
+      amount,
     };
   }
 
+  /** کال‌بک بک‌اند — باز کردن این URL همان verify است */
   buildPaymentUrl(trackId: string): string {
-    return `${this.sandboxBaseUrl}/${trackId}`;
+    const base =
+      this.callbackUrl || 'http://localhost:3000/deposits/zarinpal/verify';
+    const url = new URL(base);
+    url.searchParams.set('Authority', trackId);
+    url.searchParams.set('Status', 'OK');
+    return url.toString();
   }
 }

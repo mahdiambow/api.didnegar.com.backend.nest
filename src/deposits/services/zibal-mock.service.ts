@@ -13,10 +13,10 @@ export class ZibalMockService implements IBank {
   readonly kind = 'bank' as const;
   readonly gateway = 'zibal' as const;
 
-  private readonly startBaseUrl: string;
+  private readonly callbackUrl: string;
 
   constructor(config: ConfigService) {
-    this.startBaseUrl = config.get('ZIBAL_START_URL');
+    this.callbackUrl = config.get('ZIBAL_CALLBACK_URL');
   }
 
   requestPayment(
@@ -46,7 +46,13 @@ export class ZibalMockService implements IBank {
     };
   }
 
+  /** کال‌بک بک‌اند — باز کردن این URL همان verify است */
   buildPaymentUrl(trackId: string): string {
-    return `${this.startBaseUrl}/${trackId}`;
+    const base = this.callbackUrl || 'http://localhost:3000/deposits/zibal/verify';
+    const url = new URL(base);
+    url.searchParams.set('trackId', trackId);
+    url.searchParams.set('success', '1');
+    url.searchParams.set('status', '2');
+    return url.toString();
   }
 }
