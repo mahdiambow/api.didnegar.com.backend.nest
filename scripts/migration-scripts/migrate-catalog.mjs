@@ -306,18 +306,49 @@ async function migrateProducts(source, target) {
             );
             count.updated += 1;
           } else {
+            const insertValues = [
+              id,
+              row.legacyId,
+              'products',
+              row.name,
+              row.slug,
+              row.description,
+              row.shortDescription,
+              row.sku || null,
+              row.status || 'publish',
+              'approved',
+              null,
+              asBoolean(row.isVirtual) ? 1 : 0,
+              asBoolean(row.isDownloadable) ? 1 : 0,
+              1,
+              0,
+              JSON.stringify([]),
+              values[10],
+              values[11],
+              JSON.stringify([]),
+              row.ratingCount || 0,
+              row.averageRating || 0,
+              row.totalSales || 0,
+              row.taxStatus,
+              row.taxClass,
+              row.globalUniqueId,
+              row.weight,
+              row.length,
+              row.width,
+              row.height,
+              JSON.stringify([]),
+              JSON.stringify([]),
+              row.createdAt,
+              row.updatedAt,
+            ];
             await target.execute(
               `INSERT INTO products (
                 id, legacyId, legacyTable, name, slug, description, shortDescription, sku, status,
                 approvalStatus, brandId, isVirtual, isDownloadable, isActive, isFeatured, seo, image,
                 price, tableInfo, ratingCount, averageRating, totalSales, taxStatus, taxClass,
                 globalUniqueId, weight, length, width, height, attributeIds, sellerIds, createdAt, updatedAt
-              ) VALUES (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', NULL, ?, ?, 1, 0, CAST('[]' AS JSON),
-                CAST(? AS JSON), CAST(? AS JSON), CAST('[]' AS JSON), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                CAST('[]' AS JSON), CAST('[]' AS JSON), ?, ?
-              )`,
-              [id, ...values],
+              ) VALUES (${insertValues.map(() => '?').join(', ')})`,
+              insertValues,
             );
             count.added += 1;
           }
