@@ -51,6 +51,8 @@ const DEFAULTS: Record<string, string> = {
   ZARINPAL_CALLBACK_URL: '',
   ZIBAL_START_URL: 'https://gateway.zibal.ir/start',
   ZIBAL_CALLBACK_URL: '',
+  LOAN_START_URL: 'https://loan-mock.local/pay',
+  LOAN_CALLBACK_URL: '',
 };
 
 @Injectable()

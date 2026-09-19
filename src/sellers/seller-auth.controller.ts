@@ -42,8 +42,8 @@ export class SellerAuthController {
     message: 'OTP sent successfully',
   })
   @ApiOperation({
-    summary: 'ورود فروشنده با موبایل و ارسال OTP',
-    description: 'فقط حساب‌های با نقش seller / super-seller',
+    summary: 'Seller login with mobile and send OTP',
+    description: 'ورود فروشنده با موبایل و ارسال OTP\n\nفقط حساب‌های با نقش seller / super-seller',
   })
   @ApiBody({ type: LoginOrSignupDto })
   @ApiOkResponse({ type: LoginOrSignupApiResponseDto })
@@ -59,7 +59,7 @@ export class SellerAuthController {
     code: 'OTP_VERIFIED',
     message: 'OTP verified successfully',
   })
-  @ApiOperation({ summary: 'تایید OTP فروشنده و دریافت token' })
+  @ApiOperation({ summary: 'Verify seller OTP and get token', description: 'تایید OTP فروشنده و دریافت token' })
   @ApiBody({ type: VerifyOtpDto })
   @ApiOkResponse({ type: VerifyOtpApiResponseDto })
   @ApiTooManyRequestsResponse({ type: ApiErrorResponseDto })
@@ -74,7 +74,7 @@ export class SellerAuthController {
     code: 'LOGIN_SUCCESS',
     message: 'Logged in successfully',
   })
-  @ApiOperation({ summary: 'ورود فروشنده با موبایل و رمز عبور' })
+  @ApiOperation({ summary: 'Seller login with mobile and password', description: 'ورود فروشنده با موبایل و رمز عبور' })
   @ApiBody({ type: LoginWithPasswordDto })
   @ApiOkResponse({ type: LoginWithPasswordApiResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
@@ -92,7 +92,7 @@ export class SellerAuthController {
     code: 'TOKEN_VALIDATED',
     message: 'Token validated successfully',
   })
-  @ApiOperation({ summary: 'اعتبارسنجی token پورتال فروشنده' })
+  @ApiOperation({ summary: 'Validate seller portal token', description: 'اعتبارسنجی token پورتال فروشنده' })
   @ApiBody({ type: ValidateTokenDto })
   @ApiOkResponse({ type: ValidateTokenApiResponseDto })
   validateToken(@Body() dto: ValidateTokenDto) {
@@ -110,7 +110,7 @@ export class SellerAuthController {
     message: 'Password set successfully',
   })
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'تنظیم رمز عبور فروشنده لاگین‌شده' })
+  @ApiOperation({ summary: 'Set password for logged-in seller', description: 'تنظیم رمز عبور فروشنده لاگین‌شده' })
   @ApiBody({ type: SetPasswordDto })
   @ApiOkResponse({ type: SetPasswordApiResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })

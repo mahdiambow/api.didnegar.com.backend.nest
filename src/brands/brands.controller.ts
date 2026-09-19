@@ -49,7 +49,7 @@ export class BrandsController {
     code: 'BRANDS_FOUND',
     message: 'Brands retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست برندها با pagination و فیلتر' })
+  @ApiOperation({ summary: 'List brands with pagination and filters', description: 'لیست برندها با pagination و فیلتر' })
   @ApiOkResponse({ type: BrandsPaginatedApiResponseDto })
   findAll(@Query() query: ListBrandsQueryDto) {
     return this.brandsService.findAll(query);
@@ -61,7 +61,7 @@ export class BrandsController {
     code: 'BRAND_FOUND',
     message: 'Brand retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک برند' })
+  @ApiOperation({ summary: 'Get one brand', description: 'دریافت یک برند' })
   @ApiOkResponse({ type: BrandApiResponseDto })
   findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.brandsService.findOne(id);
@@ -73,7 +73,7 @@ export class BrandsController {
     code: 'BRAND_CREATED',
     message: 'Brand created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد برند' })
+  @ApiOperation({ summary: 'Create brand', description: 'ایجاد برند' })
   @ApiOkResponse({ type: BrandApiResponseDto })
   create(@Body() dto: CreateBrandDto) {
     return this.brandsService.create(dto);
@@ -85,7 +85,7 @@ export class BrandsController {
     code: 'BRAND_UPDATED',
     message: 'Brand updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش برند' })
+  @ApiOperation({ summary: 'Update brand', description: 'ویرایش برند' })
   @ApiOkResponse({ type: BrandApiResponseDto })
   update(
     @Param('id', ParseULIDPipe) id: string,
@@ -100,7 +100,7 @@ export class BrandsController {
     code: 'BRAND_DELETED',
     message: 'Brand deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف برند' })
+  @ApiOperation({ summary: 'Delete brand', description: 'حذف برند' })
   remove(@Param('id', ParseULIDPipe) id: string) {
     return this.brandsService.remove(id);
   }

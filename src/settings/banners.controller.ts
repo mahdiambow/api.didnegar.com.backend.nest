@@ -40,7 +40,7 @@ export class BannersController {
   constructor(private readonly bannersService: BannersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'لیست بنرها با فیلتر محل نمایش، بخش و دسته‌بندی' })
+  @ApiOperation({ summary: 'List banners filtered by placement, section, and category', description: 'لیست بنرها با فیلتر محل نمایش، بخش و دسته‌بندی' })
   @ApiResponseMeta({
     code: 'BANNERS_FOUND',
     message: 'Banners retrieved successfully',
@@ -51,7 +51,7 @@ export class BannersController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'دریافت تنظیمات بنر' })
+  @ApiOperation({ summary: 'Get banner settings', description: 'دریافت تنظیمات بنر' })
   @ApiResponseMeta({
     code: 'BANNER_FOUND',
     message: 'Banner settings found successfully',
@@ -65,7 +65,7 @@ export class BannersController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'ایجاد تنظیمات بنر' })
+  @ApiOperation({ summary: 'Create banner settings', description: 'ایجاد تنظیمات بنر' })
   @ApiResponseMeta({
     code: 'BANNER_CREATED',
     message: 'Banner settings created successfully',
@@ -79,7 +79,7 @@ export class BannersController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'ویرایش تنظیمات بنر' })
+  @ApiOperation({ summary: 'Update banner settings', description: 'ویرایش تنظیمات بنر' })
   @ApiResponseMeta({
     code: 'BANNER_UPDATED',
     message: 'Banner settings updated successfully',
@@ -93,7 +93,7 @@ export class BannersController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'حذف تنظیمات بنر' })
+  @ApiOperation({ summary: 'Delete banner settings', description: 'حذف تنظیمات بنر' })
   @ApiResponseMeta({
     code: 'BANNER_DELETED',
     message: 'Banner settings deleted successfully',

@@ -1,8 +1,17 @@
-import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, OneToOne, UpdateDateColumn } from 'typeorm';
+import {
+  PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  OneToOne,
+  UpdateDateColumn,
+} from 'typeorm';
 import type { Order } from './order.entity.js';
 
 export type PaymentStatus = 'pending' | 'success' | 'failed';
-export type PaymentGateway = 'zarinpal' | 'zibal';
+export type PaymentGateway = 'zarinpal' | 'zibal' | 'loan' | 'credit';
 
 @Entity('payments')
 export class Payment {

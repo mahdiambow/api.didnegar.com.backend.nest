@@ -55,9 +55,8 @@ export class UsersController {
     message: 'Users retrieved successfully',
   })
   @ApiOperation({
-    summary: 'لیست کاربران با pagination',
-    description:
-      'فیلتر اختیاری search روی username / displayName / email / firstName / lastName',
+    summary: 'List users with pagination',
+    description: 'لیست کاربران با pagination\n\nفیلتر اختیاری search روی username / displayName / email / firstName / lastName',
   })
   @ApiOkResponse({ type: UsersPaginatedApiResponseDto })
   findAll(@Req() req: { user: AuthUser }, @Query() query: ListUsersQueryDto) {
@@ -69,7 +68,7 @@ export class UsersController {
     code: 'USER_FOUND',
     message: 'User retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک کاربر' })
+  @ApiOperation({ summary: 'Get one user', description: 'دریافت یک کاربر' })
   @ApiOkResponse({ type: UserApiResponseDto })
   findOne(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     return this.usersService.findOne(req.user, id);
@@ -80,7 +79,7 @@ export class UsersController {
     code: 'USER_CREATED',
     message: 'User created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد کاربر' })
+  @ApiOperation({ summary: 'Create user', description: 'ایجاد کاربر' })
   @ApiOkResponse({ type: UserApiResponseDto })
   create(@Req() req: { user: AuthUser }, @Body() dto: CreateUserDto) {
     return this.usersService.create(req.user, dto);
@@ -91,7 +90,7 @@ export class UsersController {
     code: 'USER_UPDATED',
     message: 'User updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش کاربر' })
+  @ApiOperation({ summary: 'Update user', description: 'ویرایش کاربر' })
   @ApiOkResponse({ type: UserApiResponseDto })
   update(
     @Req() req: { user: AuthUser },
@@ -106,7 +105,7 @@ export class UsersController {
     code: 'USER_DELETED',
     message: 'User deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف کاربر' })
+  @ApiOperation({ summary: 'Delete user', description: 'حذف کاربر' })
   remove(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     return this.usersService.remove(req.user, id);
   }

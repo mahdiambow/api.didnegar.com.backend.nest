@@ -1,12 +1,26 @@
 import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
+import { IsIn } from 'class-validator';
 import { ShippingMethodResponseDto } from '../../shipping/dto/shipping.dto.js';
 
 export class CreatePaymentDto {
   @ApiProperty({ example: '01JEX000000000000000000010' })
   @IsULID()
   orderId: string;
+}
+
+export class RequestPaymentDto {
+  @ApiProperty({ example: '01JEX000000000000000000010' })
+  @IsULID()
+  orderId: string;
+
+  @ApiProperty({
+    enum: ['credit', 'zarinpal', 'zibal', 'loan'],
+    description:
+      'credit = کیف پول | zarinpal/zibal = درگاه بانکی (IBank) | loan = وام شخص ثالث (ILoan)',
+  })
+  @IsIn(['credit', 'zarinpal', 'zibal', 'loan'])
+  method: 'credit' | 'zarinpal' | 'zibal' | 'loan';
 }
 
 export class PaymentResponseDto {
@@ -16,13 +30,15 @@ export class PaymentResponseDto {
   @ApiProperty()
   paymentId: string;
 
-  @ApiProperty({ enum: ['zarinpal', 'zibal'] })
+  @ApiProperty({ enum: ['zarinpal', 'zibal', 'loan', 'credit'] })
   gateway: string;
 
-  @ApiProperty({ description: 'authority (زرین‌پال) یا trackId (زیبال)' })
+  @ApiProperty({ description: 'authority / trackId / credit token' })
   authority: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: 'برای credit خالی است؛ برای درگاه/وام URL هدایت',
+  })
   paymentUrl: string;
 
   @ApiProperty()
@@ -42,6 +58,9 @@ export class PaymentResponseDto {
 
   @ApiProperty()
   gatewayMessage: string;
+
+  @ApiPropertyOptional({ description: 'موجودی کیف پول بعد از پرداخت credit' })
+  creditBalance?: number;
 }
 
 export class PaymentVerifyResponseDto {
@@ -51,7 +70,7 @@ export class PaymentVerifyResponseDto {
   @ApiProperty()
   paymentId: string;
 
-  @ApiProperty({ enum: ['zarinpal', 'zibal'] })
+  @ApiProperty({ enum: ['zarinpal', 'zibal', 'loan', 'credit'] })
   gateway: string;
 
   @ApiProperty()
@@ -80,6 +99,9 @@ export class PaymentVerifyResponseDto {
 
   @ApiProperty()
   gatewayMessage: string;
+
+  @ApiPropertyOptional()
+  creditBalance?: number;
 }
 
 export function toPaymentResponse(data: PaymentResponseDto): PaymentResponseDto {

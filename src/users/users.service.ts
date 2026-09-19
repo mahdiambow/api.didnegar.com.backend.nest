@@ -14,6 +14,7 @@ import { RoleRepository } from '../roles/repositories/role.repository.js';
 import { SellerRepository } from '../sellers/repositories/seller.repository.js';
 import type { Role } from '../roles/entities/role.entity.js';
 import { assertCompatibleRoleAudiences } from '../roles/role-audience.util.js';
+import { CreditService } from '../credit/credit.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 
@@ -23,6 +24,7 @@ export class UsersService {
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RoleRepository,
     private readonly sellerRepository: SellerRepository,
+    private readonly creditService: CreditService,
   ) {}
 
   async findAll(
@@ -89,6 +91,7 @@ export class UsersService {
     const saved = await this.userRepository.save(
       this.userRepository.create({
         username: dto.username,
+        role: primaryRole,
         roleId: primaryRole.id,
         extraRoleIds,
         sellerId,
@@ -102,9 +105,10 @@ export class UsersService {
           : null,
       }),
     );
+    await this.creditService.init(saved.id);
 
-    const loaded = await this.userRepository.findByIdOrFail(saved.id);
-    return this.toResponse(loaded);
+    const loaded = await this.userRepository.findById(saved.id);
+    return this.toResponse(loaded!);
   }
 
   async update(scope: TenantScope, id: string, dto: UpdateUserDto) {

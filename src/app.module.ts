@@ -24,6 +24,7 @@ import { PublicModule } from './public/public.module.js';
 import { DatabaseSeedModule } from './database/database.seed.module.js';
 import { UlidSubscriber } from './common/id/ulid.subscriber.js';
 import { ShoppingCartModule } from './shopping-cart/shopping-cart.module.js';
+import { CreditModule } from './credit/credit.module.js';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { ShoppingCartModule } from './shopping-cart/shopping-cart.module.js';
     BrandsModule,
     OffersModule,
     ShoppingCartModule,
+    CreditModule,
     OrdersModule,
     PaymentsModule,
     ShippingModule,

@@ -46,8 +46,8 @@ export class OffersController {
 
   @Get()
   @ApiOperation({
-    summary: 'لیست پیشنهادهای فروش تأییدشده',
-    description: 'فقط آفرهای با approvalStatus=approved برمی‌گردند.',
+    summary: 'List approved seller offers',
+    description: 'لیست پیشنهادهای فروش تأییدشده\n\nفقط آفرهای با approvalStatus=approved برمی‌گردند.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_FOUND',
@@ -67,9 +67,8 @@ export class OffersController {
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
   @ApiOperation({
-    summary: 'دریافت پیشنهاد فروش برای فرم تأیید / ویرایش',
-    description:
-      'آفر به‌همراه آبجکت کامل محصول لینک‌شده برمی‌گردد تا در صفحه تأیید قابل ویرایش باشد.',
+    summary: 'Get seller offer for approve / edit form',
+    description: 'دریافت پیشنهاد فروش برای فرم تأیید / ویرایش\n\nآفر به‌همراه آبجکت کامل محصول لینک‌شده برمی‌گردد تا در صفحه تأیید قابل ویرایش باشد.',
   })
   @ApiResponseMeta({
     code: 'OFFER_FOUND',
@@ -81,7 +80,7 @@ export class OffersController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'دریافت پیشنهاد فروش' })
+  @ApiOperation({ summary: 'Get seller offer', description: 'دریافت پیشنهاد فروش' })
   @ApiResponseMeta({
     code: 'OFFER_FOUND',
     message: 'Seller offer found successfully',
@@ -101,9 +100,8 @@ export class OffersController {
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
   @ApiOperation({
-    summary: 'ایجاد یک یا چند پیشنهاد فروش',
-    description:
-      'sellerId از JWT خوانده می‌شود. اگر productId نباشد یا محصول در کاتالوگ نباشد، از روی فیلد product (و sku/قیمت/موجودی آفر) محصول جدید ساخته می‌شود.',
+    summary: 'Create one or more seller offers',
+    description: 'ایجاد یک یا چند پیشنهاد فروش\n\nsellerId از JWT خوانده می‌شود. اگر productId نباشد یا محصول در کاتالوگ نباشد، از روی فیلد product (و sku/قیمت/موجودی آفر) محصول جدید ساخته می‌شود.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_CREATED',
@@ -123,9 +121,8 @@ export class OffersController {
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
   @ApiOperation({
-    summary: 'تأیید / رد / بازگرداندن به انتظار پیشنهاد فروش (فقط ادمین)',
-    description:
-      'با `approved` شدن آفر، محصول لینک‌شده (`productId`) هم `approved` و در صورت نیاز `publish` می‌شود.',
+    summary: 'Approve / reject / set seller offer pending (admin only)',
+    description: 'تأیید / رد / بازگرداندن به انتظار پیشنهاد فروش (فقط ادمین)\n\nبا `approved` شدن آفر، محصول لینک‌شده (`productId`) هم `approved` و در صورت نیاز `publish` می‌شود.',
   })
   @ApiResponseMeta({
     code: 'OFFER_REVIEWED',
@@ -149,8 +146,8 @@ export class OffersController {
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
   @ApiOperation({
-    summary: 'ویرایش پیشنهاد فروش',
-    description: 'تغییر قیمت و سایر فیلدها فوری اعمال می‌شود',
+    summary: 'Update seller offer',
+    description: 'ویرایش پیشنهاد فروش\n\nتغییر قیمت و سایر فیلدها فوری اعمال می‌شود',
   })
   @ApiResponseMeta({
     code: 'OFFER_UPDATED',
@@ -174,7 +171,7 @@ export class OffersController {
     DEFAULT_ROLE_SLUGS.ADMIN,
     DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
   )
-  @ApiOperation({ summary: 'حذف پیشنهاد فروش' })
+  @ApiOperation({ summary: 'Delete seller offer', description: 'حذف پیشنهاد فروش' })
   @ApiResponseMeta({
     code: 'OFFER_DELETED',
     message: 'Seller offer deleted successfully',

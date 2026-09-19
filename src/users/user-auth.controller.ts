@@ -41,7 +41,7 @@ export class UserAuthController {
     code: 'OTP_SENT',
     message: 'OTP sent successfully',
   })
-  @ApiOperation({ summary: 'ورود / ثبت‌نام کاربر با موبایل و ارسال OTP' })
+  @ApiOperation({ summary: 'User login / signup with mobile and send OTP', description: 'ورود / ثبت‌نام کاربر با موبایل و ارسال OTP' })
   @ApiBody({ type: LoginOrSignupDto })
   @ApiOkResponse({ type: LoginOrSignupApiResponseDto })
   @ApiTooManyRequestsResponse({ type: ApiErrorResponseDto })
@@ -56,7 +56,7 @@ export class UserAuthController {
     code: 'OTP_VERIFIED',
     message: 'OTP verified successfully',
   })
-  @ApiOperation({ summary: 'تایید OTP کاربر و دریافت token' })
+  @ApiOperation({ summary: 'Verify user OTP and get token', description: 'تایید OTP کاربر و دریافت token' })
   @ApiBody({ type: VerifyOtpDto })
   @ApiOkResponse({ type: VerifyOtpApiResponseDto })
   @ApiTooManyRequestsResponse({ type: ApiErrorResponseDto })
@@ -71,7 +71,7 @@ export class UserAuthController {
     code: 'LOGIN_SUCCESS',
     message: 'Logged in successfully',
   })
-  @ApiOperation({ summary: 'ورود کاربر با موبایل و رمز عبور' })
+  @ApiOperation({ summary: 'User login with mobile and password', description: 'ورود کاربر با موبایل و رمز عبور' })
   @ApiBody({ type: LoginWithPasswordDto })
   @ApiOkResponse({ type: LoginWithPasswordApiResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
@@ -85,7 +85,7 @@ export class UserAuthController {
     code: 'TOKEN_VALIDATED',
     message: 'Token validated successfully',
   })
-  @ApiOperation({ summary: 'اعتبارسنجی token پورتال کاربر' })
+  @ApiOperation({ summary: 'Validate user portal token', description: 'اعتبارسنجی token پورتال کاربر' })
   @ApiBody({ type: ValidateTokenDto })
   @ApiOkResponse({ type: ValidateTokenApiResponseDto })
   validateToken(@Body() dto: ValidateTokenDto) {
@@ -103,7 +103,7 @@ export class UserAuthController {
     message: 'Password set successfully',
   })
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'تنظیم رمز عبور کاربر لاگین‌شده' })
+  @ApiOperation({ summary: 'Set password for logged-in user', description: 'تنظیم رمز عبور کاربر لاگین‌شده' })
   @ApiBody({ type: SetPasswordDto })
   @ApiOkResponse({ type: SetPasswordApiResponseDto })
   @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })

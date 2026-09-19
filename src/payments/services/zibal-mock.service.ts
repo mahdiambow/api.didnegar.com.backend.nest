@@ -2,13 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
 import { ConfigService } from '../../config/config.service.js';
 import type {
-  PaymentGatewayAdapter,
+  IBank,
   PaymentRequestResult,
   PaymentVerifyResult,
 } from './payment-gateway.interface.js';
 
 @Injectable()
-export class ZibalMockService implements PaymentGatewayAdapter {
+export class ZibalMockService implements IBank {
+  readonly kind = 'bank' as const;
   readonly gateway = 'zibal' as const;
 
   private readonly startBaseUrl: string;
@@ -33,7 +34,8 @@ export class ZibalMockService implements PaymentGatewayAdapter {
 
   verifyPayment(authority: string, amount: number): PaymentVerifyResult {
     const refId = String(
-      200000 + (parseInt(authority.slice(-6), 10) % 800000 || randomInt(1, 99999)),
+      200000 +
+        (parseInt(authority.slice(-6), 10) % 800000 || randomInt(1, 99999)),
     );
 
     return {

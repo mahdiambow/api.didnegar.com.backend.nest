@@ -62,7 +62,7 @@ export class AttributeValuesController {
     code: 'ATTRIBUTE_VALUES_FOUND',
     message: 'Attribute values retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست مقادیر ویژگی با pagination و فیلتر' })
+  @ApiOperation({ summary: 'List attribute values with pagination and filters', description: 'لیست مقادیر ویژگی با pagination و فیلتر' })
   @ApiOkResponse({ type: AttributeValuesPaginatedApiResponseDto })
   findAll(@Query() query: ListAttributeValuesQueryDto) {
     return this.attributesService.findAllValues(query);
@@ -74,7 +74,7 @@ export class AttributeValuesController {
     code: 'ATTRIBUTE_VALUE_FOUND',
     message: 'Attribute value retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک مقدار ویژگی (valueId)' })
+  @ApiOperation({ summary: 'Get one attribute value (valueId)', description: 'دریافت یک مقدار ویژگی (valueId)' })
   @ApiOkResponse({ type: AttributeValueApiResponseDto })
   findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.attributesService.findValue(id);
@@ -86,7 +86,7 @@ export class AttributeValuesController {
     code: 'ATTRIBUTE_VALUE_CREATED',
     message: 'Attribute value created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد مقدار برای یک ویژگی' })
+  @ApiOperation({ summary: 'Create attribute value', description: 'ایجاد مقدار برای یک ویژگی' })
   @ApiOkResponse({ type: AttributeValueApiResponseDto })
   create(@Body() dto: CreateAttributeValueDto) {
     return this.attributesService.createValue(dto);
@@ -98,7 +98,7 @@ export class AttributeValuesController {
     code: 'ATTRIBUTE_VALUE_UPDATED',
     message: 'Attribute value updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش مقدار ویژگی' })
+  @ApiOperation({ summary: 'Update attribute value', description: 'ویرایش مقدار ویژگی' })
   @ApiOkResponse({ type: AttributeValueApiResponseDto })
   update(
     @Param('id', ParseULIDPipe) id: string,
@@ -113,7 +113,7 @@ export class AttributeValuesController {
     code: 'ATTRIBUTE_VALUE_DELETED',
     message: 'Attribute value deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف مقدار ویژگی' })
+  @ApiOperation({ summary: 'Delete attribute value', description: 'حذف مقدار ویژگی' })
   remove(@Param('id', ParseULIDPipe) id: string) {
     return this.attributesService.removeValue(id);
   }

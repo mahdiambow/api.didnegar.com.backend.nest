@@ -76,7 +76,7 @@ export class PublicController {
   ) {}
 
   @Get('footer')
-  @ApiOperation({ summary: 'فوتر کامل (پابلیک)' })
+  @ApiOperation({ summary: 'Full footer (public)', description: 'فوتر کامل (پابلیک)' })
   @ApiResponseMeta({
     code: 'PUBLIC_FOOTER_FOUND',
     message: 'Footer retrieved successfully',
@@ -87,7 +87,7 @@ export class PublicController {
   }
 
   @Get('header')
-  @ApiOperation({ summary: 'هدر کامل (پابلیک)' })
+  @ApiOperation({ summary: 'Full header (public)', description: 'هدر کامل (پابلیک)' })
   @ApiResponseMeta({
     code: 'PUBLIC_HEADER_FOUND',
     message: 'Header retrieved successfully',
@@ -99,8 +99,8 @@ export class PublicController {
 
   @Get('banners')
   @ApiOperation({
-    summary: 'همه بنرها (پابلیک)',
-    description: 'کل بنرها بدون pagination',
+    summary: 'All banners (public)',
+    description: 'همه بنرها (پابلیک)\n\nکل بنرها بدون pagination',
   })
   @ApiResponseMeta({
     code: 'PUBLIC_BANNERS_FOUND',
@@ -113,9 +113,8 @@ export class PublicController {
 
   @Get('products')
   @ApiOperation({
-    summary: 'همه محصولات قابل‌نمایش (پابلیک)',
-    description:
-      'محصولات publish + approved + active با برند، دسته‌ها، ویژگی‌ها و سایر روابط',
+    summary: 'All visible products (public)',
+    description: 'همه محصولات قابل‌نمایش (پابلیک)\n\nمحصولات publish + approved + active با برند، دسته‌ها، ویژگی‌ها و سایر روابط',
   })
   @ApiResponseMeta({
     code: 'PUBLIC_PRODUCTS_FOUND',
@@ -128,8 +127,8 @@ export class PublicController {
 
   @Get('categories')
   @ApiOperation({
-    summary: 'درخت کامل دسته‌بندی‌ها (پابلیک)',
-    description: '۳ سطح: parentCategories → categories → subCategories',
+    summary: 'Full category tree (public)',
+    description: 'درخت کامل دسته‌بندی‌ها (پابلیک)\n\n۳ سطح: parentCategories → categories → subCategories',
   })
   @ApiResponseMeta({
     code: 'PUBLIC_CATEGORIES_FOUND',

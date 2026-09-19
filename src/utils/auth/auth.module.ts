@@ -19,6 +19,7 @@ import { RefreshToken } from './entities/refresh-token.entity.js';
 import { ConfigService } from '../../config/config.service.js';
 import { RolesModule } from '../../roles/roles.module.js';
 import { ShoppingCartModule } from '../../shopping-cart/shopping-cart.module.js';
+import { CreditModule } from '../../credit/credit.module.js';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ShoppingCartModule } from '../../shopping-cart/shopping-cart.module.js'
     ]),
     forwardRef(() => RolesModule),
     forwardRef(() => ShoppingCartModule),
+    forwardRef(() => CreditModule),
     ThrottlerModule.forRoot({
       throttlers: [
         authThrottler.otpSend,

@@ -16,6 +16,7 @@ export class OrderRepository {
         items: { product: true },
         payment: true,
         shippingMethod: true,
+        address: true,
       },
     });
   }
@@ -27,6 +28,7 @@ export class OrderRepository {
         items: { product: true },
         payment: true,
         shippingMethod: true,
+        address: true,
       },
     });
   }

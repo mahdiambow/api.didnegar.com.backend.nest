@@ -12,7 +12,7 @@ import { RolesModule } from '../roles/roles.module.js';
 @Module({
   imports: [
     TypeOrmModule.forFeature([ShippingMethod]),
-    OffersModule,
+    forwardRef(() => OffersModule),
     forwardRef(() => AuthModule),
     forwardRef(() => RolesModule),
   ],

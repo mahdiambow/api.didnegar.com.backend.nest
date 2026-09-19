@@ -49,7 +49,8 @@ export class AttributesController {
     message: 'Attributes retrieved successfully',
   })
   @ApiOperation({
-    summary: 'لیست ویژگی‌ها همراه values — فیلتر اختیاری با valueId',
+    summary: 'List attributes with values — optional filter by valueId',
+    description: 'لیست ویژگی‌ها همراه values — فیلتر اختیاری با valueId',
   })
   @ApiOkResponse({ type: AttributesListApiResponseDto })
   findAll(@Query() query: ListAttributesQueryDto) {
@@ -62,7 +63,7 @@ export class AttributesController {
     code: 'ATTRIBUTE_FOUND',
     message: 'Attribute retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک ویژگی' })
+  @ApiOperation({ summary: 'Get one attribute', description: 'دریافت یک ویژگی' })
   @ApiOkResponse({ type: AttributeApiResponseDto })
   findOne(@Param('id', ParseULIDPipe) id: string) {
     return this.attributesService.findAttribute(id);
@@ -74,7 +75,7 @@ export class AttributesController {
     code: 'ATTRIBUTE_CREATED',
     message: 'Attribute created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد ویژگی' })
+  @ApiOperation({ summary: 'Create attribute', description: 'ایجاد ویژگی' })
   @ApiOkResponse({ type: AttributeApiResponseDto })
   create(@Body() dto: CreateAttributeDto) {
     return this.attributesService.createAttribute(dto);
@@ -86,7 +87,7 @@ export class AttributesController {
     code: 'ATTRIBUTE_UPDATED',
     message: 'Attribute updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش ویژگی' })
+  @ApiOperation({ summary: 'Update attribute', description: 'ویرایش ویژگی' })
   @ApiOkResponse({ type: AttributeApiResponseDto })
   update(
     @Param('id', ParseULIDPipe) id: string,
@@ -101,7 +102,7 @@ export class AttributesController {
     code: 'ATTRIBUTE_DELETED',
     message: 'Attribute deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف ویژگی' })
+  @ApiOperation({ summary: 'Delete attribute', description: 'حذف ویژگی' })
   remove(@Param('id', ParseULIDPipe) id: string) {
     return this.attributesService.removeAttribute(id);
   }

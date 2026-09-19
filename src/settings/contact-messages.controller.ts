@@ -49,7 +49,8 @@ export class ContactMessagesController {
 
   @Post()
   @ApiOperation({
-    summary: 'ارسال پیام تماس با ما (عمومی)',
+    summary: 'Submit contact-us message (public)',
+    description: 'ارسال پیام تماس با ما (عمومی)',
   })
   @ApiResponseMeta({
     code: 'CONTACT_MESSAGE_CREATED',
@@ -64,7 +65,7 @@ export class ContactMessagesController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'لیست پیام‌های دریافتی' })
+  @ApiOperation({ summary: 'List received messages', description: 'لیست پیام‌های دریافتی' })
   @ApiResponseMeta({
     code: 'CONTACT_MESSAGES_FOUND',
     message: 'Contact messages retrieved successfully',
@@ -78,7 +79,7 @@ export class ContactMessagesController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'دریافت یک پیام' })
+  @ApiOperation({ summary: 'Get one message', description: 'دریافت یک پیام' })
   @ApiResponseMeta({
     code: 'CONTACT_MESSAGE_FOUND',
     message: 'Contact message found successfully',
@@ -93,7 +94,8 @@ export class ContactMessagesController {
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
   @ApiOperation({
-    summary: 'ویرایش پیام (خوانده‌شده، یادداشت داخلی، پاسخ)',
+    summary: 'Update message (read, internal note, reply)',
+    description: 'ویرایش پیام (خوانده‌شده، یادداشت داخلی، پاسخ)',
   })
   @ApiResponseMeta({
     code: 'CONTACT_MESSAGE_UPDATED',
@@ -111,7 +113,7 @@ export class ContactMessagesController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'حذف پیام' })
+  @ApiOperation({ summary: 'Delete message', description: 'حذف پیام' })
   @ApiResponseMeta({
     code: 'CONTACT_MESSAGE_DELETED',
     message: 'Contact message deleted successfully',

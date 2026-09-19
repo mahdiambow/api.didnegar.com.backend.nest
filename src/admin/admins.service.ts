@@ -10,6 +10,7 @@ import { UserRepository } from '../utils/auth/repositories/user.repository.js';
 import { toUserResponse } from '../utils/auth/dto/user-response.dto.js';
 import { RoleRepository } from '../roles/repositories/role.repository.js';
 import { RoleAudience } from '../roles/role-audience.enum.js';
+import { hasAudience } from '../roles/role-audience.util.js';
 import { AdminRepository } from './repositories/admin.repository.js';
 import { CreateAdminDto } from './dto/create-admin.dto.js';
 import { UpdateAdminDto } from './dto/update-admin.dto.js';
@@ -204,10 +205,10 @@ export class AdminsService {
         user.role.audience,
         ...extraRoles.map((role) => role.audience),
       ];
-      if (audiences.some((audience) => audience !== RoleAudience.ADMIN)) {
+      if (!hasAudience(audiences, RoleAudience.ADMIN)) {
         throw new ApiException(
           'ROLE_AUDIENCE_MISMATCH',
-          `کاربر ${user.username} نقش حوزه admin ندارد و قابل لینک به ادمین نیست`,
+          `کاربر ${user.username} هیچ نقش حوزه admin ندارد و قابل لینک به ادمین نیست`,
           HttpStatus.BAD_REQUEST,
         );
       }
