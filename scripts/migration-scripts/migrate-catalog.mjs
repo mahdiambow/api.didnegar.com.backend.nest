@@ -2,7 +2,9 @@
 import { appendFile, writeFile } from 'node:fs/promises';
 import {
   BATCH_SIZE,
+  asBoolean,
   assertTables,
+  newId,
   openLegacyConnection,
   openTargetConnection,
   requiredEnv,
@@ -135,6 +137,98 @@ async function migrateSellers(source, target, report) {
   return { map, batchCount, totals };
 }
 
+async function migrateListings(source, target, sellerMap, report) {
+  const totals = { read: 0, added: 0, updated: 0, skipped: 0 };
+  const batchCount = await batches(
+    source,
+    'SELECT l.id, l.sellerId, l.productVariantId, l.sku, l.price, l.stockQuantity, l.stockStatus, l.isActive, l.createdAt, l.updatedAt, v.productId AS legacyProductId, p.legacyId AS productLegacyId, p.minPrice, p.maxPrice, p.isVirtual, p.isDownloadable, p.taxStatus, p.taxClass, p.description, p.weight, p.length, p.width, p.height, p.featuredImage FROM seller_variant_listings l INNER JOIN product_variants v ON v.id = l.productVariantId INNER JOIN products p ON p.id = v.productId ORDER BY l.id',
+    async (rows, offset, batch) => {
+      const count = { read: rows.length, added: 0, updated: 0, skipped: 0 };
+      await target.beginTransaction();
+      try {
+        for (const row of rows) {
+          const sellerId = sellerMap.get(String(row.sellerId));
+          if (!sellerId) {
+            await report({
+              type: 'listing-missing-seller',
+              listingId: row.id,
+              legacySellerId: row.sellerId,
+            });
+            count.skipped += 1;
+            continue;
+          }
+          const [products] = await target.execute(
+            'SELECT id FROM products WHERE legacyTable = ? AND legacyId = ? LIMIT 1',
+            ['products', row.productLegacyId],
+          );
+          if (!products[0]) {
+            await report({
+              type: 'listing-missing-product',
+              listingId: row.id,
+              legacyProductId: row.legacyProductId,
+            });
+            count.skipped += 1;
+            continue;
+          }
+          const values = [
+            sellerId,
+            products[0].id,
+            row.sku || null,
+            Number(row.price ?? row.minPrice ?? row.maxPrice ?? 0),
+            row.minPrice,
+            row.maxPrice,
+            Math.max(0, Math.floor(Number(row.stockQuantity) || 0)),
+            row.stockStatus || 'outofstock',
+            asBoolean(row.isActive) ? 1 : 0,
+            asBoolean(row.isVirtual) ? 1 : 0,
+            asBoolean(row.isDownloadable) ? 1 : 0,
+            row.taxStatus,
+            row.taxClass,
+            row.description,
+            row.weight,
+            row.length,
+            row.width,
+            row.height,
+            row.featuredImage,
+            row.createdAt,
+            row.updatedAt,
+          ];
+          const [existing] = await target.execute(
+            'SELECT id FROM seller_offers WHERE legacySourceId = ? LIMIT 1',
+            [row.id],
+          );
+          if (existing[0]) {
+            await target.execute(
+              'UPDATE seller_offers SET sellerId=?,productId=?,sku=?,price=?,minPrice=?,maxPrice=?,stock=?,stockStatus=?,isActive=?,isVirtual=?,isDownloadable=?,taxStatus=?,taxClass=?,description=?,weight=?,length=?,width=?,height=?,image=?,createdAt=?,updatedAt=? WHERE id=?',
+              [...values, existing[0].id],
+            );
+            count.updated += 1;
+          } else {
+            await target.execute(
+              "INSERT INTO seller_offers (id,legacyId,legacyTable,legacySourceId,sellerId,productId,attributes,sku,price,minPrice,maxPrice,stock,stockStatus,isActive,isVirtual,isDownloadable,isOnSale,taxStatus,taxClass,description,weight,length,width,height,image,approvalStatus,createdAt,updatedAt) VALUES (?,NULL,'seller_variant_listings',?,?,?,CAST('{}' AS JSON),?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,'approved',?,?)",
+              [newId(), row.id, ...values],
+            );
+            count.added += 1;
+          }
+        }
+        await target.commit();
+      } catch (error) {
+        await target.rollback();
+        throw error;
+      }
+      console.log(
+        JSON.stringify(
+          { entity: 'seller_offers', batch, offset, ...count },
+          null,
+          2,
+        ),
+      );
+      add(totals, count);
+    },
+  );
+  return { batchCount, totals };
+}
+
 async function main() {
   const legacyDb = requiredEnv('LEGACY_MIGRATED_DB_DATABASE');
   const targetDb = requiredEnv('DB_DATABASE');
@@ -169,12 +263,14 @@ async function main() {
       'Target',
     );
     const sellers = await migrateSellers(source, target, report);
+    const listings = await migrateListings(source, target, sellers.map, report);
     const summary = {
       complete: true,
       sellerBatches: sellers.batchCount,
       sellers: sellers.totals,
       reportPath,
-      note: 'Seller import completed. Product and offer import requires the target schema migrations and will be added in the next catalog migration revision.',
+      listingBatches: listings.batchCount,
+      listings: listings.totals,
     };
     await report({ type: 'run-complete', ...summary });
     console.log(JSON.stringify(summary, null, 2));
