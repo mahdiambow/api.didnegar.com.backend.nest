@@ -110,7 +110,7 @@ export class ProductsService {
   async create(dto: CreateProductDto) {
     const { categoryIds, sellerIds, ...productData } = dto;
 
-    await this.assertUniqueFields(productData.slug, productData.sku);
+    await this.assertUniqueFields(productData.slug);
     if (productData.brandId) {
       await this.assertBrandExists(productData.brandId);
     }
@@ -196,21 +196,6 @@ export class ProductsService {
         throw new ApiException(
           'PRODUCT_SLUG_EXISTS',
           'محصول با این slug از قبل وجود دارد',
-          HttpStatus.CONFLICT,
-        );
-      }
-    }
-
-    if (
-      productData.sku !== undefined &&
-      productData.sku !== null &&
-      productData.sku !== product.sku
-    ) {
-      const skuTaken = await this.productRepository.findBySku(productData.sku);
-      if (skuTaken && skuTaken.id !== product.id) {
-        throw new ApiException(
-          'PRODUCT_SKU_EXISTS',
-          'محصول با این sku از قبل وجود دارد',
           HttpStatus.CONFLICT,
         );
       }
@@ -427,21 +412,12 @@ export class ProductsService {
     });
   }
 
-  private async assertUniqueFields(slug: string, sku: string) {
+  private async assertUniqueFields(slug: string) {
     const slugTaken = await this.productRepository.findBySlug(slug);
     if (slugTaken) {
       throw new ApiException(
         'PRODUCT_SLUG_EXISTS',
         'محصول با این slug از قبل وجود دارد',
-        HttpStatus.CONFLICT,
-      );
-    }
-
-    const skuTaken = await this.productRepository.findBySku(sku);
-    if (skuTaken) {
-      throw new ApiException(
-        'PRODUCT_SKU_EXISTS',
-        'محصول با این sku از قبل وجود دارد',
         HttpStatus.CONFLICT,
       );
     }
@@ -465,8 +441,8 @@ export class ProductsService {
       );
     }
     throw new ApiException(
-      'PRODUCT_SKU_EXISTS',
-      'محصول با این sku از قبل وجود دارد',
+      'PRODUCT_UNIQUE_FIELD_EXISTS',
+      'یکی از فیلدهای یکتای محصول از قبل وجود دارد',
       HttpStatus.CONFLICT,
     );
   }

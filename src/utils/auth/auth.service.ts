@@ -57,18 +57,27 @@ export class AuthService {
       user = await this.dataSource.transaction(async (manager) => {
         const users = manager.getRepository(User);
         //TODO: should be moved to verify otp when redis is added
+        // Set `role` relation (not only roleId) so TypeORM does not null the FK on save
         const created = await users.save(
           users.create({
             username: mobile,
             isActive: true,
+            role: defaultRole,
             roleId: defaultRole.id,
+            extraRoleIds: [],
           }),
         );
         await this.shoppingCartService.init(created.id, manager);
         await this.creditService.init(created.id, manager);
         return created;
       });
+      user = (await this.userRepository.findByUsername(mobile)) ?? user;
     } else {
+      if (!user.roleId || !user.role) {
+        const defaultRole = await this.rolesSeedService.getDefaultUserRole();
+        await this.userRepository.update(user.id, { roleId: defaultRole.id });
+        user = (await this.userRepository.findByUsername(mobile)) ?? user;
+      }
       await this.assertPortalAccess(user, portal);
     }
 
@@ -133,7 +142,7 @@ export class AuthService {
   }
 
   async verifyOtp(mobile: string, code: string, portal: AuthPortal) {
-    const user = await this.userRepository.findByUsernameForOtpVerify(mobile);
+    let user = await this.userRepository.findByUsernameForOtpVerify(mobile);
 
     if (!user || !user.otpCode || !user.otpExpiresAt) {
       throw new ApiException(
@@ -158,6 +167,12 @@ export class AuthService {
         'کد تایید نادرست است',
         HttpStatus.UNAUTHORIZED,
       );
+    }
+
+    if (!user.roleId || !user.role) {
+      const defaultRole = await this.rolesSeedService.getDefaultUserRole();
+      await this.userRepository.update(user.id, { roleId: defaultRole.id });
+      user = (await this.userRepository.findByUsernameForOtpVerify(mobile))!;
     }
 
     await this.assertPortalAccess(user, portal);
@@ -343,8 +358,11 @@ export class AuthService {
       );
     }
 
-    const roles = await this.resolveRoleSlugs(user);
     const allowed = AUTH_PORTAL_ROLES[portal];
+    // پورتال کاربر: هر حساب فعال می‌تواند وارد شود
+    if (allowed === null) return;
+
+    const roles = await this.resolveRoleSlugs(user);
     if (
       !userHasRole(
         { role: user.role.slug, roles },

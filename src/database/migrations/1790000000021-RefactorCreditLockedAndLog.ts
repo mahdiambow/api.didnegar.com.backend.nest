@@ -4,10 +4,10 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * Migrates older credit schema (balance + credit_ledger) to
  * amount/lockedAmount + credit_logs with sourceType in|out|lock|unlock.
  */
-export class RefactorCreditLockedAndLog1790000000020
+export class RefactorCreditLockedAndLog1790000000021
   implements MigrationInterface
 {
-  name = 'RefactorCreditLockedAndLog1790000000020';
+  name = 'RefactorCreditLockedAndLog1790000000021';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     if (await queryRunner.hasTable('user_credits')) {

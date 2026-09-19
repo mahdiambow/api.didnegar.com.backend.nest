@@ -47,9 +47,8 @@ export class NewsletterController {
 
   @Post('subscribe')
   @ApiOperation({
-    summary: 'عضویت در خبرنامه',
-    description:
-      'userId از JWT خوانده می‌شود و ایمیل از دیتابیس کاربر گرفته می‌شود (بدون body).',
+    summary: 'Subscribe to newsletter',
+    description: 'عضویت در خبرنامه\n\nuserId از JWT خوانده می‌شود و ایمیل از دیتابیس کاربر گرفته می‌شود (بدون body).',
   })
   @ApiResponseMeta({
     code: 'NEWSLETTER_SUBSCRIBED',
@@ -62,8 +61,8 @@ export class NewsletterController {
 
   @Post('unsubscribe')
   @ApiOperation({
-    summary: 'لغو عضویت در خبرنامه',
-    description: 'userId از JWT خوانده می‌شود.',
+    summary: 'Unsubscribe from newsletter',
+    description: 'لغو عضویت در خبرنامه\n\nuserId از JWT خوانده می‌شود.',
   })
   @ApiResponseMeta({
     code: 'NEWSLETTER_UNSUBSCRIBED',
@@ -75,7 +74,7 @@ export class NewsletterController {
   }
 
   @Get('me')
-  @ApiOperation({ summary: 'وضعیت عضویت خبرنامه کاربر لاگین‌شده' })
+  @ApiOperation({ summary: 'Newsletter status for logged-in user', description: 'وضعیت عضویت خبرنامه کاربر لاگین‌شده' })
   @ApiResponseMeta({
     code: 'NEWSLETTER_FOUND',
     message: 'Newsletter subscription retrieved successfully',
@@ -88,7 +87,7 @@ export class NewsletterController {
   @Get()
   @UseGuards(RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'لیست اعضای خبرنامه (ادمین)' })
+  @ApiOperation({ summary: 'List newsletter subscribers (admin)', description: 'لیست اعضای خبرنامه (ادمین)' })
   @ApiResponseMeta({
     code: 'NEWSLETTER_LIST_FOUND',
     message: 'Newsletter subscriptions retrieved successfully',
@@ -100,8 +99,8 @@ export class NewsletterController {
 
   @Delete('me')
   @ApiOperation({
-    summary: 'لغو عضویت (همان unsubscribe)',
-    description: 'userId از JWT خوانده می‌شود.',
+    summary: 'Unsubscribe (same as unsubscribe)',
+    description: 'لغو عضویت (همان unsubscribe)\n\nuserId از JWT خوانده می‌شود.',
   })
   @ApiResponseMeta({
     code: 'NEWSLETTER_UNSUBSCRIBED',

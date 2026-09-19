@@ -57,7 +57,7 @@ export class OrdersController {
     code: 'ORDERS_FOUND',
     message: 'Orders retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست سفارش‌ها (ادمین)' })
+  @ApiOperation({ summary: 'List orders (admin)', description: 'لیست سفارش‌ها (ادمین)' })
   @ApiOkResponse({ type: OrdersPaginatedApiResponseDto })
   findAll(@Query() query: ListOrdersQueryDto) {
     return this.ordersService.findAll(query);
@@ -68,7 +68,7 @@ export class OrdersController {
     code: 'ORDER_CREATED',
     message: 'Order created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد سفارش' })
+  @ApiOperation({ summary: 'Create order', description: 'ایجاد سفارش' })
   @ApiOkResponse({ type: OrderApiResponseDto })
   create(@Req() req: { user: { sub: string } }, @Body() dto: CreateOrderDto) {
     return this.ordersService.create(req.user.sub, dto);
@@ -81,7 +81,7 @@ export class OrdersController {
     code: 'ORDER_FOUND',
     message: 'Order retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت سفارش (ادمین)' })
+  @ApiOperation({ summary: 'Get order (admin)', description: 'دریافت سفارش (ادمین)' })
   @ApiOkResponse({ type: OrderApiResponseDto })
   findOneAdmin(@Param('id') id: string) {
     return this.ordersService.findOneAdmin(id);
@@ -94,7 +94,7 @@ export class OrdersController {
     code: 'ORDER_UPDATED',
     message: 'Order updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش سفارش (ادمین)' })
+  @ApiOperation({ summary: 'Update order (admin)', description: 'ویرایش سفارش (ادمین)' })
   @ApiOkResponse({ type: OrderApiResponseDto })
   updateAdmin(@Param('id') id: string, @Body() dto: UpdateOrderDto) {
     return this.ordersService.updateAdmin(id, dto);
@@ -105,7 +105,7 @@ export class OrdersController {
     code: 'ORDER_FOUND',
     message: 'Order retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت سفارش کاربر' })
+  @ApiOperation({ summary: 'Get user order', description: 'دریافت سفارش کاربر' })
   @ApiOkResponse({ type: OrderApiResponseDto })
   findOne(@Req() req: { user: { sub: string } }, @Param('id') id: string) {
     return this.ordersService.findOne(id, req.user.sub);

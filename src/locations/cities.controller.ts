@@ -58,7 +58,7 @@ export class CitiesController {
     code: 'CITIES_FOUND',
     message: 'Cities retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست شهرها' })
+  @ApiOperation({ summary: 'List cities', description: 'لیست شهرها' })
   @ApiOkResponse({ type: CitiesPaginatedApiResponseDto })
   findAll(@Query() query: ListCitiesQueryDto) {
     return this.citiesService.findAll(query);
@@ -70,7 +70,7 @@ export class CitiesController {
     code: 'CITY_FOUND',
     message: 'City retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک شهر' })
+  @ApiOperation({ summary: 'Get one city', description: 'دریافت یک شهر' })
   @ApiOkResponse({ type: CityApiResponseDto })
   findOne(@Param('id') id: string) {
     return this.citiesService.findOne(id);
@@ -82,7 +82,7 @@ export class CitiesController {
     code: 'CITY_CREATED',
     message: 'City created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد شهر' })
+  @ApiOperation({ summary: 'Create city', description: 'ایجاد شهر' })
   @ApiOkResponse({ type: CityApiResponseDto })
   create(@Body() dto: CreateCityDto) {
     return this.citiesService.create(dto);
@@ -94,7 +94,7 @@ export class CitiesController {
     code: 'CITY_UPDATED',
     message: 'City updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش شهر' })
+  @ApiOperation({ summary: 'Update city', description: 'ویرایش شهر' })
   @ApiOkResponse({ type: CityApiResponseDto })
   update(@Param('id') id: string, @Body() dto: UpdateCityDto) {
     return this.citiesService.update(id, dto);
@@ -106,7 +106,7 @@ export class CitiesController {
     code: 'CITY_DELETED',
     message: 'City deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف شهر' })
+  @ApiOperation({ summary: 'Delete city', description: 'حذف شهر' })
   remove(@Param('id') id: string) {
     return this.citiesService.remove(id);
   }

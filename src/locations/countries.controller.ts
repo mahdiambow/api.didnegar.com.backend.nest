@@ -58,7 +58,7 @@ export class CountriesController {
     code: 'COUNTRIES_FOUND',
     message: 'Countries retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست کشورها' })
+  @ApiOperation({ summary: 'List countries', description: 'لیست کشورها' })
   @ApiOkResponse({ type: CountriesPaginatedApiResponseDto })
   findAll(@Query() query: ListLocationsQueryDto) {
     return this.countriesService.findAll(query);
@@ -70,7 +70,7 @@ export class CountriesController {
     code: 'COUNTRY_FOUND',
     message: 'Country retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک کشور' })
+  @ApiOperation({ summary: 'Get one country', description: 'دریافت یک کشور' })
   @ApiOkResponse({ type: CountryApiResponseDto })
   findOne(@Param('id') id: string) {
     return this.countriesService.findOne(id);
@@ -82,7 +82,7 @@ export class CountriesController {
     code: 'COUNTRY_CREATED',
     message: 'Country created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد کشور' })
+  @ApiOperation({ summary: 'Create country', description: 'ایجاد کشور' })
   @ApiOkResponse({ type: CountryApiResponseDto })
   create(@Body() dto: CreateCountryDto) {
     return this.countriesService.create(dto);
@@ -94,7 +94,7 @@ export class CountriesController {
     code: 'COUNTRY_UPDATED',
     message: 'Country updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش کشور' })
+  @ApiOperation({ summary: 'Update country', description: 'ویرایش کشور' })
   @ApiOkResponse({ type: CountryApiResponseDto })
   update(@Param('id') id: string, @Body() dto: UpdateCountryDto) {
     return this.countriesService.update(id, dto);
@@ -106,7 +106,7 @@ export class CountriesController {
     code: 'COUNTRY_DELETED',
     message: 'Country deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف کشور' })
+  @ApiOperation({ summary: 'Delete country', description: 'حذف کشور' })
   remove(@Param('id') id: string) {
     return this.countriesService.remove(id);
   }

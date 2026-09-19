@@ -126,7 +126,7 @@ export class ParentCategoriesController {
     code: 'PARENT_CATEGORIES_FOUND',
     message: 'Parent categories retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست parent category ها (سطح ۱)' })
+  @ApiOperation({ summary: 'List parent categories (level 1)', description: 'لیست parent category ها (سطح ۱)' })
   @ApiOkResponse({ type: ParentCategoriesListApiResponseDto })
   findAll(@Query() query: ListParentCategoriesQueryDto) {
     return this.categoriesService.findAllParentCategories(query);
@@ -137,7 +137,7 @@ export class ParentCategoriesController {
     code: 'CATEGORIES_FOUND',
     message: 'Categories retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست دسته‌های یک parent category' })
+  @ApiOperation({ summary: 'List categories of a parent category', description: 'لیست دسته‌های یک parent category' })
   @ApiOkResponse({ type: CategoriesListApiResponseDto })
   findCategories(
     @Param('parentCategoryId') parentCategoryId: string,
@@ -154,7 +154,7 @@ export class ParentCategoriesController {
     code: 'PARENT_CATEGORY_FOUND',
     message: 'Parent category retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت parent category' })
+  @ApiOperation({ summary: 'Get parent category', description: 'دریافت parent category' })
   @ApiOkResponse({ type: ParentCategoryApiResponseDto })
   findOne(@Param('id') id: string) {
     return this.categoriesService.findParentCategory(id);
@@ -165,7 +165,7 @@ export class ParentCategoriesController {
     code: 'PARENT_CATEGORY_CREATED',
     message: 'Parent category created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد parent category' })
+  @ApiOperation({ summary: 'Create parent category', description: 'ایجاد parent category' })
   @ApiOkResponse({ type: ParentCategoryApiResponseDto })
   create(@Body() dto: CreateParentCategoryDto) {
     return this.categoriesService.createParentCategory(dto);
@@ -176,7 +176,7 @@ export class ParentCategoriesController {
     code: 'PARENT_CATEGORY_UPDATED',
     message: 'Parent category updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش parent category' })
+  @ApiOperation({ summary: 'Update parent category', description: 'ویرایش parent category' })
   @ApiOkResponse({ type: ParentCategoryApiResponseDto })
   update(@Param('id') id: string, @Body() dto: UpdateParentCategoryDto) {
     return this.categoriesService.updateParentCategory(id, dto);
@@ -187,7 +187,7 @@ export class ParentCategoriesController {
     code: 'PARENT_CATEGORY_DELETED',
     message: 'Parent category deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف parent category' })
+  @ApiOperation({ summary: 'Delete parent category', description: 'حذف parent category' })
   remove(@Param('id') id: string) {
     return this.categoriesService.removeParentCategory(id);
   }
@@ -206,8 +206,8 @@ export class CategoriesController {
     message: 'Categories retrieved successfully',
   })
   @ApiOperation({
-    summary: 'لیست دسته‌بندی‌ها (سطح ۲)',
-    description: 'اختیاری: ?parentCategoryId=&search=&isActive=',
+    summary: 'List categories (level 2)',
+    description: 'لیست دسته‌بندی‌ها (سطح ۲)\n\nاختیاری: ?parentCategoryId=&search=&isActive=',
   })
   @ApiOkResponse({ type: CategoriesListApiResponseDto })
   findAllCategories(@Query() query: ListCategoriesQueryDto) {
@@ -219,7 +219,7 @@ export class CategoriesController {
     code: 'SUB_CATEGORIES_FOUND',
     message: 'Sub categories retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست زیردسته‌های یک دسته (سطح ۳)' })
+  @ApiOperation({ summary: 'List subcategories of a category (level 3)', description: 'لیست زیردسته‌های یک دسته (سطح ۳)' })
   @ApiOkResponse({ type: SubCategoriesListApiResponseDto })
   findSubCategories(
     @Param('categoryId') categoryId: string,
@@ -236,7 +236,7 @@ export class CategoriesController {
     code: 'CATEGORY_FOUND',
     message: 'Category retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت دسته‌بندی' })
+  @ApiOperation({ summary: 'Get category', description: 'دریافت دسته‌بندی' })
   @ApiOkResponse({ type: CategoryApiResponseDto })
   findCategory(@Param('id') id: string) {
     return this.categoriesService.findCategory(id);
@@ -247,7 +247,7 @@ export class CategoriesController {
     code: 'CATEGORY_CREATED',
     message: 'Category created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد دسته‌بندی — نیاز به parentCategoryId' })
+  @ApiOperation({ summary: 'Create category — requires parentCategoryId', description: 'ایجاد دسته‌بندی — نیاز به parentCategoryId' })
   @ApiOkResponse({ type: CategoryApiResponseDto })
   createCategory(@Body() dto: CreateCategoryDto) {
     return this.categoriesService.createCategory(dto);
@@ -258,7 +258,7 @@ export class CategoriesController {
     code: 'CATEGORY_UPDATED',
     message: 'Category updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش دسته‌بندی' })
+  @ApiOperation({ summary: 'Update category', description: 'ویرایش دسته‌بندی' })
   @ApiOkResponse({ type: CategoryApiResponseDto })
   updateCategory(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
     return this.categoriesService.updateCategory(id, dto);
@@ -269,7 +269,7 @@ export class CategoriesController {
     code: 'CATEGORY_DELETED',
     message: 'Category deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف دسته‌بندی' })
+  @ApiOperation({ summary: 'Delete category', description: 'حذف دسته‌بندی' })
   removeCategory(@Param('id') id: string) {
     return this.categoriesService.removeCategory(id);
   }
@@ -288,8 +288,8 @@ export class SubCategoriesController {
     message: 'Sub categories retrieved successfully',
   })
   @ApiOperation({
-    summary: 'لیست زیردسته‌ها (با category و parentCategory)',
-    description: 'فیلتر اختیاری: ?categoryId= یا ?parentCategoryId= یا ?search=',
+    summary: 'List subcategories (with category and parentCategory)',
+    description: 'لیست زیردسته‌ها (با category و parentCategory)\n\nفیلتر اختیاری: ?categoryId= یا ?parentCategoryId= یا ?search=',
   })
   @ApiOkResponse({ type: SubCategoriesListApiResponseDto })
   findAll(@Query() query: ListSubCategoriesQueryDto) {
@@ -301,7 +301,7 @@ export class SubCategoriesController {
     code: 'SUB_CATEGORY_FOUND',
     message: 'Sub category retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت زیردسته با دیتای populate شده' })
+  @ApiOperation({ summary: 'Get subcategory with populated data', description: 'دریافت زیردسته با دیتای populate شده' })
   @ApiOkResponse({ type: SubCategoryApiResponseDto })
   findOne(@Param('id') id: string) {
     return this.categoriesService.findSubCategory(id);
@@ -312,7 +312,7 @@ export class SubCategoriesController {
     code: 'SUB_CATEGORY_CREATED',
     message: 'Sub category created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد زیردسته (سطح ۳)' })
+  @ApiOperation({ summary: 'Create subcategory (level 3)', description: 'ایجاد زیردسته (سطح ۳)' })
   @ApiOkResponse({ type: SubCategoryApiResponseDto })
   createSubCategory(@Body() dto: CreateSubCategoryDto) {
     return this.categoriesService.createSubCategory(dto);
@@ -323,7 +323,7 @@ export class SubCategoriesController {
     code: 'SUB_CATEGORY_UPDATED',
     message: 'Sub category updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش زیردسته' })
+  @ApiOperation({ summary: 'Update subcategory', description: 'ویرایش زیردسته' })
   @ApiOkResponse({ type: SubCategoryApiResponseDto })
   updateSubCategory(@Param('id') id: string, @Body() dto: UpdateSubCategoryDto) {
     return this.categoriesService.updateSubCategory(id, dto);
@@ -334,7 +334,7 @@ export class SubCategoriesController {
     code: 'SUB_CATEGORY_DELETED',
     message: 'Sub category deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف زیردسته' })
+  @ApiOperation({ summary: 'Delete subcategory', description: 'حذف زیردسته' })
   removeSubCategory(@Param('id') id: string) {
     return this.categoriesService.removeSubCategory(id);
   }
@@ -352,14 +352,14 @@ export class ProductCategoriesController {
     code: 'PRODUCT_CATEGORIES_FOUND',
     message: 'Product categories retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست ارتباط محصول-دسته' })
+  @ApiOperation({ summary: 'List product-category relations', description: 'لیست ارتباط محصول-دسته' })
   @ApiOkResponse({ type: ProductCategoriesPaginatedApiResponseDto })
   findProductCategories(@Query() query: ListProductCategoriesQueryDto) {
     return this.categoriesService.findProductCategories(query);
   }
 
   @Get('by-product/:productId')
-  @ApiOperation({ summary: 'دسته‌بندی‌های یک محصول' })
+  @ApiOperation({ summary: 'Categories of a product', description: 'دسته‌بندی‌های یک محصول' })
   findByProduct(@Param('productId') productId: string) {
     return this.categoriesService.getProductCategoriesByProductId(productId);
   }
@@ -369,7 +369,7 @@ export class ProductCategoriesController {
     code: 'PRODUCT_CATEGORY_CREATED',
     message: 'Product category link created successfully',
   })
-  @ApiOperation({ summary: 'اختصاص دسته به محصول' })
+  @ApiOperation({ summary: 'Assign category to product', description: 'اختصاص دسته به محصول' })
   @ApiOkResponse({ type: ProductCategoryApiResponseDto })
   assignProductCategory(@Body() dto: CreateProductCategoryDto) {
     return this.categoriesService.assignProductCategory(dto);
@@ -380,7 +380,7 @@ export class ProductCategoriesController {
     code: 'PRODUCT_CATEGORY_UPDATED',
     message: 'Product category link updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش ارتباط محصول-دسته' })
+  @ApiOperation({ summary: 'Update product-category relation', description: 'ویرایش ارتباط محصول-دسته' })
   @ApiOkResponse({ type: ProductCategoryApiResponseDto })
   updateProductCategory(
     @Param('id') id: string,
@@ -394,7 +394,7 @@ export class ProductCategoriesController {
     code: 'PRODUCT_CATEGORY_DELETED',
     message: 'Product category link deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف ارتباط محصول-دسته' })
+  @ApiOperation({ summary: 'Delete product-category relation', description: 'حذف ارتباط محصول-دسته' })
   removeProductCategory(@Param('id') id: string) {
     return this.categoriesService.removeProductCategory(id);
   }

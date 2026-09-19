@@ -71,9 +71,8 @@ export class MediaController {
   @Get()
   @RequireRole(...sellerRoles)
   @ApiOperation({
-    summary: 'لیست گالری رسانه',
-    description:
-      'با group فیلتر کن (blog/product/setting/seller/other). سلر معمولی فقط رسانه خودش را می‌بیند.',
+    summary: 'List media gallery',
+    description: 'لیست گالری رسانه\n\nبا group فیلتر کن (blog/product/setting/seller/other). سلر معمولی فقط رسانه خودش را می‌بیند.',
   })
   @ApiResponseMeta({
     code: 'MEDIA_LIST',
@@ -103,9 +102,8 @@ export class MediaController {
     type: UploadMediaDto,
   })
   @ApiOperation({
-    summary: 'آپلود رسانه به گالری (staging)',
-    description:
-      'فیلد group مسیر فولدر را مشخص می‌کند. برای seller مسیر seller/{sellerId}/ است. sellerId از JWT خوانده می‌شود. از دکمه Authorize بالای صفحه توکن را ست کن.',
+    summary: 'Upload media to gallery (staging)',
+    description: 'آپلود رسانه به گالری (staging)\n\nفیلد group مسیر فولدر را مشخص می‌کند. برای seller مسیر seller/{sellerId}/ است. sellerId از JWT خوانده می‌شود. از دکمه Authorize بالای صفحه توکن را ست کن.',
   })
   @ApiResponseMeta({
     code: 'MEDIA_UPLOADED',
@@ -124,7 +122,7 @@ export class MediaController {
 
   @Get(':id')
   @RequireRole(...sellerRoles)
-  @ApiOperation({ summary: 'دریافت یک رسانه' })
+  @ApiOperation({ summary: 'Get one media item', description: 'دریافت یک رسانه' })
   @ApiResponseMeta({
     code: 'MEDIA_FOUND',
     message: 'Media asset retrieved successfully',
@@ -140,9 +138,8 @@ export class MediaController {
   @Patch(':id/approval')
   @RequireRole(...reviewerRoles)
   @ApiOperation({
-    summary: 'تأیید یا رد رسانه',
-    description:
-      'approved → انتقال به gallery و expires_at=null. rejected → expires_at=+24h.',
+    summary: 'Approve or reject media',
+    description: 'تأیید یا رد رسانه\n\napproved → انتقال به gallery و expires_at=null. rejected → expires_at=+24h.',
   })
   @ApiResponseMeta({
     code: 'MEDIA_REVIEWED',
@@ -160,8 +157,8 @@ export class MediaController {
   @Patch(':id/attach')
   @RequireRole(...sellerRoles)
   @ApiOperation({
-    summary: 'اتصال رسانه تأییدشده به محصول',
-    description: 'is_used=true',
+    summary: 'Attach approved media to product',
+    description: 'اتصال رسانه تأییدشده به محصول\n\nis_used=true',
   })
   @ApiResponseMeta({
     code: 'MEDIA_ATTACHED',
@@ -178,7 +175,7 @@ export class MediaController {
 
   @Patch(':id/detach')
   @RequireRole(...sellerRoles)
-  @ApiOperation({ summary: 'جدا کردن رسانه از محصول' })
+  @ApiOperation({ summary: 'Detach media from product', description: 'جدا کردن رسانه از محصول' })
   @ApiResponseMeta({
     code: 'MEDIA_DETACHED',
     message: 'Media detached from product',
@@ -193,7 +190,7 @@ export class MediaController {
 
   @Delete(':id')
   @RequireRole(...sellerRoles)
-  @ApiOperation({ summary: 'حذف رسانه استفاده‌نشده' })
+  @ApiOperation({ summary: 'Delete unused media', description: 'حذف رسانه استفاده‌نشده' })
   @ApiResponseMeta({
     code: 'MEDIA_DELETED',
     message: 'Media deleted successfully',

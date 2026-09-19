@@ -42,7 +42,7 @@ export class ContactSettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'دریافت تنظیمات صفحه تماس با ما' })
+  @ApiOperation({ summary: 'Get contact-us page settings', description: 'دریافت تنظیمات صفحه تماس با ما' })
   @ApiResponseMeta({
     code: 'CONTACT_SETTINGS_FOUND',
     message: 'Contact settings found successfully',
@@ -56,7 +56,7 @@ export class ContactSettingsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'ایجاد تنظیمات تماس با ما' })
+  @ApiOperation({ summary: 'Create contact-us settings', description: 'ایجاد تنظیمات تماس با ما' })
   @ApiResponseMeta({
     code: 'CONTACT_SETTINGS_CREATED',
     message: 'Contact settings created successfully',
@@ -70,7 +70,7 @@ export class ContactSettingsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'ویرایش تنظیمات تماس با ما' })
+  @ApiOperation({ summary: 'Update contact-us settings', description: 'ویرایش تنظیمات تماس با ما' })
   @ApiResponseMeta({
     code: 'CONTACT_SETTINGS_UPDATED',
     message: 'Contact settings updated successfully',
@@ -84,7 +84,7 @@ export class ContactSettingsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'حذف تنظیمات تماس با ما' })
+  @ApiOperation({ summary: 'Delete contact-us settings', description: 'حذف تنظیمات تماس با ما' })
   @ApiResponseMeta({
     code: 'CONTACT_SETTINGS_DELETED',
     message: 'Contact settings deleted successfully',

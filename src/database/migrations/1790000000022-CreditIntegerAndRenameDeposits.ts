@@ -4,10 +4,10 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * - credit amounts: decimal → bigint (whole numbers)
  * - payments → deposits, authority → trackId
  */
-export class CreditIntegerAndRenameDeposits1790000000021
+export class CreditIntegerAndRenameDeposits1790000000022
   implements MigrationInterface
 {
-  name = 'CreditIntegerAndRenameDeposits1790000000021';
+  name = 'CreditIntegerAndRenameDeposits1790000000022';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     if (await queryRunner.hasTable('user_credits')) {

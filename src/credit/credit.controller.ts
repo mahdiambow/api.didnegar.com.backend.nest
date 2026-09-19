@@ -37,7 +37,7 @@ export class CreditController {
     code: 'CREDIT_BALANCE_FOUND',
     message: 'Credit balance retrieved successfully',
   })
-  @ApiOperation({ summary: 'موجودی و مبلغ قفل‌شده کیف پول کاربر' })
+  @ApiOperation({ summary: 'User wallet balance and locked amount', description: 'موجودی و مبلغ قفل‌شده کیف پول کاربر' })
   @ApiOkResponse({ type: CreditBalanceApiResponseDto })
   getBalance(@Req() req: { user: { sub: string } }) {
     return this.creditService.getBalance(req.user.sub);

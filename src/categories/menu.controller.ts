@@ -23,9 +23,8 @@ export class MenuController {
     message: 'Menu retrieved successfully',
   })
   @ApiOperation({
-    summary: 'منوی دسته‌بندی‌ها (۳ سطح)',
-    description:
-      'سطح ۱ parentCategories ← سطح ۲ categories ← سطح ۳ subCategories (فقط فعال‌ها)',
+    summary: 'Category menu (3 levels)',
+    description: 'منوی دسته‌بندی‌ها (۳ سطح)\n\nسطح ۱ parentCategories ← سطح ۲ categories ← سطح ۳ subCategories (فقط فعال‌ها)',
   })
   @ApiOkResponse({ type: MenuApiResponseDto })
   getMenu() {

@@ -64,7 +64,7 @@ export class RolesController {
     code: 'PERMISSIONS_FOUND',
     message: 'Permissions retrieved successfully',
   })
-  @ApiOperation({ summary: 'لیست permissionهای قابل اختصاص' })
+  @ApiOperation({ summary: 'List assignable permissions', description: 'لیست permissionهای قابل اختصاص' })
   @ApiOkResponse({ type: PermissionsApiResponseDto })
   getPermissions(@Req() req: { user: AuthUser }) {
     return this.rolesService.getPermissions(req.user);
@@ -77,9 +77,8 @@ export class RolesController {
     message: 'Roles retrieved successfully',
   })
   @ApiOperation({
-    summary: 'لیست نقش‌ها با pagination',
-    description:
-      'نقش‌های سیستمی: user | seller | super-seller | admin | super-admin',
+    summary: 'List roles with pagination',
+    description: 'لیست نقش‌ها با pagination\n\nنقش‌های سیستمی: user | seller | super-seller | admin | super-admin',
   })
   @ApiOkResponse({ type: RolesPaginatedApiResponseDto })
   findAll(@Req() req: { user: AuthUser }, @Query() query: ListRolesQueryDto) {
@@ -92,7 +91,7 @@ export class RolesController {
     code: 'ROLE_FOUND',
     message: 'Role retrieved successfully',
   })
-  @ApiOperation({ summary: 'دریافت یک نقش' })
+  @ApiOperation({ summary: 'Get one role', description: 'دریافت یک نقش' })
   @ApiOkResponse({ type: RoleApiResponseDto })
   findOne(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     return this.rolesService.findOne(req.user, id);
@@ -104,7 +103,7 @@ export class RolesController {
     code: 'ROLE_CREATED',
     message: 'Role created successfully',
   })
-  @ApiOperation({ summary: 'ایجاد نقش جدید' })
+  @ApiOperation({ summary: 'Create new role', description: 'ایجاد نقش جدید' })
   @ApiOkResponse({ type: RoleApiResponseDto })
   create(@Req() req: { user: AuthUser }, @Body() dto: CreateRoleDto) {
     return this.rolesService.create(req.user, dto);
@@ -116,7 +115,7 @@ export class RolesController {
     code: 'ROLE_UPDATED',
     message: 'Role updated successfully',
   })
-  @ApiOperation({ summary: 'ویرایش نقش' })
+  @ApiOperation({ summary: 'Update role', description: 'ویرایش نقش' })
   @ApiOkResponse({ type: RoleApiResponseDto })
   update(
     @Req() req: { user: AuthUser },
@@ -132,7 +131,7 @@ export class RolesController {
     code: 'ROLE_DELETED',
     message: 'Role deleted successfully',
   })
-  @ApiOperation({ summary: 'حذف نقش' })
+  @ApiOperation({ summary: 'Delete role', description: 'حذف نقش' })
   remove(@Req() req: { user: AuthUser }, @Param('id') id: string) {
     return this.rolesService.remove(req.user, id);
   }

@@ -39,7 +39,7 @@ export class AboutUsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'دریافت درباره ما' })
+  @ApiOperation({ summary: 'Get about-us', description: 'دریافت درباره ما' })
   @ApiResponseMeta({
     code: 'ABOUT_US_FOUND',
     message: 'About us found successfully',
@@ -53,7 +53,7 @@ export class AboutUsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'ایجاد درباره ما' })
+  @ApiOperation({ summary: 'Create about-us', description: 'ایجاد درباره ما' })
   @ApiResponseMeta({
     code: 'ABOUT_US_CREATED',
     message: 'About us created successfully',
@@ -67,7 +67,7 @@ export class AboutUsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'ویرایش درباره ما' })
+  @ApiOperation({ summary: 'Update about-us', description: 'ویرایش درباره ما' })
   @ApiResponseMeta({
     code: 'ABOUT_US_UPDATED',
     message: 'About us updated successfully',
@@ -81,7 +81,7 @@ export class AboutUsController {
   @ApiBearerAuth('access-token')
   @UseGuards(JwtAuthGuard, RoleGuard)
   @RequireRole(DEFAULT_ROLE_SLUGS.ADMIN, DEFAULT_ROLE_SLUGS.SUPER_ADMIN)
-  @ApiOperation({ summary: 'حذف درباره ما' })
+  @ApiOperation({ summary: 'Delete about-us', description: 'حذف درباره ما' })
   @ApiResponseMeta({
     code: 'ABOUT_US_DELETED',
     message: 'About us deleted successfully',
