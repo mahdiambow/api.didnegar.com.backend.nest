@@ -1,0 +1,1 @@
+export const ZIBAL_PROVIDER = 'ZIBAL_PROVIDER';

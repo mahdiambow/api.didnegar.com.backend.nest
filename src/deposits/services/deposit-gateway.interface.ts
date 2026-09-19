@@ -6,9 +6,12 @@ export interface IBank {
     amount: number,
     description: string,
     orderId: string,
-  ): PaymentExternalRequestResult;
-  verifyPayment(authority: string, amount: number): PaymentExternalVerifyResult;
-  buildPaymentUrl(authority: string): string;
+  ): Promise<PaymentExternalRequestResult> | PaymentExternalRequestResult;
+  verifyPayment(
+    trackId: string,
+    amount: number,
+  ): Promise<PaymentExternalVerifyResult> | PaymentExternalVerifyResult;
+  buildPaymentUrl(trackId: string): string;
 }
 
 /** وام / اقساط شخص ثالث */
@@ -19,15 +22,18 @@ export interface ILoan {
     amount: number,
     description: string,
     orderId: string,
-  ): PaymentExternalRequestResult;
-  verifyPayment(authority: string, amount: number): PaymentExternalVerifyResult;
-  buildPaymentUrl(authority: string): string;
+  ): Promise<PaymentExternalRequestResult> | PaymentExternalRequestResult;
+  verifyPayment(
+    trackId: string,
+    amount: number,
+  ): Promise<PaymentExternalVerifyResult> | PaymentExternalVerifyResult;
+  buildPaymentUrl(trackId: string): string;
 }
 
 export type ExternalPaymentProvider = IBank | ILoan;
 
 export interface PaymentExternalRequestResult {
-  authority: string;
+  trackId: string;
   paymentUrl: string;
   message: string;
 }
@@ -35,13 +41,15 @@ export interface PaymentExternalRequestResult {
 export interface PaymentExternalVerifyResult {
   refId: string;
   message: string;
+  /** مبلغ تأییدشده توسط درگاه (ریال) — برای تطبیق با deposit */
+  amount?: number;
 }
 
 /** سازگاری با adapter قبلی */
 export type PaymentGatewayId = 'zarinpal' | 'zibal' | 'loan' | 'credit';
 
 export interface PaymentRequestResult {
-  authority: string;
+  trackId: string;
   paymentUrl: string;
   message: string;
 }
@@ -49,6 +57,7 @@ export interface PaymentRequestResult {
 export interface PaymentVerifyResult {
   refId: string;
   message: string;
+  amount?: number;
 }
 
 export interface PaymentGatewayAdapter {
@@ -57,7 +66,10 @@ export interface PaymentGatewayAdapter {
     amount: number,
     description: string,
     orderId: string,
-  ): PaymentRequestResult;
-  verifyPayment(authority: string, amount: number): PaymentVerifyResult;
-  buildPaymentUrl(authority: string): string;
+  ): Promise<PaymentRequestResult> | PaymentRequestResult;
+  verifyPayment(
+    trackId: string,
+    amount: number,
+  ): Promise<PaymentVerifyResult> | PaymentVerifyResult;
+  buildPaymentUrl(trackId: string): string;
 }

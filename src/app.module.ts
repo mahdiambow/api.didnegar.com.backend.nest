@@ -12,7 +12,7 @@ import { AdminModule } from './admin/admin.module.js';
 import { LocationsModule } from './locations/locations.module.js';
 import { ProductsModule } from './products/products.module.js';
 import { OrdersModule } from './orders/orders.module.js';
-import { PaymentsModule } from './payments/payments.module.js';
+import { DepositsModule } from './deposits/deposits.module.js';
 import { ShippingModule } from './shipping/shipping.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { AttributesModule } from './attributes/attributes.module.js';
@@ -25,6 +25,7 @@ import { DatabaseSeedModule } from './database/database.seed.module.js';
 import { UlidSubscriber } from './common/id/ulid.subscriber.js';
 import { ShoppingCartModule } from './shopping-cart/shopping-cart.module.js';
 import { CreditModule } from './credit/credit.module.js';
+import { WalletModule } from './wallet/wallet.module.js';
 
 @Module({
   imports: [
@@ -59,8 +60,9 @@ import { CreditModule } from './credit/credit.module.js';
     OffersModule,
     ShoppingCartModule,
     CreditModule,
+    WalletModule,
     OrdersModule,
-    PaymentsModule,
+    DepositsModule,
     ShippingModule,
     CategoriesModule,
     AttributesModule,

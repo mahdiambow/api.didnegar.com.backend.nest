@@ -12,7 +12,9 @@ import {
 import { Seller } from '../sellers/entities/seller.entity.js';
 import { Product } from '../products/entities/product.entity.js';
 import { ProductsService } from '../products/products.service.js';
+import { ProductStockRepository } from '../products/repositories/product-stock.repository.js';
 import { SellerOffer } from './entities/seller-offer.entity.js';
+
 import {
   CreateSellerOffersDto,
   ListSellerOffersDto,
@@ -86,7 +88,10 @@ export class OffersService {
     private readonly products: Repository<Product>,
     @Inject(forwardRef(() => ProductsService))
     private readonly productsService: ProductsService,
+    @Inject(forwardRef(() => ProductStockRepository))
+    private readonly productStockRepository: ProductStockRepository,
   ) {}
+
 
   async findAll(query: ListSellerOffersDto) {
     const { page, limit, offset } = getPaginationParams(query);
@@ -481,5 +486,39 @@ export class OffersService {
       .execute();
 
     return (result.affected ?? 0) > 0;
+  }
+
+  /** کم‌کردن موجودی آفر + محصول برای خرید — متعلق به لایهٔ stock/offers */
+  async decrementStockForPurchase(
+    items: { offerId: string; productId: string; quantity: number }[],
+    manager: EntityManager,
+  ): Promise<void> {
+    for (const item of items) {
+      const offerOk = await this.tryDecrementStock(
+        item.offerId,
+        item.quantity,
+        manager,
+      );
+      if (!offerOk) {
+        throw new ApiException(
+          'OFFER_UNAVAILABLE',
+          'پیشنهاد فروش یا موجودی موردنیاز در دسترس نیست',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      const productOk = await this.productStockRepository.tryDecrement(
+        item.productId,
+        item.quantity,
+        manager,
+      );
+      if (!productOk) {
+        throw new ApiException(
+          'PRODUCT_OUT_OF_STOCK',
+          'موجودی محصول کافی نیست',
+          HttpStatus.CONFLICT,
+        );
+      }
+    }
   }
 }

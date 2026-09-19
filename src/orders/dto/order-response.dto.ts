@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Order } from '../../payments/entities/order.entity.js';
+import { Order } from '../entities/order.entity.js';
 import { ShippingMethodResponseDto } from '../../shipping/dto/shipping.dto.js';
 import { toShippingMethodResponse } from '../../shipping/dto/shipping.dto.js';
 

@@ -30,13 +30,33 @@ export class CreditService {
     };
   }
 
+  /** لیست کیف‌پول‌های ساخته‌شده (ادمین) */
+  findPaginated(
+    offset: number,
+    limit: number,
+    filters: { userId?: string } = {},
+  ): Promise<[UserCredit[], number]> {
+    const qb = this.credits
+      .createQueryBuilder('wallet')
+      .leftJoinAndSelect('wallet.user', 'user')
+      .orderBy('wallet.createdAt', 'DESC')
+      .skip(offset)
+      .take(limit);
+
+    if (filters.userId) {
+      qb.andWhere('wallet.userId = :userId', { userId: filters.userId });
+    }
+
+    return qb.getManyAndCount();
+  }
+
   /** Create the user's wallet at registration (amount/locked = 0); idempotent. */
   async init(userId: string, manager?: EntityManager): Promise<UserCredit> {
     return this.ensureWallet(userId, manager);
   }
 
   /** شارژ موجودی قابل‌خرج */
-  async in(
+  async incrementTotalAmount(
     userId: string,
     amount: number,
     meta: CreditTxMeta,
@@ -46,7 +66,7 @@ export class CreditService {
   }
 
   /** کسر از موجودی قابل‌خرج */
-  async out(
+  async decrementTotalAmount(
     userId: string,
     amount: number,
     meta: CreditTxMeta,
@@ -75,34 +95,6 @@ export class CreditService {
     return this.apply(userId, amount, CreditSourceType.UNLOCK, meta, manager);
   }
 
-  /**
-   * پرداخت سفارش از credit:
-   * - gateway: in سپس out
-   * - کیف پول مستقیم: فقط out
-   */
-  async payOrderViaCredit(
-    userId: string,
-    amount: number,
-    meta: CreditTxMeta & { depositFromGateway?: boolean },
-    manager: EntityManager,
-  ): Promise<{ amount: number; lockedAmount: number }> {
-    if (meta.depositFromGateway) {
-      await this.in(userId, amount, { sourceId: meta.sourceId }, manager);
-    }
-
-    const wallet = await this.out(
-      userId,
-      amount,
-      { sourceId: meta.sourceId },
-      manager,
-    );
-
-    return {
-      amount: Number(wallet.amount),
-      lockedAmount: Number(wallet.lockedAmount),
-    };
-  }
-
   private async apply(
     userId: string,
     amount: number,
@@ -110,7 +102,7 @@ export class CreditService {
     meta: CreditTxMeta,
     manager: EntityManager,
   ): Promise<UserCredit> {
-    this.assertPositiveAmount(amount);
+    this.assertPositiveWholeAmount(amount);
     const wallet = await this.ensureWallet(userId, manager);
     const amountBefore = Number(wallet.amount);
     const lockedBefore = Number(wallet.lockedAmount);
@@ -190,16 +182,16 @@ export class CreditService {
     userId: string,
     manager?: EntityManager,
   ): Promise<UserCredit> {
-    const repo = manager ? manager.getRepository(UserCredit) : this.credits;
-    const existing = await repo.findOneBy({ userId });
+    const creditsRepo = manager ? manager.getRepository(UserCredit) : this.credits;
+    const existing = await creditsRepo.findOneBy({ userId });
     if (existing) return existing;
 
     try {
-      return await repo.save(
-        repo.create({ userId, amount: 0, lockedAmount: 0 }),
+      return await creditsRepo.save(
+        creditsRepo.create({ userId, amount: 0, lockedAmount: 0 }),
       );
     } catch {
-      const again = await repo.findOneBy({ userId });
+      const again = await creditsRepo.findOneBy({ userId });
       if (again) return again;
       throw new ApiException(
         'CREDIT_WALLET_ERROR',
@@ -209,11 +201,11 @@ export class CreditService {
     }
   }
 
-  private assertPositiveAmount(amount: number) {
-    if (!Number.isFinite(amount) || amount <= 0) {
+  private assertPositiveWholeAmount(amount: number) {
+    if (!Number.isInteger(amount) || amount <= 0) {
       throw new ApiException(
         'INVALID_CREDIT_AMOUNT',
-        'مبلغ اعتبار نامعتبر است',
+        'مبلغ اعتبار باید عدد صحیح مثبت باشد',
         HttpStatus.BAD_REQUEST,
       );
     }

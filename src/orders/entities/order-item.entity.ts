@@ -1,5 +1,5 @@
 import { PrimaryColumn, Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
-import type { Order } from '../../payments/entities/order.entity.js';
+import type { Order } from './order.entity.js';
 import type { SellerOffer } from '../../offers/entities/seller-offer.entity.js';
 import type { Product } from '../../products/entities/product.entity.js';
 

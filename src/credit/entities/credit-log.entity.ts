@@ -19,8 +19,8 @@ export class CreditLog {
   @Column({ type: 'varchar', length: 26 })
   userId: string;
 
-  /** مبلغ این عملیات (همیشه مثبت) */
-  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  /** مبلغ این عملیات (همیشه مثبت، عدد صحیح) */
+  @Column({ type: 'bigint' })
   amount: number;
 
   @Column({ type: 'varchar', length: 20 })
@@ -30,16 +30,16 @@ export class CreditLog {
   @Column({ type: 'varchar', length: 26, nullable: true })
   sourceId: string | null;
 
-  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  @Column({ type: 'bigint' })
   amountBefore: number;
 
-  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  @Column({ type: 'bigint' })
   amountAfter: number;
 
-  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  @Column({ type: 'bigint' })
   lockedBefore: number;
 
-  @Column({ type: 'decimal', precision: 19, scale: 4 })
+  @Column({ type: 'bigint' })
   lockedAfter: number;
 
   @CreateDateColumn()
