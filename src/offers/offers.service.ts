@@ -127,8 +127,16 @@ export class OffersService {
       .skip(offset)
       .take(limit)
       .getManyAndCount();
+
+    const products = await this.productsService.findByIds(
+      items.map((offer) => offer.productId),
+    );
+    const productById = new Map(products.map((product) => [product.id, product]));
+
     return paginatedList(
-      items.map((offer) => toOfferResponse(offer)),
+      items.map((offer) =>
+        toOfferResponse(offer, productById.get(offer.productId)),
+      ),
       page,
       limit,
       total,

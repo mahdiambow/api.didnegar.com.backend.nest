@@ -14,6 +14,8 @@ import { CategoriesService } from '../categories/categories.service.js';
 import { FooterResponseDto } from '../settings/dto/footer.dto.js';
 import { HeaderResponseDto } from '../settings/dto/header.dto.js';
 import { BannerResponseDto } from '../settings/dto/banner.dto.js';
+import { AboutUsResponseDto } from '../settings/dto/about-us.dto.js';
+import { ContactSettingsResponseDto } from '../settings/dto/contact-settings.dto.js';
 import {
   ProductPriceResponseDto,
   ProductResponseDto,
@@ -39,6 +41,21 @@ const PublicBannersApiResponseDto = createSuccessResponseDto(BannerResponseDto, 
   name: 'PublicBanners',
   isArray: true,
 });
+
+const PublicAboutUsApiResponseDto = createSuccessResponseDto(AboutUsResponseDto, {
+  code: 'PUBLIC_ABOUT_US_FOUND',
+  message: 'About us retrieved successfully',
+  name: 'PublicAboutUs',
+});
+
+const PublicContactUsApiResponseDto = createSuccessResponseDto(
+  ContactSettingsResponseDto,
+  {
+    code: 'PUBLIC_CONTACT_US_FOUND',
+    message: 'Contact us retrieved successfully',
+    name: 'PublicContactUs',
+  },
+);
 
 const PublicProductsApiResponseDto = createSuccessResponseDto(
   ProductResponseDto,
@@ -109,6 +126,34 @@ export class PublicController {
   @ApiOkResponse({ type: PublicBannersApiResponseDto })
   banners() {
     return this.bannersService.findAllPublic();
+  }
+
+  @Get('about-us')
+  @ApiOperation({
+    summary: 'About us (public)',
+    description: 'درباره ما (پابلیک)',
+  })
+  @ApiResponseMeta({
+    code: 'PUBLIC_ABOUT_US_FOUND',
+    message: 'About us retrieved successfully',
+  })
+  @ApiOkResponse({ type: PublicAboutUsApiResponseDto })
+  aboutUs() {
+    return this.settingsService.getAboutUs();
+  }
+
+  @Get('contact-us')
+  @ApiOperation({
+    summary: 'Contact us settings (public)',
+    description: 'تنظیمات تماس با ما (پابلیک)',
+  })
+  @ApiResponseMeta({
+    code: 'PUBLIC_CONTACT_US_FOUND',
+    message: 'Contact us retrieved successfully',
+  })
+  @ApiOkResponse({ type: PublicContactUsApiResponseDto })
+  contactUs() {
+    return this.settingsService.getContactSettings();
   }
 
   @Get('products')

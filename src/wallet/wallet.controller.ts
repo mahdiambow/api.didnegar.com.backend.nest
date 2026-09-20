@@ -81,7 +81,7 @@ export class WalletController {
   })
   @ApiOperation({
     summary: 'Charge wallet via gateway',
-    description: 'درخواست شارژ کیف پول از طریق زرین‌پال یا زیبال (بدون سفارش)',
+    description: 'درخواست شارژ کیف پول از طریق iBank / زیبال (بدون سفارش)',
   })
   @ApiOkResponse({ type: DepositRequestApiDto })
   createDeposit(

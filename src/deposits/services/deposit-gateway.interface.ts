@@ -1,7 +1,7 @@
-/** درگاه بانکی (زرین‌پال، زیبال، …) */
+/** درگاه بانکی واحد (پیاده‌سازی: زیبال) */
 export interface IBank {
   readonly kind: 'bank';
-  readonly gateway: 'zarinpal' | 'zibal';
+  readonly gateway: 'iBank';
   requestPayment(
     amount: number,
     description: string,
@@ -45,8 +45,7 @@ export interface PaymentExternalVerifyResult {
   amount?: number;
 }
 
-/** سازگاری با adapter قبلی */
-export type PaymentGatewayId = 'zarinpal' | 'zibal' | 'loan' | 'credit';
+export type PaymentGatewayId = 'iBank' | 'loan' | 'credit';
 
 export interface PaymentRequestResult {
   trackId: string;

@@ -40,7 +40,7 @@ export class BannersController {
   constructor(private readonly bannersService: BannersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List banners filtered by placement, section, and category', description: 'لیست بنرها با فیلتر محل نمایش، بخش و دسته‌بندی' })
+  @ApiOperation({ summary: 'List banners filtered by placement and section', description: 'لیست بنرها با فیلتر محل نمایش و بخش' })
   @ApiResponseMeta({
     code: 'BANNERS_FOUND',
     message: 'Banners retrieved successfully',

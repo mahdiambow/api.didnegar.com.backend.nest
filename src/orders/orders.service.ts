@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
 import { DataSource, EntityManager, Repository } from 'typeorm';
@@ -13,6 +13,7 @@ import { ShippingService } from '../shipping/shipping.service.js';
 import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
 import { ShoppingCart } from '../shopping-cart/entities/shopping-cart.entity.js';
 import { ShoppingCartItem } from '../shopping-cart/entities/shopping-cart-item.entity.js';
+import { DepositsService } from '../deposits/deposits.service.js';
 import { CreateOrderDto, OrderProductDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { toOrderResponse } from './dto/order-response.dto.js';
@@ -31,6 +32,8 @@ export class OrdersService {
     private readonly addresses: Repository<UserAddress>,
     @InjectRepository(ShoppingCart)
     private readonly carts: Repository<ShoppingCart>,
+    @Inject(forwardRef(() => DepositsService))
+    private readonly depositsService: DepositsService,
   ) {}
 
   async findAll(query: {
@@ -49,7 +52,12 @@ export class OrdersService {
       },
     );
 
-    return paginatedList(items.map(toOrderResponse), page, limit, total);
+    return paginatedList(
+      items.map((order) => toOrderResponse(order)),
+      page,
+      limit,
+      total,
+    );
   }
 
   async create(userId: string, dto: CreateOrderDto) {
@@ -74,7 +82,14 @@ export class OrdersService {
     });
 
     const saved = await this.orderRepository.findById(orderId);
-    return toOrderResponse(saved!);
+    const payment = await this.depositsService.requestPayment(
+      userId,
+      orderId,
+      'iBank',
+    );
+    return toOrderResponse(saved!, {
+      paymentUrl: payment.paymentUrl,
+    });
   }
 
   /** ساخت سفارش از سبد خرید + آدرس + روش(های) ارسال — کامل در یک تراکنش */
@@ -135,7 +150,14 @@ export class OrdersService {
     });
 
     const saved = await this.orderRepository.findById(orderId);
-    return toOrderResponse(saved!);
+    const payment = await this.depositsService.requestPayment(
+      userId,
+      orderId,
+      'iBank',
+    );
+    return toOrderResponse(saved!, {
+      paymentUrl: payment.paymentUrl,
+    });
   }
 
   async findOne(id: string, userId: string) {

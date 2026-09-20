@@ -24,12 +24,12 @@ export class RequestDepositDto {
   orderId?: string;
 
   @ApiProperty({
-    enum: ['credit', 'zarinpal', 'zibal', 'loan'],
+    enum: ['credit', 'iBank', 'loan'],
     description:
-      'credit = کیف پول | zarinpal/zibal = درگاه بانکی (IBank) | loan = وام شخص ثالث (ILoan)',
+      'credit = کیف پول | iBank = درگاه بانکی (زیبال) | loan = وام شخص ثالث',
   })
-  @IsIn(['credit', 'zarinpal', 'zibal', 'loan'])
-  method: 'credit' | 'zarinpal' | 'zibal' | 'loan';
+  @IsIn(['credit', 'iBank', 'loan'])
+  method: 'credit' | 'iBank' | 'loan';
 }
 
 export class DepositResponseDto {
@@ -44,7 +44,7 @@ export class DepositResponseDto {
   @ApiPropertyOptional({ description: 'شناسه transaction ثبت‌شده برای این عملیات' })
   transactionId?: string;
 
-  @ApiProperty({ enum: ['zarinpal', 'zibal', 'loan', 'credit'] })
+  @ApiProperty({ enum: ['iBank', 'loan', 'credit'] })
   gateway: string;
 
   @ApiProperty({ description: 'trackId (درگاه / وام / credit token)' })
@@ -77,56 +77,6 @@ export class DepositResponseDto {
   creditBalance?: number;
 }
 
-export class DepositVerifyResponseDto {
-  @ApiPropertyOptional({ nullable: true })
-  orderId?: string | null;
-
-  @ApiProperty()
-  depositId: string;
-
-  @ApiPropertyOptional()
-  transactionId?: string;
-
-  @ApiProperty({ enum: ['zarinpal', 'zibal', 'loan', 'credit'] })
-  gateway: string;
-
-  @ApiProperty()
-  refId: string;
-
-  @ApiProperty()
-  status: string;
-
-  @ApiProperty()
-  amount: number;
-
-  @ApiPropertyOptional()
-  subtotal?: number;
-
-  @ApiPropertyOptional()
-  shippingAmount?: number;
-
-  @ApiPropertyOptional()
-  displayTotal?: number;
-
-  @ApiPropertyOptional({ type: ShippingMethodResponseDto, nullable: true })
-  shippingMethod?: ShippingMethodResponseDto | null;
-
-  @ApiPropertyOptional()
-  productName?: string;
-
-  @ApiProperty()
-  gatewayMessage: string;
-
-  @ApiPropertyOptional()
-  creditBalance?: number;
-}
-
 export function toDepositResponse(data: DepositResponseDto): DepositResponseDto {
-  return data;
-}
-
-export function toDepositVerifyResponse(
-  data: DepositVerifyResponseDto,
-): DepositVerifyResponseDto {
   return data;
 }

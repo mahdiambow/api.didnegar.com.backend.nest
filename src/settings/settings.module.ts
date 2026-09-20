@@ -1,4 +1,3 @@
-import { Category } from '../categories/entities/category.entity.js';
 import { Banner } from './entities/banner.entity.js';
 import { BannersController } from './banners.controller.js';
 import { BannersService } from './banners.service.js';
@@ -28,7 +27,6 @@ import { ContactMessagesService } from './contact-messages.service.js';
       ContactSettings,
       ContactMessage,
       Banner,
-      Category,
     ]),
   ],
   controllers: [

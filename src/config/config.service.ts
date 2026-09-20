@@ -47,8 +47,6 @@ const DEFAULTS: Record<string, string> = {
   MEDIA_ALLOWED_MIME_TYPES: 'image/jpeg,image/png,image/webp,image/gif',
   MEDIA_UPLOAD_RATE_TTL_MS: '60000',
   MEDIA_UPLOAD_RATE_LIMIT: '10',
-  ZARINPAL_SANDBOX_URL: 'https://sandbox.zarinpal.com/pg/StartPay',
-  ZARINPAL_CALLBACK_URL: '',
   ZIBAL_MERCHANT: 'zibal',
   ZIBAL_API_BASE: 'https://gateway.zibal.ir',
   ZIBAL_START_URL: 'https://gateway.zibal.ir/start',

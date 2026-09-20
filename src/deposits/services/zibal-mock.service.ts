@@ -11,7 +11,7 @@ import type {
 @Injectable()
 export class ZibalMockService implements IBank {
   readonly kind = 'bank' as const;
-  readonly gateway = 'zibal' as const;
+  readonly gateway = 'iBank' as const;
 
   private readonly startBaseUrl: string;
 

@@ -54,6 +54,13 @@ function setup(isCod = false) {
   };
   const addresses = { findOneBy: vi.fn() };
   const carts = { findOne: vi.fn() };
+  const deposits = {
+    requestPayment: vi.fn(async () => ({
+      paymentUrl: 'https://gateway.example/start/1',
+      trackId: '123',
+      depositId: 'dep1',
+    })),
+  };
   const service = new OrdersService(
     dataSource as unknown as DataSource,
     repository as unknown as OrderRepository,
@@ -61,8 +68,9 @@ function setup(isCod = false) {
     shipping as unknown as ShippingService,
     addresses as never,
     carts as never,
+    deposits as never,
   );
-  return { service, repository, products, dataSource };
+  return { service, repository, products, dataSource, deposits };
 }
 
 describe('multi-product orders', () => {
@@ -83,6 +91,7 @@ describe('multi-product orders', () => {
     expect(result.shippingAmount).toBe(50);
     expect(result.displayTotal).toBe(500);
     expect(result.amount).toBe(isCod ? 450 : 500);
+    expect(result.paymentUrl).toBe('https://gateway.example/start/1');
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
     expect(products.decrementStockForPurchase).toHaveBeenCalled();
   });
