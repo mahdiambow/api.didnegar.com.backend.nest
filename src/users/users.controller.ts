@@ -63,6 +63,20 @@ export class UsersController {
     return this.usersService.findAll(req.user, query);
   }
 
+  @Get('me')
+  @ApiResponseMeta({
+    code: 'USER_FOUND',
+    message: 'User retrieved successfully',
+  })
+  @ApiOperation({
+    summary: 'Get current user from token',
+    description: 'دریافت مشخصات کاربر لاگین‌شده — شناسه از JWT خوانده می‌شود',
+  })
+  @ApiOkResponse({ type: UserApiResponseDto })
+  me(@Req() req: { user: AuthUser }) {
+    return this.usersService.findOne(req.user, req.user.sub);
+  }
+
   @Get(':id')
   @ApiResponseMeta({
     code: 'USER_FOUND',
