@@ -81,22 +81,63 @@ export class ProductsService {
     );
   }
 
-  /** کاتالوگ پابلیک — همه محصولات publish + approved + active با روابط کامل */
-  async findAllPublic() {
-    const items = await this.productRepository.findFiltered(
+  /** کاتالوگ پابلیک — pagination + search/category؛ فقط publish + approved + active */
+  async findAllPublic(query: {
+    page?: string | number;
+    limit?: string | number;
+    brandId?: string;
+    search?: string;
+    name?: string;
+    categoryId?: string;
+    subCategoryId?: string;
+  } = {}) {
+    const { page, limit, offset } = getPaginationParams(query);
+    const [items, total] = await this.productRepository.findPaginated(
+      offset,
+      limit,
       {
         status: 'publish',
         approvalStatus: 'approved',
         isActive: true,
+        brandId: query.brandId,
+        search: query.search,
+        name: query.name,
+        categoryId: query.categoryId,
+        subCategoryId: query.subCategoryId,
       },
       true,
     );
-    return this.toEnrichedProductResponses(items);
+
+    return paginatedList(
+      await this.toEnrichedProductResponses(items),
+      page,
+      limit,
+      total,
+    );
   }
 
   async findOne(id: string) {
     const product = await this.productRepository.findById(id, true);
     if (!product) {
+      throw new ApiException(
+        'PRODUCT_NOT_FOUND',
+        'محصول یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    const [response] = await this.toEnrichedProductResponses([product]);
+    return response;
+  }
+
+  /** یک محصول پابلیک — فقط اگر publish + approved + active باشد */
+  async findOnePublic(id: string) {
+    const product = await this.productRepository.findById(id, true);
+    if (
+      !product ||
+      product.status !== 'publish' ||
+      product.approvalStatus !== 'approved' ||
+      product.isActive === false
+    ) {
       throw new ApiException(
         'PRODUCT_NOT_FOUND',
         'محصول یافت نشد',

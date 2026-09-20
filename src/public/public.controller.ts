@@ -1,11 +1,13 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { ParseULIDPipe } from '../common/id/index.js';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
+import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { BannersService } from '../settings/banners.service.js';
@@ -20,6 +22,7 @@ import {
   ProductPriceResponseDto,
   ProductResponseDto,
 } from '../products/dto/product-response.dto.js';
+import { ListPublicProductsQueryDto } from '../products/dto/list-public-products-query.dto.js';
 import { AttributeValueResponseDto } from '../attributes/dto/attribute-value.dto.js';
 import { MenuParentCategoryDto } from '../categories/dto/menu-response.dto.js';
 
@@ -57,15 +60,20 @@ const PublicContactUsApiResponseDto = createSuccessResponseDto(
   },
 );
 
-const PublicProductsApiResponseDto = createSuccessResponseDto(
+const PublicProductsPaginatedApiResponseDto = createPaginatedResponseDto(
   ProductResponseDto,
   {
     code: 'PUBLIC_PRODUCTS_FOUND',
     message: 'Products retrieved successfully',
     name: 'PublicProducts',
-    isArray: true,
   },
 );
+
+const PublicProductApiResponseDto = createSuccessResponseDto(ProductResponseDto, {
+  code: 'PUBLIC_PRODUCT_FOUND',
+  message: 'Product retrieved successfully',
+  name: 'PublicProduct',
+});
 
 const PublicCategoriesApiResponseDto = createSuccessResponseDto(
   MenuParentCategoryDto,
@@ -158,16 +166,32 @@ export class PublicController {
 
   @Get('products')
   @ApiOperation({
-    summary: 'All visible products (public)',
-    description: 'همه محصولات قابل‌نمایش (پابلیک)\n\nمحصولات publish + approved + active با برند، دسته‌ها، ویژگی‌ها و سایر روابط',
+    summary: 'List visible products (public)',
+    description:
+      'لیست محصولات قابل‌نمایش (پابلیک)\n\npagination + فیلتر search / name / brandId / categoryId / subCategoryId — فقط publish + approved + active با فیلدهای کامل',
   })
   @ApiResponseMeta({
     code: 'PUBLIC_PRODUCTS_FOUND',
     message: 'Products retrieved successfully',
   })
-  @ApiOkResponse({ type: PublicProductsApiResponseDto })
-  products() {
-    return this.productsService.findAllPublic();
+  @ApiOkResponse({ type: PublicProductsPaginatedApiResponseDto })
+  products(@Query() query: ListPublicProductsQueryDto) {
+    return this.productsService.findAllPublic(query);
+  }
+
+  @Get('products/:id')
+  @ApiOperation({
+    summary: 'Get one visible product (public)',
+    description:
+      'یک محصول قابل‌نمایش (پابلیک)\n\nفقط اگر publish + approved + active باشد — با فیلدهای کامل',
+  })
+  @ApiResponseMeta({
+    code: 'PUBLIC_PRODUCT_FOUND',
+    message: 'Product retrieved successfully',
+  })
+  @ApiOkResponse({ type: PublicProductApiResponseDto })
+  product(@Param('id', ParseULIDPipe) id: string) {
+    return this.productsService.findOnePublic(id);
   }
 
   @Get('categories')
