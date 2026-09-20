@@ -582,23 +582,21 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
         \`id\` CHAR(26) NOT NULL,
         \`page\` VARCHAR(30) NOT NULL,
         \`section\` VARCHAR(30) NOT NULL,
-        \`categoryId\` CHAR(26) NULL,
         \`items\` JSON NOT NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         \`updatedAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         CONSTRAINT \`PK_banners\` PRIMARY KEY (\`id\`),
         CONSTRAINT \`CHK_banners_placement\` CHECK (
-          (\`page\` = 'home' AND \`categoryId\` IS NULL AND \`section\` IN ('main_slider', 'three_images', 'narrow_banner', 'video', 'two_images', 'single_banner'))
-          OR (\`page\` = 'category_sidebar' AND \`categoryId\` IS NOT NULL AND \`section\` = 'sidebar')
-        ),
-        CONSTRAINT \`FK_banners_categoryId\` FOREIGN KEY (\`categoryId\`) REFERENCES \`categories\`(\`id\`) ON DELETE CASCADE ON UPDATE RESTRICT
+          (\`page\` = 'home' AND \`section\` IN ('main_slider', 'three_images', 'narrow_banner', 'video', 'two_images', 'single_banner'))
+          OR (\`page\` = 'category_sidebar' AND \`section\` = 'sidebar')
+        )
       ) ENGINE=InnoDB
     `);
     await queryRunner.query(`
       CREATE UNIQUE INDEX \`UQ_banners_home_section\` ON \`banners\` ((CASE WHEN \`page\` = 'home' THEN \`section\` ELSE NULL END))
     `);
     await queryRunner.query(`
-      CREATE UNIQUE INDEX \`UQ_banners_category_section\` ON \`banners\` ((CASE WHEN \`page\` = 'category_sidebar' THEN CONCAT(\`categoryId\`, ':', \`section\`) ELSE NULL END))
+      CREATE UNIQUE INDEX \`UQ_banners_category_section\` ON \`banners\` ((CASE WHEN \`page\` = 'category_sidebar' THEN \`section\` ELSE NULL END))
     `);
 
     // --- about_us ---

@@ -1,4 +1,3 @@
-import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsEnum, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, ValidateNested } from 'class-validator';
@@ -48,15 +47,6 @@ export class CreateBannerDto {
   @IsEnum(BannerSection)
   section: BannerSection;
 
-  @ApiPropertyOptional({
-    type: String,
-    nullable: true,
-    description: 'شناسه دسته‌بندی برای سایدبار؛ صفحه نخست بدون دسته‌بندی است',
-  })
-  @IsOptional()
-  @IsULID()
-  categoryId?: string | null;
-
   @ApiProperty({
     type: [BannerItemDto],
     description:
@@ -84,11 +74,6 @@ export class ListBannersQueryDto {
   @IsOptional()
   @IsEnum(BannerSection)
   section?: BannerSection;
-
-  @ApiPropertyOptional({ format: 'ulid' })
-  @IsOptional()
-  @IsULID()
-  categoryId?: string;
 
   @ApiPropertyOptional({
     default: DEFAULT_PAGE,
