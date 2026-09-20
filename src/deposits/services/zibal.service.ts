@@ -6,6 +6,10 @@ import type {
   PaymentRequestResult,
   PaymentVerifyResult,
 } from './deposit-gateway.interface.js';
+import {
+  isZibalPaymentAccepted,
+  zibalStatusException,
+} from './zibal-status.js';
 
 type ZibalRequestResponse = {
   result?: number;
@@ -31,6 +35,7 @@ type ZibalVerifyResponse = {
  * - start:   GET  /start/{trackId}
  * - verify:  POST /v1/verify  { merchant, trackId }
  * - result 100 = موفق | 201 = قبلاً verify شده
+ * - status تراکنش: ۱ = پرداخت‌شده و تأییدشده (بقیه → خطا)
  */
 @Injectable()
 export class ZibalService implements IBank {
@@ -117,14 +122,30 @@ export class ZibalService implements IBank {
 
     // 100 = موفق، 201 = قبلاً تأیید شده (idempotent)
     if (data.result !== 100 && data.result !== 201) {
-      throw new ApiException(
-        'ZIBAL_VERIFY_FAILED',
+      this.logger.warn(
+        `Zibal verify failed trackId=${trackId} result=${data.result} status=${data.status}`,
+      );
+      throw zibalStatusException(
+        data.status,
         data.message ?? `تأیید زیبال ناموفق (result=${data.result})`,
-        HttpStatus.BAD_REQUEST,
       );
     }
 
-    if (data.amount != null && Math.round(data.amount) !== Math.round(expectedAmount)) {
+    if (
+      data.status != null &&
+      !isZibalPaymentAccepted(data.status) &&
+      data.result !== 201
+    ) {
+      this.logger.warn(
+        `Zibal verify status not accepted trackId=${trackId} status=${data.status}`,
+      );
+      throw zibalStatusException(data.status, data.message);
+    }
+
+    if (
+      data.amount != null &&
+      Math.round(data.amount) !== Math.round(expectedAmount)
+    ) {
       this.logger.warn(
         `Zibal amount mismatch trackId=${trackId} expected=${expectedAmount} got=${data.amount}`,
       );

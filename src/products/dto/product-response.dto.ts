@@ -3,11 +3,9 @@ import { ProductCategoryResponseDto } from '../../categories/dto/category-respon
 import { toProductCategoryResponse } from '../../categories/dto/category-response.dto.js';
 import { PRODUCT_CATEGORY_RESPONSE_EXAMPLE } from '../../categories/dto/category.examples.js';
 import {
-  ProductAttributeResponseDto,
-  toProductAttributeResponse,
-} from './product-variant-response.dto.js';
-import { PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE } from './product-variant.examples.js';
-import { Product } from '../entities/product.entity.js';
+  Product,
+  getPriceValueAttributeIds,
+} from '../entities/product.entity.js';
 import type {
   ProductImageData,
   ProductPriceData,
@@ -325,13 +323,6 @@ export class ProductResponseDto {
     description: 'دسته‌های populate‌شده — شامل subCategory و category',
   })
   categories?: ProductCategoryResponseDto[];
-
-  @ApiPropertyOptional({
-    type: [ProductAttributeResponseDto],
-    example: [PRODUCT_ATTRIBUTE_RESPONSE_EXAMPLE],
-    description: 'product-attributeهای populate‌شده',
-  })
-  variants?: ProductAttributeResponseDto[];
 }
 
 function normalizeImage(image: Product['image']): ProductImageData {
@@ -355,7 +346,7 @@ function toPriceResponses(
   attributeValueById?: Map<string, AttributeValueResponseDto>,
 ): ProductPriceResponseDto[] {
   return normalizePriceResponse(price).map((item) => ({
-    valueAttributes: (item.attributeIds ?? [])
+    valueAttributes: getPriceValueAttributeIds(item)
       .map((id) => attributeValueById?.get(id))
       .filter((value): value is AttributeValueResponseDto => Boolean(value)),
     price: item.price ?? null,
@@ -435,10 +426,6 @@ export function toProductResponse(
         ? product.productCategories.map(
             (item) => item.subCategoryId ?? item.categoryId!,
           )
-        : undefined,
-    variants:
-      includeRelations && product.variants
-        ? product.variants.map((item) => toProductAttributeResponse(item))
         : undefined,
   };
 }

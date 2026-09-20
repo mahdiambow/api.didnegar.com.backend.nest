@@ -96,47 +96,9 @@ async function loadOffers(target, listingIds) {
   return new Map(rows.map((row) => [String(row.legacySourceId), row]));
 }
 
-async function syncProductAttributeIds(target, productIds, validAttributeIds) {
-  if (!productIds.size) return { updated: 0, invalidOfferAttributes: 0 };
-  const ids = [...productIds];
-  const [offers] = await target.execute(
-    `SELECT id, productId, attributes FROM seller_offers
-     WHERE productId IN (${ids.map(() => '?').join(', ')})`,
-    ids,
-  );
-  const attributesByProduct = new Map(
-    ids.map((productId) => [productId, new Set()]),
-  );
-  let invalidOfferAttributes = 0;
-  for (const offer of offers) {
-    const attributes = parseAttributes(offer.attributes);
-    if (!attributes) {
-      await writeReport({
-        type: 'invalid-offer-attributes-json-during-product-sync',
-        sellerOfferId: offer.id,
-        productId: offer.productId,
-      });
-      invalidOfferAttributes += 1;
-      continue;
-    }
-    const productAttributes = attributesByProduct.get(String(offer.productId));
-    if (!productAttributes) continue;
-    for (const attributeId of Object.keys(attributes)) {
-      if (validAttributeIds.has(attributeId))
-        productAttributes.add(attributeId);
-    }
-  }
-
-  let updated = 0;
-  for (const [productId, attributeIds] of attributesByProduct) {
-    const value = JSON.stringify([...attributeIds].sort());
-    const [result] = await target.execute(
-      'UPDATE products SET attributeIds = CAST(? AS JSON) WHERE id = ? AND attributeIds <> CAST(? AS JSON)',
-      [value, productId, value],
-    );
-    updated += Number(result.affectedRows || 0);
-  }
-  return { updated, invalidOfferAttributes };
+async function syncProductAttributeIds() {
+  // products.attributeIds removed — attributes live on seller_offers / price JSON
+  return { updated: 0, invalidOfferAttributes: 0 };
 }
 
 async function migrateBatch(target, rows, offset, batch, valueMaps) {
@@ -263,11 +225,7 @@ async function migrateBatch(target, rows, offset, batch, valueMaps) {
       );
       count.updated += 1;
     }
-    const productSync = await syncProductAttributeIds(
-      target,
-      affectedProductIds,
-      valueMaps.attributeIds,
-    );
+    const productSync = await syncProductAttributeIds();
     count.productsUpdated += productSync.updated;
     count.invalidOfferAttributes += productSync.invalidOfferAttributes;
     await target.commit();
@@ -362,7 +320,7 @@ async function main() {
       target,
       targetDatabase,
       'products',
-      ['id', 'attributeIds'],
+      ['id'],
       'Target',
     );
 

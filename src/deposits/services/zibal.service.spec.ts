@@ -116,6 +116,41 @@ describe('ZibalService (IPG verify)', () => {
     });
   });
 
+  it('verifyPayment maps zibal status to typed error', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      Response.json({
+        result: 202,
+        status: 3,
+        message: 'cancelled',
+      }),
+    ) as typeof fetch;
+
+    const service = new ZibalService(mockConfig());
+    await expect(service.verifyPayment('111', 15000)).rejects.toMatchObject({
+      response: {
+        code: 'ZIBAL_USER_CANCEL',
+        message: 'پرداخت توسط کاربر لغو شد',
+      },
+    });
+  });
+
+  it('verifyPayment maps insufficient balance status', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      Response.json({
+        result: 202,
+        status: 5,
+      }),
+    ) as typeof fetch;
+
+    const service = new ZibalService(mockConfig());
+    await expect(service.verifyPayment('111', 15000)).rejects.toMatchObject({
+      response: {
+        code: 'ZIBAL_INSUFFICIENT_BALANCE',
+        message: 'موجودی کارت کافی نیست',
+      },
+    });
+  });
+
   it('verifyPayment rejects amount mismatch', async () => {
     globalThis.fetch = vi.fn(async () =>
       Response.json({

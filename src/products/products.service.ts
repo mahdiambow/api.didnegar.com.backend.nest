@@ -26,7 +26,7 @@ import {
 import { BrandRepository } from '../brands/repositories/brand.repository.js';
 import { ShippingMethodRepository } from '../shipping/repositories/shipping-method.repository.js';
 import { toShippingMethodResponse } from '../shipping/dto/shipping.dto.js';
-import { Product } from './entities/product.entity.js';
+import { Product, getPriceValueAttributeIds } from './entities/product.entity.js';
 import { ProductRepository } from './repositories/product.repository.js';
 import { ProductStockRepository } from './repositories/product-stock.repository.js';
 
@@ -224,7 +224,7 @@ export class ProductsService {
         productData.price === null
           ? []
           : productData.price.map((item) => ({
-              attributeIds: [
+              valueAttributeIds: [
                 ...new Set(item.valueAttributeIds ?? item.attributeIds ?? []),
               ],
               price: item.price ?? null,
@@ -369,9 +369,6 @@ export class ProductsService {
   private async toEnrichedProductResponses(
     products: Product[],
   ): Promise<ProductResponseDto[]> {
-    const attributeIds = [
-      ...new Set(products.flatMap((product) => product.attributeIds ?? [])),
-    ];
     const priceValueIds = [
       ...new Set(
         products.flatMap((product) => {
@@ -380,7 +377,7 @@ export class ProductsService {
             : product.price
               ? [product.price]
               : [];
-          return prices.flatMap((item) => item.attributeIds ?? []);
+          return prices.flatMap((item) => getPriceValueAttributeIds(item));
         }),
       ),
     ];
@@ -399,24 +396,22 @@ export class ProductsService {
       ),
     ];
 
-    const [attributes, priceValues, sellers, shippingMethods] =
-      await Promise.all([
-        this.attributeRepository.findByIdsWithValues(attributeIds),
-        this.attributeValueRepository.findByIds(priceValueIds),
-        this.sellerRepository.findByIds(sellerIds),
-        this.shippingMethodRepository.findByIds(shippingMethodIds),
-      ]);
+    const priceValues =
+      await this.attributeValueRepository.findByIds(priceValueIds);
+    const attributeIds = [
+      ...new Set(priceValues.map((value) => value.attributeId).filter(Boolean)),
+    ];
+
+    const [attributes, sellers, shippingMethods] = await Promise.all([
+      this.attributeRepository.findByIdsWithValues(attributeIds),
+      this.sellerRepository.findByIds(sellerIds),
+      this.shippingMethodRepository.findByIds(shippingMethodIds),
+    ]);
 
     const attributeMap = new Map(
       attributes.map((attribute) => [
         attribute.id,
         toAttributeResponse(attribute, true),
-      ]),
-    );
-    const valueAttributesByAttributeId = new Map(
-      attributes.map((attribute) => [
-        attribute.id,
-        (attribute.values ?? []).map(toAttributeValueResponse),
       ]),
     );
     const attributeValueById = new Map(
@@ -436,14 +431,28 @@ export class ProductsService {
     );
 
     return products.map((product) => {
-      const productAttributeIds = product.attributeIds ?? [];
+      const prices = Array.isArray(product.price)
+        ? product.price
+        : product.price
+          ? [product.price]
+          : [];
+      const productValueIds = [
+        ...new Set(prices.flatMap((item) => getPriceValueAttributeIds(item))),
+      ];
+      const productAttributeIds = [
+        ...new Set(
+          productValueIds
+            .map((id) => attributeValueById.get(id)?.attributeId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
       return toProductResponse(product, true, {
         attributes: productAttributeIds
           .map((id) => attributeMap.get(id))
           .filter((item): item is NonNullable<typeof item> => Boolean(item)),
-        valueAttributes: productAttributeIds.flatMap(
-          (id) => valueAttributesByAttributeId.get(id) ?? [],
-        ),
+        valueAttributes: productValueIds
+          .map((id) => attributeValueById.get(id))
+          .filter((item): item is NonNullable<typeof item> => Boolean(item)),
         attributeValueById,
         createdBySeller: product.createdBySellerId
           ? (sellerMap.get(product.createdBySellerId) ?? null)

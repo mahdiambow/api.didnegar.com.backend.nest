@@ -377,7 +377,6 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
         \`length\` DECIMAL(10,2) NULL,
         \`width\` DECIMAL(10,2) NULL,
         \`height\` DECIMAL(10,2) NULL,
-        \`attributeIds\` JSON NOT NULL DEFAULT ('[]'),
         \`sellerIds\` JSON NOT NULL DEFAULT ('[]'),
         \`createdBySellerId\` CHAR(26) NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -408,17 +407,6 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
         UNIQUE INDEX \`IDX_product_stocks_productId\` (\`productId\`),
         CONSTRAINT \`CHK_product_stock\` CHECK (\`stock\` >= 0),
         CONSTRAINT \`FK_product_stocks_productId\` FOREIGN KEY (\`productId\`) REFERENCES \`products\`(\`id\`) ON DELETE CASCADE ON UPDATE RESTRICT
-      ) ENGINE=InnoDB
-    `);
-
-    // --- product_variants ---
-    await queryRunner.query(`
-      CREATE TABLE \`product_variants\` (
-        \`id\` CHAR(26) NOT NULL,
-        \`product_id\` CHAR(26) NOT NULL,
-        CONSTRAINT \`PK_product_variants\` PRIMARY KEY (\`id\`),
-        INDEX \`IDX_product_variants_product_id\` (\`product_id\`),
-        CONSTRAINT \`FK_product_variants_product_id\` FOREIGN KEY (\`product_id\`) REFERENCES \`products\`(\`id\`) ON DELETE CASCADE ON UPDATE RESTRICT
       ) ENGINE=InnoDB
     `);
 
@@ -661,7 +649,6 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS \`orders\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`seller_offers\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`product_categories\``);
-    await queryRunner.query(`DROP TABLE IF EXISTS \`product_variants\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`product_stocks\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`products\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`shipping_methods\``);

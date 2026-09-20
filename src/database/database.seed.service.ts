@@ -4,7 +4,6 @@ import { RolesSeedService } from '../roles/roles.seed.service.js';
 import { ShippingSeedService } from '../shipping/shipping.seed.service.js';
 import { AttributesSeedService } from '../attributes/attributes.seed.service.js';
 import { CategoriesSeedService } from '../categories/categories.seed.service.js';
-import { ProductsSeedService } from '../products/products.seed.service.js';
 
 @Injectable()
 export class DatabaseSeedService implements OnModuleInit {
@@ -16,7 +15,6 @@ export class DatabaseSeedService implements OnModuleInit {
     private readonly shippingSeedService: ShippingSeedService,
     private readonly attributesSeedService: AttributesSeedService,
     private readonly categoriesSeedService: CategoriesSeedService,
-    private readonly productsSeedService: ProductsSeedService,
   ) {}
 
   async onModuleInit() {
@@ -34,7 +32,6 @@ export class DatabaseSeedService implements OnModuleInit {
     await this.shippingSeedService.seed();
     await this.attributesSeedService.seed();
     await this.categoriesSeedService.seedCatalog();
-    await this.productsSeedService.seed();
     await this.categoriesSeedService.seedProductLinks();
 
     this.logger.log('Initial database seed completed.');

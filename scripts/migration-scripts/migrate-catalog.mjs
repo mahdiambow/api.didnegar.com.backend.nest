@@ -278,7 +278,7 @@ async function migrateProducts(source, target) {
             }),
             JSON.stringify([
               {
-                attributeIds: [],
+                valueAttributeIds: [],
                 price,
                 discountPercentage: null,
                 discountAmount: null,
@@ -357,7 +357,6 @@ async function migrateProducts(source, target) {
               row.width,
               row.height,
               JSON.stringify([]),
-              JSON.stringify([]),
               row.createdAt,
               row.updatedAt,
             ];
@@ -366,7 +365,7 @@ async function migrateProducts(source, target) {
                 id, legacyId, legacyTable, name, slug, description, shortDescription, sku, status,
                 approvalStatus, brandId, isVirtual, isDownloadable, isActive, isFeatured, seo, image,
                 price, tableInfo, ratingCount, averageRating, totalSales, taxStatus, taxClass,
-                globalUniqueId, weight, length, width, height, attributeIds, sellerIds, createdAt, updatedAt
+                globalUniqueId, weight, length, width, height, sellerIds, createdAt, updatedAt
               ) VALUES (${insertValues.map(() => '?').join(', ')})`,
               insertValues,
             );
