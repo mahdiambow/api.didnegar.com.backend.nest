@@ -107,13 +107,6 @@ async function clearIncorrectImportedOfferAttributes(target) {
   return Number(result.affectedRows || 0);
 }
 
-async function clearIncorrectProductAttributeIds(target) {
-  const [result] = await target.execute(
-    "UPDATE products SET attributeIds = CAST('[]' AS JSON) WHERE legacyTable = 'products' AND attributeIds <> CAST('[]' AS JSON)",
-  );
-  return Number(result.affectedRows || 0);
-}
-
 async function migrateBatch(target, rows, offset, batch, maps, priceCache) {
   const count = {
     read: rows.length,
@@ -350,15 +343,9 @@ async function main() {
     );
     const clearedOfferAttributes =
       await clearIncorrectImportedOfferAttributes(target);
-    const clearedProductAttributeIds =
-      await clearIncorrectProductAttributeIds(target);
     await writeReport({
       type: 'cleared-incorrect-imported-offer-attributes',
       count: clearedOfferAttributes,
-    });
-    await writeReport({
-      type: 'cleared-incorrect-product-attribute-ids',
-      count: clearedProductAttributeIds,
     });
 
     const maps = await loadTargetMaps(target);
@@ -394,7 +381,6 @@ async function main() {
       complete: true,
       batches,
       clearedIncorrectImportedOfferAttributes: clearedOfferAttributes,
-      clearedIncorrectProductAttributeIds: clearedProductAttributeIds,
       totals,
       reportPath,
     };
