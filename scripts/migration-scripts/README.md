@@ -61,3 +61,13 @@ npm run db:migrate:attributes
 
 Imports legacy `attributes` and `attribute_values`. Legacy value `slug` becomes the
 target value label when present; value ordering is deterministic by legacy order.
+
+## Product-category relations
+
+```sh
+npm run db:migrate:product-relations
+```
+
+Run after categories and catalog. Imports legacy `product_categories`, resolving
+products, categories, and sub-categories through their legacy identities. Invalid
+references are skipped and recorded in `migration-product-relations-report.jsonl`.
