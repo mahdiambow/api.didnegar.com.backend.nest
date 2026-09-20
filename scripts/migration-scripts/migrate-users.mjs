@@ -18,12 +18,14 @@ import {
 const ROLE_PRIORITY = ['super-admin', 'admin', 'super-seller', 'seller', 'user'];
 const LEGACY_ROLE_MAP = new Map([
   ['customer', 'user'],
-  ['shop_manager', 'seller'],
+  // Seller eligibility is read from the legacy sellers table below. WordPress
+  // capabilities such as shop_manager must not create a seller by themselves.
+  ['shop_manager', 'user'],
   ['subscriber', 'user'],
   ['administrator', 'super-admin'],
-  ['dokan_export_order', 'seller'],
+  ['dokan_export_order', 'user'],
   ['edit_users', 'admin'],
-  ['seller', 'seller'],
+  ['seller', 'user'],
   ['gform_full_access', 'admin'],
   ['edit_files', 'admin'],
   ['edit_plugins', 'admin'],
@@ -93,6 +95,20 @@ async function getBatchRoles(source, userIds) {
   return byUser;
 }
 
+// The previous migration has already applied the legacy seller rules
+// (seller_status = 1 or dokan_enable_selling = yes). This table, rather than
+// a WordPress role/capability, is the authoritative seller source.
+async function getBatchSellers(source, userIds) {
+  if (!userIds.length) return new Map();
+  const [rows] = await source.execute(
+    `SELECT id, userId, legacyId, legacyTable, isActive, createdAt, updatedAt
+     FROM sellers
+     WHERE userId IN (${userIds.map(() => '?').join(', ')})`,
+    userIds,
+  );
+  return new Map(rows.map((row) => [String(row.userId), row]));
+}
+
 async function loadTargetUsers(target, legacyRows) {
   const usernames = [...new Set(legacyRows.map((row) => usernameBase(row.username)).filter(Boolean))];
   const legacyClauses = legacyRows.map(() => '(legacyTable = ? AND legacyId = ?)').join(' OR ');
@@ -120,17 +136,17 @@ function sellerName(row) {
     || usernameBase(row.username);
 }
 
-function sellerSlug(row) {
-  return `legacy-seller-${createHash('sha1').update(String(row.id)).digest('hex').slice(0, 32)}`;
+function sellerSlug(sourceSeller) {
+  return `legacy-seller-${createHash('sha1').update(String(sourceSeller.id)).digest('hex').slice(0, 32)}`;
 }
 
-async function ensureSeller(target, row) {
-  const slug = sellerSlug(row);
+async function ensureSeller(target, row, sourceSeller) {
+  const slug = sellerSlug(sourceSeller);
   const name = sellerName(row);
   const email = asNullableString(row.email, 150) || `seller-${row.legacyId}@legacy.invalid`;
   const phone = usernameBase(row.username).slice(0, 20);
-  const legacyId = Number(row.legacyId);
-  const legacyTable = String(row.legacyTable || 'users');
+  const legacyId = Number(sourceSeller.legacyId);
+  const legacyTable = String(sourceSeller.legacyTable || 'users');
   const values = [
     legacyId,
     legacyTable,
@@ -138,9 +154,9 @@ async function ensureSeller(target, row) {
     name.slice(0, 200),
     email,
     phone,
-    asBoolean(row.isActive) ? 'active' : 'inactive',
-    row.createdAt,
-    row.updatedAt,
+    asBoolean(sourceSeller.isActive) ? 'active' : 'inactive',
+    sourceSeller.createdAt,
+    sourceSeller.updatedAt,
   ];
   let [existing] = await target.execute(
     'SELECT id FROM sellers WHERE legacyTable = ? AND legacyId = ? LIMIT 1',
@@ -232,6 +248,7 @@ async function ensureAdmin(target, row, existingAdminId) {
 async function migrateBatch({ source, target, rows, offset, batchNumber, roleBySlug, defaultUserRoleId }) {
   const startedAt = Date.now();
   const rolesByUser = await getBatchRoles(source, rows.map((row) => String(row.id)));
+  const sellersByUser = await getBatchSellers(source, rows.map((row) => String(row.id)));
   const users = await loadTargetUsers(target, rows);
   const usernameOwners = new Map([...users.byUsername].map(([username, user]) => [username, user.id]));
   const counters = {
@@ -265,9 +282,10 @@ async function migrateBatch({ source, target, rows, offset, batchNumber, roleByS
       const mappedSlugs = sourceRoles.map(mapLegacyRole);
       counters.unmappedRoleLinks += mappedSlugs.filter((slug) => !slug).length;
       const mappedRoles = mappedSlugs.map((slug) => (slug ? roleBySlug.get(slug) : null)).filter(Boolean);
+      const sourceSeller = sellersByUser.get(String(row.id));
+      if (sourceSeller) mappedRoles.push(roleBySlug.get('seller'));
       const { roleId, extraRoleIds } = chooseRoles(mappedRoles, defaultUserRoleId);
-      const sellerRole = mappedRoles.some((role) => role.slug === 'seller');
-      const seller = sellerRole ? await ensureSeller(target, row) : null;
+      const seller = sourceSeller ? await ensureSeller(target, row, sourceSeller) : null;
       if (seller?.created) counters.sellersAdded += 1;
       if (seller && !seller.created) counters.sellersUpdated += 1;
       const adminRole = mappedRoles.some((role) => role.slug === 'admin' || role.slug === 'super-admin');
@@ -336,7 +354,8 @@ async function main() {
     unmappedRoleLinks: 0,
   };
   try {
-    await assertTables(source, sourceDatabase, ['users', 'user_roles'], 'Legacy');
+    await assertTables(source, sourceDatabase, ['users', 'user_roles', 'sellers'], 'Legacy');
+    await assertColumns(source, sourceDatabase, 'sellers', ['id', 'userId', 'legacyId', 'legacyTable', 'isActive'], 'Legacy');
     await assertTables(target, targetDatabase, ['users', 'roles', 'sellers', 'admins'], 'Target');
     await assertColumns(target, targetDatabase, 'users', ['legacyId', 'legacyTable', 'adminId'], 'Target');
     await assertColumns(target, targetDatabase, 'sellers', ['legacyId', 'legacyTable'], 'Target');
