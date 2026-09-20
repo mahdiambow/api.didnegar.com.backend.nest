@@ -363,7 +363,6 @@ export class ProductsSeedService {
                 finalPrice: product.price,
               },
             ],
-            attributeIds: [],
             sellerIds: seller ? [seller.id] : [],
             createdBySellerId: seller?.id ?? null,
           }),

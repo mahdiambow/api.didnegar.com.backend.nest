@@ -50,7 +50,7 @@ describe('general product contract', () => {
   it('does not map obsolete fields into a new product or return them from a legacy record', () => {
     const data = toProductEntityData({ ...general, ...removed }, 1);
     const response = toProductResponse(
-      { ...data, ...removed, variants: [] } as unknown as Product,
+      { ...data, ...removed } as unknown as Product,
       true,
     );
     for (const field of Object.keys(removed)) {

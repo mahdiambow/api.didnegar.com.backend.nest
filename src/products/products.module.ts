@@ -3,7 +3,6 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity.js';
 import { ProductStock } from './entities/product-stock.entity.js';
-import { ProductVariant } from './entities/product-variant.entity.js';
 import { ProductsService } from './products.service.js';
 import { ProductsController } from './products.controller.js';
 import { ProductsPricingController } from './products-pricing.controller.js';
@@ -21,7 +20,7 @@ import { ShippingMethodRepository } from '../shipping/repositories/shipping-meth
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, ProductStock, ProductVariant, ShippingMethod]),
+    TypeOrmModule.forFeature([Product, ProductStock, ShippingMethod]),
     BrandsModule,
     forwardRef(() => AuthModule),
     forwardRef(() => CategoriesModule),

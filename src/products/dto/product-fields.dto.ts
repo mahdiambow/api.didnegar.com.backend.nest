@@ -383,19 +383,6 @@ export class ProductWritableFieldsDto {
   height?: number;
 
   @ApiPropertyOptional({
-    type: [String],
-    example: ['01JEX000000000000000000070'],
-    description:
-      'شناسه ویژگی‌های والد (Attribute IDs) — در پاسخ GET به‌جای این، آرایه valueAttributes برمی‌گردد',
-  })
-  @IsOptional()
-  @IsArray()
-  @ArrayUnique()
-  @ArrayMaxSize(100)
-  @IsULID({ each: true })
-  attributeIds?: string[];
-
-  @ApiPropertyOptional({
     enum: ['pending', 'approved', 'rejected'],
     example: 'approved',
     description: 'وضعیت تأیید محصول',
@@ -423,7 +410,6 @@ export type ProductWritableData = Omit<
   slug: string;
   brandId?: string | null;
   shippingMethodId?: string | null;
-  attributeIds?: string[];
   sellerIds?: string[];
   approvalStatus?: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string | null;
@@ -501,7 +487,6 @@ export function toProductEntityData(
     length: dto.length ?? null,
     width: dto.width ?? null,
     height: dto.height ?? null,
-    attributeIds: [...new Set(dto.attributeIds ?? [])],
     sellerIds,
     createdBySellerId: sellerIds[0] ?? null,
   };

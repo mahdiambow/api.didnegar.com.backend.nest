@@ -81,7 +81,7 @@ export class ProductsService {
     );
   }
 
-  /** کاتالوگ پابلیک — pagination + search/category؛ فقط publish + approved + active */
+  /** کاتالوگ پابلیک — pagination + search/category/price؛ فقط publish + approved + active */
   async findAllPublic(query: {
     page?: string | number;
     limit?: string | number;
@@ -90,6 +90,8 @@ export class ProductsService {
     name?: string;
     categoryId?: string;
     subCategoryId?: string;
+    minPrice?: number;
+    maxPrice?: number;
   } = {}) {
     const { page, limit, offset } = getPaginationParams(query);
     const [items, total] = await this.productRepository.findPaginated(
@@ -104,6 +106,8 @@ export class ProductsService {
         name: query.name,
         categoryId: query.categoryId,
         subCategoryId: query.subCategoryId,
+        minPrice: query.minPrice,
+        maxPrice: query.maxPrice,
       },
       true,
     );
@@ -369,9 +373,6 @@ export class ProductsService {
   private async toEnrichedProductResponses(
     products: Product[],
   ): Promise<ProductResponseDto[]> {
-    const attributeIds = [
-      ...new Set(products.flatMap((product) => product.attributeIds ?? [])),
-    ];
     const priceValueIds = [
       ...new Set(
         products.flatMap((product) => {
@@ -399,24 +400,22 @@ export class ProductsService {
       ),
     ];
 
-    const [attributes, priceValues, sellers, shippingMethods] =
-      await Promise.all([
-        this.attributeRepository.findByIdsWithValues(attributeIds),
-        this.attributeValueRepository.findByIds(priceValueIds),
-        this.sellerRepository.findByIds(sellerIds),
-        this.shippingMethodRepository.findByIds(shippingMethodIds),
-      ]);
+    const priceValues =
+      await this.attributeValueRepository.findByIds(priceValueIds);
+    const parentAttributeIds = [
+      ...new Set(priceValues.map((value) => value.attributeId).filter(Boolean)),
+    ];
+
+    const [attributes, sellers, shippingMethods] = await Promise.all([
+      this.attributeRepository.findByIdsWithValues(parentAttributeIds),
+      this.sellerRepository.findByIds(sellerIds),
+      this.shippingMethodRepository.findByIds(shippingMethodIds),
+    ]);
 
     const attributeMap = new Map(
       attributes.map((attribute) => [
         attribute.id,
         toAttributeResponse(attribute, true),
-      ]),
-    );
-    const valueAttributesByAttributeId = new Map(
-      attributes.map((attribute) => [
-        attribute.id,
-        (attribute.values ?? []).map(toAttributeValueResponse),
       ]),
     );
     const attributeValueById = new Map(
@@ -436,14 +435,26 @@ export class ProductsService {
     );
 
     return products.map((product) => {
-      const productAttributeIds = product.attributeIds ?? [];
+      const prices = Array.isArray(product.price)
+        ? product.price
+        : product.price
+          ? [product.price]
+          : [];
+      const productValueIds = [
+        ...new Set(prices.flatMap((item) => item.attributeIds ?? [])),
+      ];
+      const valueAttributes = productValueIds
+        .map((id) => attributeValueById.get(id))
+        .filter((item): item is NonNullable<typeof item> => Boolean(item));
+      const productAttributeIds = [
+        ...new Set(valueAttributes.map((item) => item.attributeId)),
+      ];
+
       return toProductResponse(product, true, {
         attributes: productAttributeIds
           .map((id) => attributeMap.get(id))
           .filter((item): item is NonNullable<typeof item> => Boolean(item)),
-        valueAttributes: productAttributeIds.flatMap(
-          (id) => valueAttributesByAttributeId.get(id) ?? [],
-        ),
+        valueAttributes,
         attributeValueById,
         createdBySeller: product.createdBySellerId
           ? (sellerMap.get(product.createdBySellerId) ?? null)

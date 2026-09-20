@@ -13,7 +13,6 @@ import {
 import type { Brand } from '../../brands/entities/brand.entity.js';
 import type { ProductCategory } from '../../categories/entities/product-category.entity.js';
 import type { ShippingMethod } from '../../shipping/entities/shipping-method.entity.js';
-import type { ProductVariant } from './product-variant.entity.js';
 import type { ProductStock } from './product-stock.entity.js';
 
 export type ProductSeoItem = { key: string; val: string };
@@ -152,9 +151,6 @@ export class Product {
   height: number | null;
 
   @Column({ type: 'json', default: [] })
-  attributeIds: string[];
-
-  @Column({ type: 'json', default: [] })
   sellerIds: string[];
 
   @Column({ type: 'varchar', length: 26, nullable: true })
@@ -176,9 +172,6 @@ export class Product {
 
   @OneToMany('ProductCategory', 'product')
   productCategories: ProductCategory[];
-
-  @OneToMany('ProductVariant', 'product')
-  variants: ProductVariant[];
 
   @OneToOne('ProductStock', 'product')
   productStock: ProductStock | null;

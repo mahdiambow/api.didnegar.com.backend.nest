@@ -168,7 +168,7 @@ export class PublicController {
   @ApiOperation({
     summary: 'List visible products (public)',
     description:
-      'لیست محصولات قابل‌نمایش (پابلیک)\n\npagination + فیلتر search / name / brandId / categoryId / subCategoryId — فقط publish + approved + active با فیلدهای کامل',
+      'لیست محصولات قابل‌نمایش (پابلیک)\n\npagination + فیلتر search / name / brandId / categoryId / subCategoryId / minPrice / maxPrice — فقط publish + approved + active با فیلدهای کامل',
   })
   @ApiResponseMeta({
     code: 'PUBLIC_PRODUCTS_FOUND',

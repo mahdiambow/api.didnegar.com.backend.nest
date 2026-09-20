@@ -1,6 +1,7 @@
 import { IsULID } from '../../common/id/index.js';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
 
@@ -40,4 +41,24 @@ export class ListPublicProductsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsULID()
   subCategoryId?: string;
+
+  @ApiPropertyOptional({
+    example: 1_000_000,
+    description: 'حداقل قیمت پیشنهاد فروش (ریال) — برای رنج فرانت',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  minPrice?: number;
+
+  @ApiPropertyOptional({
+    example: 50_000_000,
+    description: 'حداکثر قیمت پیشنهاد فروش (ریال) — برای رنج فرانت',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  maxPrice?: number;
 }
