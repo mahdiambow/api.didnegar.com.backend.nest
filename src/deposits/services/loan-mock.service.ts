@@ -22,6 +22,7 @@ export class LoanMockService implements ILoan {
     amount: number,
     description: string,
     _orderId: string,
+    _callbackUrl?: string,
   ): PaymentExternalRequestResult {
     const trackId = `LOAN-${randomBytes(12).toString('hex').toUpperCase()}`;
     return {

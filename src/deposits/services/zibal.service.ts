@@ -59,8 +59,10 @@ export class ZibalService implements IBank {
     amount: number,
     description: string,
     orderId: string,
+    callbackUrl?: string,
   ): Promise<PaymentRequestResult> {
-    if (!this.callbackUrl) {
+    const resolvedCallback = callbackUrl || this.callbackUrl;
+    if (!resolvedCallback) {
       throw new ApiException(
         'ZIBAL_CALLBACK_MISSING',
         'ZIBAL_CALLBACK_URL تنظیم نشده است',
@@ -71,7 +73,7 @@ export class ZibalService implements IBank {
     const body = {
       merchant: this.merchant,
       amount: Math.round(amount),
-      callbackUrl: this.callbackUrl,
+      callbackUrl: resolvedCallback,
       description,
       orderId,
     };

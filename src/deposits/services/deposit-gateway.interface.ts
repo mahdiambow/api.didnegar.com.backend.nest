@@ -6,6 +6,7 @@ export interface IBank {
     amount: number,
     description: string,
     orderId: string,
+    callbackUrl?: string,
   ): Promise<PaymentExternalRequestResult> | PaymentExternalRequestResult;
   verifyPayment(
     trackId: string,
@@ -22,6 +23,7 @@ export interface ILoan {
     amount: number,
     description: string,
     orderId: string,
+    callbackUrl?: string,
   ): Promise<PaymentExternalRequestResult> | PaymentExternalRequestResult;
   verifyPayment(
     trackId: string,
@@ -65,6 +67,7 @@ export interface PaymentGatewayAdapter {
     amount: number,
     description: string,
     orderId: string,
+    callbackUrl?: string,
   ): Promise<PaymentRequestResult> | PaymentRequestResult;
   verifyPayment(
     trackId: string,
