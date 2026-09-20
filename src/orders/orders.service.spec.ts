@@ -52,8 +52,6 @@ function setup(isCod = false) {
       }),
     ),
   };
-  const addresses = { findOneBy: vi.fn() };
-  const carts = { findOne: vi.fn() };
   const deposits = {
     requestPayment: vi.fn(async () => ({
       paymentUrl: 'https://gateway.example/start/1',
@@ -66,8 +64,6 @@ function setup(isCod = false) {
     repository as unknown as OrderRepository,
     products as unknown as OffersService,
     shipping as unknown as ShippingService,
-    addresses as never,
-    carts as never,
     deposits as never,
   );
   return { service, repository, products, dataSource, deposits };

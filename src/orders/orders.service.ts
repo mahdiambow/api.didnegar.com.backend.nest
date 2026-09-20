@@ -1,25 +1,20 @@
 import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import BigNumber from 'bignumber.js';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
-import { UserAddress } from '../users/entities/user-address.entity.js';
 import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
 import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
-import { ShoppingCart } from '../shopping-cart/entities/shopping-cart.entity.js';
-import { ShoppingCartItem } from '../shopping-cart/entities/shopping-cart-item.entity.js';
 import { DepositsService } from '../deposits/deposits.service.js';
 import { CreateOrderDto, OrderProductDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { toOrderResponse } from './dto/order-response.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
 import { Order } from './entities/order.entity.js';
-import type { CheckoutCartDto } from '../shopping-cart/dto/checkout-cart.dto.js';
 
 @Injectable()
 export class OrdersService {
@@ -28,10 +23,6 @@ export class OrdersService {
     private readonly orderRepository: OrderRepository,
     private readonly offersService: OffersService,
     private readonly shippingService: ShippingService,
-    @InjectRepository(UserAddress)
-    private readonly addresses: Repository<UserAddress>,
-    @InjectRepository(ShoppingCart)
-    private readonly carts: Repository<ShoppingCart>,
     @Inject(forwardRef(() => DepositsService))
     private readonly depositsService: DepositsService,
   ) {}
@@ -79,74 +70,6 @@ export class OrdersService {
         shippingAmount: amounts.shippingAmount,
         amount: amounts.payableAmount,
       });
-    });
-
-    const saved = await this.orderRepository.findById(orderId);
-    const payment = await this.depositsService.requestPayment(
-      userId,
-      orderId,
-      'iBank',
-    );
-    return toOrderResponse(saved!, {
-      paymentUrl: payment.paymentUrl,
-    });
-  }
-
-  /** ساخت سفارش از سبد خرید + آدرس + روش(های) ارسال — کامل در یک تراکنش */
-  async checkoutFromCart(userId: string, dto: CheckoutCartDto) {
-    const address = await this.addresses.findOneBy({
-      id: dto.addressId,
-      userId,
-    });
-    if (!address) {
-      throw new ApiException(
-        'ADDRESS_NOT_FOUND',
-        'آدرس یافت نشد',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    const cart = await this.carts.findOne({
-      where: { userId },
-      relations: { items: true },
-    });
-    if (!cart?.items?.length) {
-      throw new ApiException(
-        'CART_EMPTY',
-        'سبد خرید خالی است',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const shippingMethods = await Promise.all(
-      dto.shippingMethodIds.map((id) =>
-        this.shippingService.resolveShippingMethod(id),
-      ),
-    );
-
-    const items = await Promise.all(
-      cart.items.map((item) =>
-        this.offersService.resolvePurchasable(item.offerId, item.quantity),
-      ),
-    );
-    const amounts = this.calculateAmounts(items, shippingMethods);
-
-    const orderId = await this.dataSource.transaction(async (manager) => {
-      await this.offersService.decrementStockForPurchase(items, manager);
-
-      const createdId = await this.insertOrder(manager, {
-        userId,
-        items,
-        addressId: address.id,
-        shippingMethodIds: shippingMethods.map((m) => m.id),
-        shippingMethodId: shippingMethods[0].id,
-        subtotal: amounts.subtotal,
-        shippingAmount: amounts.shippingAmount,
-        amount: amounts.payableAmount,
-      });
-
-      await manager.getRepository(ShoppingCartItem).delete({ cartId: cart.id });
-      return createdId;
     });
 
     const saved = await this.orderRepository.findById(orderId);

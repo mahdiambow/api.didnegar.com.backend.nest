@@ -10,19 +10,10 @@ import { ShippingModule } from '../shipping/shipping.module.js';
 import { AuthModule } from '../utils/auth/auth.module.js';
 import { RolesModule } from '../roles/roles.module.js';
 import { DepositsModule } from '../deposits/deposits.module.js';
-import { UserAddress } from '../users/entities/user-address.entity.js';
-import { ShoppingCart } from '../shopping-cart/entities/shopping-cart.entity.js';
-import { ShoppingCartItem } from '../shopping-cart/entities/shopping-cart-item.entity.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Order,
-      OrderItem,
-      UserAddress,
-      ShoppingCart,
-      ShoppingCartItem,
-    ]),
+    TypeOrmModule.forFeature([Order, OrderItem]),
     forwardRef(() => OffersModule),
     forwardRef(() => ShippingModule),
     forwardRef(() => AuthModule),
