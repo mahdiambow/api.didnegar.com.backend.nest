@@ -82,17 +82,61 @@ async function loadAttributeValues(target) {
         row,
       ]),
     ),
+    attributeIds: new Set(rows.map((row) => String(row.attributeId))),
   };
 }
 
 async function loadOffers(target, listingIds) {
   if (!listingIds.length) return new Map();
   const [rows] = await target.execute(
-    `SELECT id, legacySourceId, attributes FROM seller_offers
+    `SELECT id, legacySourceId, productId, attributes FROM seller_offers
      WHERE legacySourceId IN (${listingIds.map(() => '?').join(', ')})`,
     listingIds,
   );
   return new Map(rows.map((row) => [String(row.legacySourceId), row]));
+}
+
+async function syncProductAttributeIds(target, productIds, validAttributeIds) {
+  if (!productIds.size) return { updated: 0, invalidOfferAttributes: 0 };
+  const ids = [...productIds];
+  const [offers] = await target.execute(
+    `SELECT id, productId, attributes FROM seller_offers
+     WHERE productId IN (${ids.map(() => '?').join(', ')})`,
+    ids,
+  );
+  const attributesByProduct = new Map(
+    ids.map((productId) => [productId, new Set()]),
+  );
+  let invalidOfferAttributes = 0;
+  for (const offer of offers) {
+    const attributes = parseAttributes(offer.attributes);
+    if (!attributes) {
+      await writeReport({
+        type: 'invalid-offer-attributes-json-during-product-sync',
+        sellerOfferId: offer.id,
+        productId: offer.productId,
+      });
+      invalidOfferAttributes += 1;
+      continue;
+    }
+    const productAttributes = attributesByProduct.get(String(offer.productId));
+    if (!productAttributes) continue;
+    for (const attributeId of Object.keys(attributes)) {
+      if (validAttributeIds.has(attributeId))
+        productAttributes.add(attributeId);
+    }
+  }
+
+  let updated = 0;
+  for (const [productId, attributeIds] of attributesByProduct) {
+    const value = JSON.stringify([...attributeIds].sort());
+    const [result] = await target.execute(
+      'UPDATE products SET attributeIds = CAST(? AS JSON) WHERE id = ? AND attributeIds <> CAST(? AS JSON)',
+      [value, productId, value],
+    );
+    updated += Number(result.affectedRows || 0);
+  }
+  return { updated, invalidOfferAttributes };
 }
 
 async function migrateBatch(target, rows, offset, batch, valueMaps) {
@@ -106,6 +150,7 @@ async function migrateBatch(target, rows, offset, batch, valueMaps) {
     missingAttributeValues: 0,
     conflicts: 0,
     invalidOfferAttributes: 0,
+    productsUpdated: 0,
   };
   const listingIds = [
     ...new Set(
@@ -117,6 +162,7 @@ async function migrateBatch(target, rows, offset, batch, valueMaps) {
   ];
   const offersByListing = await loadOffers(target, listingIds);
   const pending = new Map();
+  const affectedProductIds = new Set();
 
   await target.beginTransaction();
   try {
@@ -145,7 +191,6 @@ async function migrateBatch(target, rows, offset, batch, valueMaps) {
         count.skipped += 1;
         continue;
       }
-
       const attributeValue =
         valueMaps.byLegacy.get(legacyIdKey(row.attributeValueLegacyId)) ||
         valueMaps.byNaturalKey.get(
@@ -165,6 +210,7 @@ async function migrateBatch(target, rows, offset, batch, valueMaps) {
         count.skipped += 1;
         continue;
       }
+      affectedProductIds.add(String(offer.productId));
 
       let next = pending.get(offer.id);
       if (!next) {
@@ -217,6 +263,13 @@ async function migrateBatch(target, rows, offset, batch, valueMaps) {
       );
       count.updated += 1;
     }
+    const productSync = await syncProductAttributeIds(
+      target,
+      affectedProductIds,
+      valueMaps.attributeIds,
+    );
+    count.productsUpdated += productSync.updated;
+    count.invalidOfferAttributes += productSync.invalidOfferAttributes;
     await target.commit();
   } catch (error) {
     await target.rollback();
@@ -249,6 +302,7 @@ async function main() {
     missingAttributeValues: 0,
     conflicts: 0,
     invalidOfferAttributes: 0,
+    productsUpdated: 0,
   };
   try {
     await assertTables(
@@ -302,6 +356,13 @@ async function main() {
       targetDatabase,
       'seller_offers',
       ['id', 'legacySourceId', 'attributes'],
+      'Target',
+    );
+    await assertColumns(
+      target,
+      targetDatabase,
+      'products',
+      ['id', 'attributeIds'],
       'Target',
     );
 
