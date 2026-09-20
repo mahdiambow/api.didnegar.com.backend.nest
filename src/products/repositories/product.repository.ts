@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Product } from '../entities/product.entity.js';
 
 export interface ProductFilters {
@@ -23,6 +23,24 @@ export class ProductRepository {
   findById(id: string, includeRelations = false) {
     return this.repo.findOne({
       where: { id },
+      relations: includeRelations
+        ? {
+            brand: true,
+            shippingMethod: true,
+            productStock: true,
+            productCategories: {
+              category: { parentCategory: true },
+              subCategory: { category: { parentCategory: true } },
+            },
+          }
+        : undefined,
+    });
+  }
+
+  findByIds(ids: string[], includeRelations = false) {
+    if (ids.length === 0) return Promise.resolve([] as Product[]);
+    return this.repo.find({
+      where: { id: In([...new Set(ids)]) },
       relations: includeRelations
         ? {
             brand: true,

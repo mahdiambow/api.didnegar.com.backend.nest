@@ -107,6 +107,13 @@ export class ProductsService {
     return response;
   }
 
+  async findByIds(ids: string[]) {
+    const uniqueIds = [...new Set(ids.filter(Boolean))];
+    if (uniqueIds.length === 0) return [] as ProductResponseDto[];
+    const products = await this.productRepository.findByIds(uniqueIds, true);
+    return this.toEnrichedProductResponses(products);
+  }
+
   async create(dto: CreateProductDto) {
     const { categoryIds, sellerIds, ...productData } = dto;
 
