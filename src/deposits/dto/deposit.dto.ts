@@ -77,56 +77,6 @@ export class DepositResponseDto {
   creditBalance?: number;
 }
 
-export class DepositVerifyResponseDto {
-  @ApiPropertyOptional({ nullable: true })
-  orderId?: string | null;
-
-  @ApiProperty()
-  depositId: string;
-
-  @ApiPropertyOptional()
-  transactionId?: string;
-
-  @ApiProperty({ enum: ['iBank', 'loan', 'credit'] })
-  gateway: string;
-
-  @ApiProperty()
-  refId: string;
-
-  @ApiProperty()
-  status: string;
-
-  @ApiProperty()
-  amount: number;
-
-  @ApiPropertyOptional()
-  subtotal?: number;
-
-  @ApiPropertyOptional()
-  shippingAmount?: number;
-
-  @ApiPropertyOptional()
-  displayTotal?: number;
-
-  @ApiPropertyOptional({ type: ShippingMethodResponseDto, nullable: true })
-  shippingMethod?: ShippingMethodResponseDto | null;
-
-  @ApiPropertyOptional()
-  productName?: string;
-
-  @ApiProperty()
-  gatewayMessage: string;
-
-  @ApiPropertyOptional()
-  creditBalance?: number;
-}
-
 export function toDepositResponse(data: DepositResponseDto): DepositResponseDto {
-  return data;
-}
-
-export function toDepositVerifyResponse(
-  data: DepositVerifyResponseDto,
-): DepositVerifyResponseDto {
   return data;
 }

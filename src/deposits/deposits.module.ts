@@ -21,7 +21,7 @@ import { ZIBAL_PROVIDER } from './zibal.constants.js';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Deposit, Withdraw, Transaction]),
-    OrdersModule,
+    forwardRef(() => OrdersModule),
     CreditModule,
     forwardRef(() => AuthModule),
   ],
