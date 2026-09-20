@@ -82,3 +82,15 @@ Run after attributes and catalog. It transforms legacy `product_variant_attribut
 into `products.price[].valueAttributeIds`; the Nest `product_variants` table is
 not populated. Invalid links are recorded in
 `migration-offer-attributes-report.jsonl`.
+
+## Product images
+
+```sh
+npm run db:migrate:product-images
+```
+
+Run after catalog. It maps legacy `product_variant_images` and `media` into the
+existing product `image` JSON: `{ "featuredImg": "...", "gallery": ["..."] }`.
+The first valid image ordered by legacy primary flag and sort order becomes
+`featuredImg`; all unique URLs are retained in `gallery`. No target schema migration
+or seller-offer image column is used.
