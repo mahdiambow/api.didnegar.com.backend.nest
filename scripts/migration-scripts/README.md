@@ -79,5 +79,6 @@ npm run db:migrate:offer-attributes
 ```
 
 Run after attributes and catalog. It transforms legacy `product_variant_attributes`
-into `seller_offers.attributes`; the Nest `product_variants` table is not populated.
-Invalid links are recorded in `migration-offer-attributes-report.jsonl`.
+into `products.price[].valueAttributeIds`; the Nest `product_variants` table is
+not populated. Invalid links are recorded in
+`migration-offer-attributes-report.jsonl`.

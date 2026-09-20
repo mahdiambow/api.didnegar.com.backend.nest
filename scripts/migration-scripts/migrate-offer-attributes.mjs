@@ -1,6 +1,6 @@
 /**
- * Moves legacy product-variant selections into seller_offers.attributes.
- * Nest product_variants is intentionally not populated.
+ * Moves legacy product-variant value selections into products.price[].
+ * valueAttributeIds. Nest product_variants remains deliberately unused.
  */
 import { appendFile, writeFile } from 'node:fs/promises';
 import {
@@ -19,8 +19,8 @@ const reportPath =
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: node scripts/migration-scripts/migrate-offer-attributes.mjs
 
-Run after attributes and catalog. Variant selections are merged into the matching
-seller offer's attributes JSON; Nest product_variants remains unused.`);
+Run after attributes and catalog. Legacy product variant attribute values are
+written to products.price[].valueAttributeIds; Nest product_variants is unused.`);
   process.exit(0);
 }
 
@@ -32,17 +32,24 @@ function legacyIdKey(value) {
   return value === null || value === undefined ? null : String(value);
 }
 
-function parseAttributes(value) {
-  if (value === null || value === undefined || value === '') return {};
-  if (typeof value === 'object' && !Array.isArray(value)) return { ...value };
+function parseJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value === null || value === undefined) return [];
   try {
     const parsed = JSON.parse(String(value));
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed
-      : null;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return null;
+    return [];
   }
+}
+
+function decimalOrZero(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function priceKey(valueAttributeIds) {
+  return valueAttributeIds.join(':');
 }
 
 async function writeReport(event) {
@@ -65,169 +72,176 @@ async function readBatches(source, sql, onBatch) {
   }
 }
 
-async function loadAttributeValues(target) {
-  const [rows] = await target.execute(`
-    SELECT value_row.id, value_row.attributeId, value_row.legacyId,
-           attribute_row.legacyId AS attributeLegacyId, value_row.value
+async function loadTargetMaps(target) {
+  const [products] = await target.execute(
+    "SELECT id, legacyId FROM products WHERE legacyTable = 'products'",
+  );
+  const [values] = await target.execute(`
+    SELECT value_row.id, value_row.legacyId, value_row.value,
+           attribute_row.legacyId AS attributeLegacyId
     FROM attribute_values value_row
     INNER JOIN attributes attribute_row ON attribute_row.id = value_row.attributeId
     WHERE value_row.legacyTable = 'attribute_values'
       AND attribute_row.legacyTable = 'attributes'
   `);
   return {
-    byLegacy: new Map(rows.map((row) => [legacyIdKey(row.legacyId), row])),
-    byNaturalKey: new Map(
-      rows.map((row) => [
+    products: new Map(
+      products.map((row) => [legacyIdKey(row.legacyId), String(row.id)]),
+    ),
+    valuesByLegacy: new Map(
+      values.map((row) => [legacyIdKey(row.legacyId), row]),
+    ),
+    valuesByNaturalKey: new Map(
+      values.map((row) => [
         `${legacyIdKey(row.attributeLegacyId)}:${row.value}`,
         row,
       ]),
     ),
-    attributeIds: new Set(rows.map((row) => String(row.attributeId))),
   };
 }
 
-async function loadOffers(target, listingIds) {
-  if (!listingIds.length) return new Map();
-  const [rows] = await target.execute(
-    `SELECT id, legacySourceId, productId, attributes FROM seller_offers
-     WHERE legacySourceId IN (${listingIds.map(() => '?').join(', ')})`,
-    listingIds,
+async function clearIncorrectImportedOfferAttributes(target) {
+  const [result] = await target.execute(
+    "UPDATE seller_offers SET attributes = CAST('{}' AS JSON) WHERE legacyTable = 'seller_variant_listings' AND attributes <> CAST('{}' AS JSON)",
   );
-  return new Map(rows.map((row) => [String(row.legacySourceId), row]));
+  return Number(result.affectedRows || 0);
 }
 
-async function syncProductAttributeIds() {
-  // products.attributeIds removed — attributes live on seller_offers / price JSON
-  return { updated: 0, invalidOfferAttributes: 0 };
+async function clearIncorrectProductAttributeIds(target) {
+  const [result] = await target.execute(
+    "UPDATE products SET attributeIds = CAST('[]' AS JSON) WHERE legacyTable = 'products' AND attributeIds <> CAST('[]' AS JSON)",
+  );
+  return Number(result.affectedRows || 0);
 }
 
-async function migrateBatch(target, rows, offset, batch, valueMaps) {
+async function migrateBatch(target, rows, offset, batch, maps, priceCache) {
   const count = {
     read: rows.length,
-    updated: 0,
+    productsUpdated: 0,
+    pricesAdded: 0,
     unchanged: 0,
     skipped: 0,
-    missingListings: 0,
-    missingOffers: 0,
+    missingProducts: 0,
     missingAttributeValues: 0,
-    conflicts: 0,
-    invalidOfferAttributes: 0,
-    productsUpdated: 0,
+    duplicateCombinations: 0,
   };
-  const listingIds = [
-    ...new Set(
-      rows
-        .map((row) => row.listingId)
-        .filter((id) => id !== null && id !== undefined)
-        .map(String),
-    ),
-  ];
-  const offersByListing = await loadOffers(target, listingIds);
-  const pending = new Map();
-  const affectedProductIds = new Set();
+  const changedProducts = new Set();
 
   await target.beginTransaction();
   try {
     for (const row of rows) {
-      if (!row.listingId) {
+      const productId = maps.products.get(legacyIdKey(row.productLegacyId));
+      if (!productId) {
         await writeReport({
-          type: 'variant-without-seller-listing',
-          variantAttributeId: row.id,
-          legacyVariantId: row.variantId,
-          legacyAttributeValueId: row.attributeValueId,
+          type: 'missing-product',
+          legacyVariantId: row.id,
+          variantLegacyId: row.legacyId,
+          legacyProductId: row.productId,
+          productLegacyId: row.productLegacyId,
         });
-        count.missingListings += 1;
+        count.missingProducts += 1;
         count.skipped += 1;
         continue;
       }
 
-      const offer = offersByListing.get(String(row.listingId));
-      if (!offer) {
-        await writeReport({
-          type: 'missing-seller-offer',
-          variantAttributeId: row.id,
-          legacyVariantId: row.variantId,
-          legacyListingId: row.listingId,
-        });
-        count.missingOffers += 1;
-        count.skipped += 1;
-        continue;
-      }
-      const attributeValue =
-        valueMaps.byLegacy.get(legacyIdKey(row.attributeValueLegacyId)) ||
-        valueMaps.byNaturalKey.get(
-          `${legacyIdKey(row.attributeLegacyId)}:${row.attributeValue}`,
-        );
-      if (!attributeValue) {
-        await writeReport({
-          type: 'missing-attribute-value',
-          variantAttributeId: row.id,
-          legacyVariantId: row.variantId,
-          legacyAttributeValueId: row.attributeValueId,
-          attributeValueLegacyId: row.attributeValueLegacyId,
-          attributeLegacyId: row.attributeLegacyId,
-          value: row.attributeValue,
-        });
-        count.missingAttributeValues += 1;
-        count.skipped += 1;
-        continue;
-      }
-      affectedProductIds.add(String(offer.productId));
-
-      let next = pending.get(offer.id);
-      if (!next) {
-        const attributes = parseAttributes(offer.attributes);
-        if (!attributes) {
+      const sourceValues = parseJsonArray(row.sourceAttributeValues).filter(
+        (value) =>
+          value &&
+          value.attributeValueLegacyId !== null &&
+          value.attributeValueLegacyId !== undefined,
+      );
+      const valueAttributeIds = [];
+      let missingValue = false;
+      for (const sourceValue of sourceValues) {
+        const targetValue =
+          maps.valuesByLegacy.get(
+            legacyIdKey(sourceValue.attributeValueLegacyId),
+          ) ||
+          maps.valuesByNaturalKey.get(
+            `${legacyIdKey(sourceValue.attributeLegacyId)}:${sourceValue.value}`,
+          );
+        if (!targetValue) {
           await writeReport({
-            type: 'invalid-offer-attributes-json',
-            variantAttributeId: row.id,
-            sellerOfferId: offer.id,
-            legacyListingId: row.listingId,
+            type: 'missing-attribute-value',
+            legacyVariantId: row.id,
+            variantLegacyId: row.legacyId,
+            legacyProductId: row.productId,
+            legacyAttributeValueId: sourceValue.attributeValueId,
+            attributeValueLegacyId: sourceValue.attributeValueLegacyId,
+            attributeLegacyId: sourceValue.attributeLegacyId,
+            value: sourceValue.value,
           });
-          count.invalidOfferAttributes += 1;
-          count.skipped += 1;
+          count.missingAttributeValues += 1;
+          missingValue = true;
+          break;
+        }
+        valueAttributeIds.push(String(targetValue.id));
+      }
+      if (missingValue) {
+        count.skipped += 1;
+        continue;
+      }
+
+      const normalizedIds = [...new Set(valueAttributeIds)].sort();
+      const minPrice = decimalOrZero(row.minPrice ?? row.maxPrice);
+      const maxPrice = decimalOrZero(row.maxPrice ?? row.minPrice);
+      const price = {
+        valueAttributeIds: normalizedIds,
+        price: maxPrice,
+        discountPercentage: null,
+        discountAmount: null,
+        expireDate: null,
+        maxQuantity: null,
+        minQuantity: 1,
+        finalPrice: minPrice,
+      };
+      let cached = priceCache.get(productId);
+      if (!cached) {
+        // Rebuild the migrated product's price list from legacy variants,
+        // replacing catalog's temporary empty-value price entry.
+        cached = { prices: [], keys: new Map() };
+        priceCache.set(productId, cached);
+      }
+
+      const key = priceKey(normalizedIds);
+      const existing = cached.keys.get(key);
+      if (existing) {
+        if (
+          existing.price === price.price &&
+          existing.finalPrice === price.finalPrice
+        ) {
+          count.unchanged += 1;
           continue;
         }
-        next = { offer, attributes, changed: false };
-        pending.set(offer.id, next);
-      }
-
-      const attributeId = String(attributeValue.attributeId);
-      const attributeValueId = String(attributeValue.id);
-      const current = next.attributes[attributeId];
-      if (current && current !== attributeValueId) {
         await writeReport({
-          type: 'conflicting-attribute-values',
-          variantAttributeId: row.id,
-          sellerOfferId: offer.id,
-          legacyListingId: row.listingId,
-          attributeId,
-          existingAttributeValueId: current,
-          incomingAttributeValueId: attributeValueId,
+          type: 'duplicate-price-combination',
+          legacyVariantId: row.id,
+          variantLegacyId: row.legacyId,
+          targetProductId: productId,
+          valueAttributeIds: normalizedIds,
+          retainedPrice: existing.price,
+          retainedFinalPrice: existing.finalPrice,
+          incomingPrice: price.price,
+          incomingFinalPrice: price.finalPrice,
         });
-        count.conflicts += 1;
+        count.duplicateCombinations += 1;
         count.skipped += 1;
         continue;
       }
-      if (current === attributeValueId) {
-        count.unchanged += 1;
-        continue;
-      }
-      next.attributes[attributeId] = attributeValueId;
-      next.changed = true;
+      cached.prices.push(price);
+      cached.keys.set(key, price);
+      changedProducts.add(productId);
+      count.pricesAdded += 1;
     }
 
-    for (const { offer, attributes, changed } of pending.values()) {
-      if (!changed) continue;
+    for (const productId of changedProducts) {
+      const cached = priceCache.get(productId);
       await target.execute(
-        'UPDATE seller_offers SET attributes = CAST(? AS JSON) WHERE id = ?',
-        [JSON.stringify(attributes), offer.id],
+        'UPDATE products SET price = CAST(? AS JSON) WHERE id = ?',
+        [JSON.stringify(cached.prices), productId],
       );
-      count.updated += 1;
+      count.productsUpdated += 1;
     }
-    const productSync = await syncProductAttributeIds();
-    count.productsUpdated += productSync.updated;
-    count.invalidOfferAttributes += productSync.invalidOfferAttributes;
     await target.commit();
   } catch (error) {
     await target.rollback();
@@ -236,7 +250,7 @@ async function migrateBatch(target, rows, offset, batch, valueMaps) {
 
   console.log(
     JSON.stringify({
-      entity: 'seller_offer_attributes',
+      entity: 'product_variant_prices',
       batch,
       offset,
       ...count,
@@ -252,24 +266,22 @@ async function main() {
   const target = await openTargetConnection();
   const totals = {
     read: 0,
-    updated: 0,
+    productsUpdated: 0,
+    pricesAdded: 0,
     unchanged: 0,
     skipped: 0,
-    missingListings: 0,
-    missingOffers: 0,
+    missingProducts: 0,
     missingAttributeValues: 0,
-    conflicts: 0,
-    invalidOfferAttributes: 0,
-    productsUpdated: 0,
+    duplicateCombinations: 0,
   };
   try {
     await assertTables(
       source,
       sourceDatabase,
       [
-        'product_variant_attributes',
         'product_variants',
-        'seller_variant_listings',
+        'products',
+        'product_variant_attributes',
         'attribute_values',
         'attributes',
       ],
@@ -278,21 +290,28 @@ async function main() {
     await assertTables(
       target,
       targetDatabase,
-      ['seller_offers', 'attribute_values', 'attributes'],
+      ['products', 'seller_offers', 'attribute_values', 'attributes'],
       'Target',
+    );
+    await assertColumns(
+      source,
+      sourceDatabase,
+      'product_variants',
+      ['id', 'legacyId', 'productId', 'minPrice', 'maxPrice'],
+      'Legacy',
+    );
+    await assertColumns(
+      source,
+      sourceDatabase,
+      'products',
+      ['id', 'legacyId'],
+      'Legacy',
     );
     await assertColumns(
       source,
       sourceDatabase,
       'product_variant_attributes',
       ['id', 'variantId', 'attributeValueId'],
-      'Legacy',
-    );
-    await assertColumns(
-      source,
-      sourceDatabase,
-      'seller_variant_listings',
-      ['id', 'productVariantId'],
       'Legacy',
     );
     await assertColumns(
@@ -312,15 +331,15 @@ async function main() {
     await assertColumns(
       target,
       targetDatabase,
-      'seller_offers',
-      ['id', 'legacySourceId', 'attributes'],
+      'products',
+      ['id', 'legacyId', 'legacyTable', 'price'],
       'Target',
     );
     await assertColumns(
       target,
       targetDatabase,
-      'products',
-      ['id'],
+      'seller_offers',
+      ['legacyTable', 'attributes'],
       'Target',
     );
 
@@ -329,22 +348,56 @@ async function main() {
       `${JSON.stringify({ type: 'run-started', at: new Date().toISOString() })}\n`,
       'utf8',
     );
-    const valueMaps = await loadAttributeValues(target);
+    const clearedOfferAttributes =
+      await clearIncorrectImportedOfferAttributes(target);
+    const clearedProductAttributeIds =
+      await clearIncorrectProductAttributeIds(target);
+    await writeReport({
+      type: 'cleared-incorrect-imported-offer-attributes',
+      count: clearedOfferAttributes,
+    });
+    await writeReport({
+      type: 'cleared-incorrect-product-attribute-ids',
+      count: clearedProductAttributeIds,
+    });
+
+    const maps = await loadTargetMaps(target);
+    const priceCache = new Map();
     const batches = await readBatches(
       source,
-      `SELECT pva.id, pva.variantId, pva.attributeValueId, listing.id AS listingId,
-              source_value.legacyId AS attributeValueLegacyId,
-              source_value.value AS attributeValue,
-              source_attribute.legacyId AS attributeLegacyId
-       FROM product_variant_attributes pva
-       LEFT JOIN seller_variant_listings listing ON listing.productVariantId = pva.variantId
-       LEFT JOIN attribute_values source_value ON source_value.id = pva.attributeValueId
+      `SELECT variant_row.id, variant_row.legacyId, variant_row.productId,
+              variant_row.minPrice, variant_row.maxPrice,
+              product_row.legacyId AS productLegacyId,
+              JSON_ARRAYAGG(
+                CASE WHEN link.id IS NULL THEN NULL ELSE JSON_OBJECT(
+                  'attributeValueId', link.attributeValueId,
+                  'attributeValueLegacyId', source_value.legacyId,
+                  'attributeLegacyId', source_attribute.legacyId,
+                  'value', source_value.value
+                ) END
+              ) AS sourceAttributeValues
+       FROM product_variants variant_row
+       INNER JOIN products product_row ON product_row.id = variant_row.productId
+       LEFT JOIN product_variant_attributes link ON link.variantId = variant_row.id
+       LEFT JOIN attribute_values source_value ON source_value.id = link.attributeValueId
        LEFT JOIN attributes source_attribute ON source_attribute.id = source_value.attributeId
-       ORDER BY pva.id, listing.id`,
+       GROUP BY variant_row.id, variant_row.legacyId, variant_row.productId,
+                variant_row.minPrice, variant_row.maxPrice, product_row.legacyId
+       ORDER BY product_row.legacyId, variant_row.legacyId, variant_row.id`,
       async (rows, offset, batch) =>
-        add(totals, await migrateBatch(target, rows, offset, batch, valueMaps)),
+        add(
+          totals,
+          await migrateBatch(target, rows, offset, batch, maps, priceCache),
+        ),
     );
-    const result = { complete: true, batches, totals, reportPath };
+    const result = {
+      complete: true,
+      batches,
+      clearedIncorrectImportedOfferAttributes: clearedOfferAttributes,
+      clearedIncorrectProductAttributeIds: clearedProductAttributeIds,
+      totals,
+      reportPath,
+    };
     await writeReport({ type: 'run-complete', ...result });
     console.log(JSON.stringify(result, null, 2));
   } finally {
