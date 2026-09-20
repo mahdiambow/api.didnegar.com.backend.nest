@@ -26,10 +26,7 @@ import { OrdersService } from './orders.service.js';
 import { CreateOrderDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto.js';
-import {
-  CreateOrderResponseDto,
-  OrderResponseDto,
-} from './dto/order-response.dto.js';
+import { OrderResponseDto } from './dto/order-response.dto.js';
 
 const OrderApiResponseDto = createSuccessResponseDto(OrderResponseDto, {
   code: 'ORDER_FOUND',
@@ -37,14 +34,6 @@ const OrderApiResponseDto = createSuccessResponseDto(OrderResponseDto, {
   name: 'Order',
 });
 
-const CreateOrderApiResponseDto = createSuccessResponseDto(
-  CreateOrderResponseDto,
-  {
-    code: 'ORDER_CREATED',
-    message: 'Order created successfully',
-    name: 'CreateOrder',
-  },
-);
 const OrdersPaginatedApiResponseDto = createPaginatedResponseDto(
   OrderResponseDto,
   {
@@ -79,12 +68,8 @@ export class OrdersController {
     code: 'ORDER_CREATED',
     message: 'Order created successfully',
   })
-  @ApiOperation({
-    summary: 'Create order and start payment',
-    description:
-      'ایجاد سفارش + شروع پرداخت با paymentMethod (credit | zarinpal | zibal | loan)',
-  })
-  @ApiOkResponse({ type: CreateOrderApiResponseDto })
+  @ApiOperation({ summary: 'Create order', description: 'ایجاد سفارش' })
+  @ApiOkResponse({ type: OrderApiResponseDto })
   create(@Req() req: { user: { sub: string } }, @Body() dto: CreateOrderDto) {
     return this.ordersService.create(req.user.sub, dto);
   }

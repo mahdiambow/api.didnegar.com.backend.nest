@@ -5,11 +5,10 @@ import { validate } from 'class-validator';
 import { Repository } from 'typeorm';
 import { BannersService } from './banners.service.js';
 import { Banner } from './entities/banner.entity.js';
-import { Category } from '../categories/entities/category.entity.js';
 import { CreateBannerDto, UpdateBannerDto } from './dto/banner.dto.js';
 import { BannerPage, BannerSection } from './types/banner.enums.js';
 
-const categoryId = '01JEX000000000000000000010';
+const bannerId = '01JEX000000000000000000010';
 const items = (count: number) =>
   Array.from({ length: count }, (_, i) => ({
     mediaUrl: `https://example.com/${i}.jpg`,
@@ -23,7 +22,7 @@ function setup() {
   let row: Banner | null = null;
   const repository = {
     create: vi.fn((data) => data),
-    save: vi.fn(async (data) => (row = { ...data, id: categoryId })),
+    save: vi.fn(async (data) => (row = { ...data, id: bannerId })),
     findOneBy: vi.fn(async () => (row ? { ...row } : null)),
     findAndCount: vi.fn(async () => [row ? [row] : [], row ? 1 : 0]),
     delete: vi.fn(async () => {
@@ -32,13 +31,10 @@ function setup() {
       return { affected };
     }),
   };
-  const categories = { existsBy: vi.fn(async () => true) };
   return {
     repository,
-    categories,
     service: new BannersService(
       repository as unknown as Repository<Banner>,
-      categories as unknown as Repository<Category>,
     ),
   };
 }
@@ -61,7 +57,7 @@ describe('banner settings', () => {
         items: items(count),
       });
       expect(result.items).toEqual(items(count));
-      expect(result.categoryId).toBeNull();
+      expect(result.page).toBe(BannerPage.HOME);
     },
   );
 
@@ -82,9 +78,10 @@ describe('banner settings', () => {
 
   it.each([
     { page: BannerPage.HOME, section: BannerSection.SIDEBAR },
-    { categoryId },
-    { page: BannerPage.CATEGORY_SIDEBAR, section: BannerSection.SIDEBAR },
-    { page: BannerPage.CATEGORY_SIDEBAR, categoryId },
+    {
+      page: BannerPage.CATEGORY_SIDEBAR,
+      section: BannerSection.SINGLE_BANNER,
+    },
   ])('rejects incompatible placements %j', async (patch) => {
     const { service } = setup();
     await expect(service.create({ ...input, ...patch })).rejects.toMatchObject({
@@ -92,19 +89,14 @@ describe('banner settings', () => {
     });
   });
 
-  it('requires an existing category for sidebar banners', async () => {
-    const { service, categories } = setup();
+  it('creates category_sidebar banners without categoryId', async () => {
+    const { service } = setup();
     const sidebar = {
-      ...input,
       page: BannerPage.CATEGORY_SIDEBAR,
       section: BannerSection.SIDEBAR,
-      categoryId,
+      items: items(1),
     };
     await expect(service.create(sidebar)).resolves.toMatchObject(sidebar);
-    categories.existsBy.mockResolvedValue(false);
-    await expect(service.create(sidebar)).rejects.toMatchObject({
-      status: 404,
-    });
   });
 
   it('validates partial updates against the saved section and allows moving placements together', async () => {
@@ -128,10 +120,12 @@ describe('banner settings', () => {
       service.update(banner.id, {
         page: BannerPage.CATEGORY_SIDEBAR,
         section: BannerSection.SIDEBAR,
-        categoryId,
         items: items(1),
       }),
-    ).resolves.toMatchObject({ categoryId });
+    ).resolves.toMatchObject({
+      page: BannerPage.CATEGORY_SIDEBAR,
+      section: BannerSection.SIDEBAR,
+    });
   });
 
   it('maps concurrent duplicate inserts to conflict', async () => {
@@ -183,7 +177,6 @@ describe('banner settings', () => {
     },
     { section: 'unknown' },
     { page: null },
-    { categoryId: 'bad-id' },
   ])('rejects malformed input %j', async (patch) => {
     expect(
       (await validate(plainToInstance(CreateBannerDto, { ...input, ...patch })))

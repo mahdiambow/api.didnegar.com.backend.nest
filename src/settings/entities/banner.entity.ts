@@ -1,12 +1,18 @@
-import { PrimaryColumn, Check, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
-import type { Category } from '../../categories/entities/category.entity.js';
+import {
+  PrimaryColumn,
+  Check,
+  Column,
+  CreateDateColumn,
+  Entity,
+  UpdateDateColumn,
+} from 'typeorm';
 import type { BannerItemDto } from '../dto/banner.dto.js';
 import { BannerPage, BannerSection } from '../types/banner.enums.js';
 
 @Entity('banners')
 @Check(
   'CHK_banners_placement',
-  "(`page` = 'home' AND `categoryId` IS NULL AND `section` IN ('main_slider', 'three_images', 'narrow_banner', 'video', 'two_images', 'single_banner')) OR (`page` = 'category_sidebar' AND `categoryId` IS NOT NULL AND `section` = 'sidebar')",
+  "(`page` = 'home' AND `section` IN ('main_slider', 'three_images', 'narrow_banner', 'video', 'two_images', 'single_banner')) OR (`page` = 'category_sidebar' AND `section` = 'sidebar')",
 )
 export class Banner {
   @PrimaryColumn({ type: 'varchar', length: 26 })
@@ -17,13 +23,6 @@ export class Banner {
 
   @Column({ type: 'varchar', length: 30 })
   section: BannerSection;
-
-  @Column({ type: 'varchar', length: 26, nullable: true })
-  categoryId: string | null;
-
-  @ManyToOne('Category', { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'categoryId' })
-  category: Category | null;
 
   @Column({ type: 'json' })
   items: BannerItemDto[];

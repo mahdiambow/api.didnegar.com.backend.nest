@@ -81,17 +81,39 @@ export class ProductsService {
     );
   }
 
-  /** کاتالوگ پابلیک — همه محصولات publish + approved + active با روابط کامل */
-  async findAllPublic() {
-    const items = await this.productRepository.findFiltered(
+  /** کاتالوگ پابلیک — pagination + search/category؛ فقط publish + approved + active */
+  async findAllPublic(query: {
+    page?: string | number;
+    limit?: string | number;
+    brandId?: string;
+    search?: string;
+    name?: string;
+    categoryId?: string;
+    subCategoryId?: string;
+  } = {}) {
+    const { page, limit, offset } = getPaginationParams(query);
+    const [items, total] = await this.productRepository.findPaginated(
+      offset,
+      limit,
       {
         status: 'publish',
         approvalStatus: 'approved',
         isActive: true,
+        brandId: query.brandId,
+        search: query.search,
+        name: query.name,
+        categoryId: query.categoryId,
+        subCategoryId: query.subCategoryId,
       },
       true,
     );
-    return this.toEnrichedProductResponses(items);
+
+    return paginatedList(
+      await this.toEnrichedProductResponses(items),
+      page,
+      limit,
+      total,
+    );
   }
 
   async findOne(id: string) {
@@ -107,10 +129,37 @@ export class ProductsService {
     return response;
   }
 
+  /** یک محصول پابلیک — فقط اگر publish + approved + active باشد */
+  async findOnePublic(id: string) {
+    const product = await this.productRepository.findById(id, true);
+    if (
+      !product ||
+      product.status !== 'publish' ||
+      product.approvalStatus !== 'approved' ||
+      product.isActive === false
+    ) {
+      throw new ApiException(
+        'PRODUCT_NOT_FOUND',
+        'محصول یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    const [response] = await this.toEnrichedProductResponses([product]);
+    return response;
+  }
+
+  async findByIds(ids: string[]) {
+    const uniqueIds = [...new Set(ids.filter(Boolean))];
+    if (uniqueIds.length === 0) return [] as ProductResponseDto[];
+    const products = await this.productRepository.findByIds(uniqueIds, true);
+    return this.toEnrichedProductResponses(products);
+  }
+
   async create(dto: CreateProductDto) {
     const { categoryIds, sellerIds, ...productData } = dto;
 
-    await this.assertUniqueFields(productData.slug);
+    await this.assertSlugAvailable(productData.slug);
+    await this.assertSkuAvailable(productData.sku);
     if (productData.brandId) {
       await this.assertBrandExists(productData.brandId);
     }
@@ -188,17 +237,11 @@ export class ProductsService {
             }));
     }
 
-    if (productData.slug && productData.slug !== product.slug) {
-      const slugTaken = await this.productRepository.findBySlug(
-        productData.slug,
-      );
-      if (slugTaken) {
-        throw new ApiException(
-          'PRODUCT_SLUG_EXISTS',
-          'محصول با این slug از قبل وجود دارد',
-          HttpStatus.CONFLICT,
-        );
-      }
+    if (productData.slug !== undefined && productData.slug !== product.slug) {
+      await this.assertSlugAvailable(productData.slug, product.id);
+    }
+    if (productData.sku !== undefined && productData.sku !== product.sku) {
+      await this.assertSkuAvailable(productData.sku, product.id);
     }
 
     if (productData.brandId) {
@@ -412,12 +455,22 @@ export class ProductsService {
     });
   }
 
-  private async assertUniqueFields(slug: string) {
-    const slugTaken = await this.productRepository.findBySlug(slug);
-    if (slugTaken) {
+  private async assertSlugAvailable(slug: string, excludeId?: string) {
+    if (await this.productRepository.slugExists(slug, excludeId)) {
       throw new ApiException(
         'PRODUCT_SLUG_EXISTS',
         'محصول با این slug از قبل وجود دارد',
+        HttpStatus.CONFLICT,
+      );
+    }
+  }
+
+  private async assertSkuAvailable(sku?: string | null, excludeId?: string) {
+    if (sku === undefined || sku === null) return;
+    if (await this.productRepository.skuExists(sku, excludeId)) {
+      throw new ApiException(
+        'PRODUCT_SKU_EXISTS',
+        'محصول با این SKU از قبل وجود دارد',
         HttpStatus.CONFLICT,
       );
     }

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Product } from '../entities/product.entity.js';
 
 export interface ProductFilters {
@@ -37,12 +37,46 @@ export class ProductRepository {
     });
   }
 
+  findByIds(ids: string[], includeRelations = false) {
+    if (ids.length === 0) return Promise.resolve([] as Product[]);
+    return this.repo.find({
+      where: { id: In([...new Set(ids)]) },
+      relations: includeRelations
+        ? {
+            brand: true,
+            shippingMethod: true,
+            productStock: true,
+            productCategories: {
+              category: { parentCategory: true },
+              subCategory: { category: { parentCategory: true } },
+            },
+          }
+        : undefined,
+    });
+  }
+
   findBySlug(slug: string) {
     return this.repo.findOne({ where: { slug } });
   }
 
   findBySku(sku: string) {
     return this.repo.findOne({ where: { sku } });
+  }
+
+  async slugExists(slug: string, excludeId?: string) {
+    const qb = this.repo
+      .createQueryBuilder('product')
+      .where('product.slug = :slug', { slug });
+    if (excludeId) qb.andWhere('product.id <> :excludeId', { excludeId });
+    return (await qb.getCount()) > 0;
+  }
+
+  async skuExists(sku: string, excludeId?: string) {
+    const qb = this.repo
+      .createQueryBuilder('product')
+      .where('product.sku = :sku', { sku });
+    if (excludeId) qb.andWhere('product.id <> :excludeId', { excludeId });
+    return (await qb.getCount()) > 0;
   }
 
   findByFilters(filters: ProductFilters = {}, includeRelations = false) {

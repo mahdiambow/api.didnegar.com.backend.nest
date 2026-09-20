@@ -35,7 +35,7 @@ type ZibalVerifyResponse = {
 @Injectable()
 export class ZibalService implements IBank {
   readonly kind = 'bank' as const;
-  readonly gateway = 'zibal' as const;
+  readonly gateway = 'iBank' as const;
 
   private readonly logger = new Logger(ZibalService.name);
   private readonly merchant: string;

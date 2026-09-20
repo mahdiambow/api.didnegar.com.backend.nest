@@ -61,14 +61,14 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   excerpt: string | null;
 
-  @Index({ unique: true })
+  @Index()
   @Column({ type: 'varchar', length: 200 })
   slug: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   description: string | null;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   shortDescription: string | null;
 
   @Index()

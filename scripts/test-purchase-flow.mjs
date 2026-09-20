@@ -126,100 +126,83 @@ async function main() {
   assert(r.status < 400, `add cart failed: ${JSON.stringify(r.json)}`);
   console.log('4) Cart item added');
 
-  r = await api('POST', '/shopping-cart/checkout', {
+  r = await api('POST', '/orders', {
     token,
-    body: { addressId, shippingMethodIds: [shippingId] },
+    body: {
+      products: [{ offerId, quantity: 1 }],
+      shippingMethodId: shippingId,
+    },
   });
-  assert(r.status < 400, `checkout failed: ${JSON.stringify(r.json)}`);
+  assert(r.status < 400, `order failed: ${JSON.stringify(r.json)}`);
   const order = r.json.data;
   console.log('5) Order', { id: order.id, amount: order.amount, status: order.status });
   assert(order.status === 'pending', 'order pending');
+  assert(order.paymentUrl, 'order must return paymentUrl');
 
-  r = await api('POST', '/deposits/credit/request', {
+  r = await api('POST', '/deposits/request', {
     token,
-    body: { orderId: order.id },
+    body: { orderId: order.id, method: 'credit' },
   });
   console.log('6) Credit pay (empty wallet) status', r.status, r.json?.code || r.json?.message);
   assert(r.status >= 400, 'credit pay must fail with empty wallet');
 
-  r = await api('POST', '/deposits/zarinpal/request', {
+  r = await api('POST', '/deposits/request', {
     token,
-    body: { orderId: order.id },
+    body: { orderId: order.id, method: 'iBank' },
   });
-  assert(r.status < 400, `zarinpal request failed: ${JSON.stringify(r.json)}`);
-  const authority = r.json.data.trackId;
-  console.log('7) Zarinpal authority', authority);
+  assert(r.status < 400, `iBank request failed: ${JSON.stringify(r.json)}`);
+  assert(r.json.data?.paymentUrl, 'iBank must return paymentUrl');
+  console.log('7) iBank request', {
+    trackId: r.json.data.trackId,
+    paymentUrl: r.json.data.paymentUrl,
+  });
 
-  r = await api(
-    'GET',
-    `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authority)}&Status=OK`,
+  // pay with credit after funding wallet (verify is handled outside this API)
+  await conn.execute(
+    `INSERT INTO user_credits (id, userId, amount, lockedAmount, createdAt, updatedAt)
+     VALUES (?, ?, ?, 0, NOW(6), NOW(6))
+     ON DUPLICATE KEY UPDATE amount = ?`,
+    [ulid(), userId, Number(order.amount), Number(order.amount)],
   );
-  assert(r.status < 400, `zarinpal verify failed: ${JSON.stringify(r.json)}`);
-  console.log('8) Verify', {
-    status: r.json.data?.status,
+
+  r = await api('POST', '/deposits/request', {
+    token,
+    body: { orderId: order.id, method: 'credit' },
+  });
+  assert(r.status < 400, `credit pay failed: ${JSON.stringify(r.json)}`);
+  console.log('8) Credit pay OK', {
+    gateway: r.json.data?.gateway,
     creditBalance: r.json.data?.creditBalance,
   });
-  assert(r.json.data?.status === 'success', 'verify success');
 
   r = await api('GET', '/credit/balance', { token });
   const bal1 = r.json.data;
-  console.log('9) Credit after bank pay', bal1);
-  assert(Number(bal1.amount) === 0, 'after bank pay amount back to 0');
+  console.log('9) Credit after pay', bal1);
+  assert(Number(bal1.amount) === 0, 'after credit pay amount back to 0');
 
-  const [logs] = await conn.query(
-    `SELECT sourceType, amount, amountBefore, amountAfter, lockedBefore, lockedAfter, sourceId
-     FROM credit_logs WHERE userId = ? ORDER BY createdAt ASC, id ASC`,
-    [userId],
-  );
-  console.log('10) Credit logs', logs);
-  assert(logs.length >= 2, 'need in+out logs');
-  const last2 = logs.slice(-2);
-  assert(last2[0].sourceType === 'in', 'first must be in');
-  assert(last2[1].sourceType === 'out', 'second must be out');
-  assert(
-    Number(last2[0].amount) === Number(last2[1].amount),
-    'in/out amounts equal',
-  );
-
-  // Loan path on a second checkout
-  console.log('11) Loan path — second order');
-  r = await api('POST', '/shopping-cart/items', {
+  // Loan path on a second order — request only
+  console.log('10) Loan path — second order');
+  r = await api('POST', '/orders', {
     token,
-    body: { offerId, quantity: 1 },
+    body: {
+      products: [{ offerId, quantity: 1 }],
+      shippingMethodId: shippingId,
+    },
   });
-  assert(r.status < 400, `2nd add cart failed: ${JSON.stringify(r.json)}`);
-  r = await api('POST', '/shopping-cart/checkout', {
-    token,
-    body: { addressId, shippingMethodIds: [shippingId] },
-  });
-  assert(r.status < 400, `2nd checkout failed: ${JSON.stringify(r.json)}`);
+  assert(r.status < 400, `2nd order failed: ${JSON.stringify(r.json)}`);
   const order2 = r.json.data;
   console.log('    order2', order2.id, order2.amount);
 
-  r = await api('POST', '/deposits/loan/request', {
+  r = await api('POST', '/deposits/request', {
     token,
-    body: { orderId: order2.id },
+    body: { orderId: order2.id, method: 'loan' },
   });
   assert(r.status < 400, `loan request failed: ${JSON.stringify(r.json)}`);
-  const loanAuth = r.json.data.trackId;
-  r = await api(
-    'GET',
-    `/deposits/loan/verify?trackId=${encodeURIComponent(loanAuth)}&success=1`,
-  );
-  assert(r.status < 400, `loan verify failed: ${JSON.stringify(r.json)}`);
-  assert(r.json.data?.status === 'success', 'loan verify success');
-  console.log('12) Loan verify OK, creditBalance', r.json.data?.creditBalance);
-
-  const [logs2] = await conn.query(
-    `SELECT sourceType, amount FROM credit_logs WHERE userId = ? ORDER BY createdAt ASC, id ASC`,
-    [userId],
-  );
-  const loanPair = logs2.slice(-2);
-  assert(loanPair[0].sourceType === 'in' && loanPair[1].sourceType === 'out', 'loan in→out');
-  console.log('13) Loan logs', loanPair);
-
-  r = await api('GET', '/credit/balance', { token });
-  assert(Number(r.json.data.amount) === 0, 'final amount 0');
+  assert(r.json.data?.paymentUrl, 'loan must return paymentUrl');
+  console.log('11) Loan request', {
+    trackId: r.json.data.trackId,
+    paymentUrl: r.json.data.paymentUrl,
+  });
 
   // keep offer (referenced by order_items); only remove unused shipping fixture if unused
   await conn.execute(
@@ -229,9 +212,9 @@ async function main() {
   await conn.end();
 
   console.log('\n✅ Purchase flow OK');
-  console.log('   - new user credit amount=0');
   console.log('   - empty wallet cannot pay with credit');
-  console.log('   - zarinpal/loan: credit IN then OUT (net 0)');
+  console.log('   - iBank/loan request return paymentUrl (verify handled client-side)');
+  console.log('   - credit pay settles order');
 }
 
 main().catch((e) => {

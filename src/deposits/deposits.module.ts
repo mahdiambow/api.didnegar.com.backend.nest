@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Deposit } from './entities/deposit.entity.js';
 import { DepositsService } from './deposits.service.js';
 import { DepositsController } from './deposits.controller.js';
-import { ZarinpalMockService } from './services/zarinpal-mock.service.js';
 import { ZibalService } from './services/zibal.service.js';
 import { ZibalMockService } from './services/zibal-mock.service.js';
 import { LoanMockService } from './services/loan-mock.service.js';
@@ -29,7 +28,6 @@ import { ZIBAL_PROVIDER } from './zibal.constants.js';
   controllers: [DepositsController],
   providers: [
     DepositsService,
-    ZarinpalMockService,
     ZibalService,
     ZibalMockService,
     LoanMockService,

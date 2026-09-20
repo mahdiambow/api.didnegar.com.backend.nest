@@ -10,10 +10,9 @@ import {
 } from 'typeorm';
 import type { Order } from '../../orders/entities/order.entity.js';
 import type { User } from '../../users/entities/user.entity.js';
-import { DepositMethod } from '../deposit-method.enum.js';
 
 export type DepositStatus = 'pending' | 'success' | 'failed';
-export type DepositGateway = DepositMethod;
+export type DepositGateway = 'iBank' | 'loan' | 'credit';
 
 /** واریز به کیف پول — orderId اختیاری است */
 @Entity('deposits')
@@ -25,13 +24,13 @@ export class Deposit {
   @Column({ type: 'varchar', length: 26 })
   userId: string;
 
-  /** اختیاری — شارژ بدون سفارش null است */
+  /** اختیاری — شارژ wallet بدون سفارش null است */
   @Index()
   @Column({ type: 'varchar', length: 26, nullable: true })
   orderId: string | null;
 
-  @Column({ type: 'varchar', length: 20, default: 'zarinpal' })
-  gateway: DepositMethod;
+  @Column({ type: 'varchar', length: 20, default: 'iBank' })
+  gateway: DepositGateway;
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 100 })

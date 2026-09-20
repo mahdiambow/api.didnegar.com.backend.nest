@@ -2,39 +2,80 @@ import {
   Body,
   Controller,
   Get,
-  Param,
+  HttpStatus,
   Post,
   Query,
   Req,
-  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
+  ApiProperty,
+  ApiPropertyOptional,
   ApiTags,
 } from '@nestjs/swagger';
-import type { Response } from 'express';
+import { Type } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, Min } from 'class-validator';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
-import { ConfigService } from '../config/config.service.js';
+import {
+  getPaginationParams,
+  paginatedList,
+} from '../common/response/helpers/paginated-response.helper.js';
+import { ApiException } from '../common/exceptions/api.exception.js';
 import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
 import { PermissionsGuard } from '../utils/auth/guards/permissions.guard.js';
 import { RequirePermissions } from '../utils/auth/decorators/require-permissions.decorator.js';
 import { PERMISSIONS } from '../roles/permissions.js';
 import { DepositsService } from './deposits.service.js';
 import {
-  DepositMethod,
-  isDepositGatewayMethod,
-} from './deposit-method.enum.js';
-import {
-  CreateTopUpDto,
   DepositResponseDto,
-  ListDepositsQueryDto,
-  VerifyDepositQueryDto,
+  RequestDepositDto,
 } from './dto/deposit.dto.js';
+
+class CreateTopUpDto {
+  @ApiProperty({ example: 500000, description: 'مبلغ واریز (ریال، عدد صحیح)' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1000)
+  amount: number;
+
+  @ApiPropertyOptional({
+    enum: ['iBank', 'loan'],
+    description: 'درگاه شارژ — پیش‌فرض iBank (زیبال)',
+    default: 'iBank',
+  })
+  @IsOptional()
+  @IsIn(['iBank', 'loan'])
+  method?: 'iBank' | 'loan';
+}
+
+class ListDepositsQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  page?: string | number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  limit?: string | number;
+
+  @ApiPropertyOptional({ enum: ['pending', 'success', 'failed'] })
+  @IsOptional()
+  @IsIn(['pending', 'success', 'failed'])
+  status?: 'pending' | 'success' | 'failed';
+
+  @ApiPropertyOptional({ description: 'فقط ادمین' })
+  @IsOptional()
+  userId?: string;
+}
+
+const DepositApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
+  code: 'PAYMENT_REQUESTED',
+  message: 'Payment request created successfully',
+  name: 'Deposit',
+});
 
 const TopUpApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
   code: 'DEPOSIT_CREATED',
@@ -45,10 +86,7 @@ const TopUpApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
 @ApiTags('Deposits')
 @Controller('deposits')
 export class DepositsController {
-  constructor(
-    private readonly depositsService: DepositsService,
-    private readonly config: ConfigService,
-  ) {}
+  constructor(private readonly depositsService: DepositsService) {}
 
   @Post()
   @ApiBearerAuth('access-token')
@@ -59,18 +97,41 @@ export class DepositsController {
   })
   @ApiOperation({
     summary: 'Top-up credit via bank gateway',
-    description:
-      'فقط شارژ اعتبار با درگاه بانکی. body: amount + paymentMethod (zarinpal|zibal). پاسخ شامل paymentUrl است.',
+    description: 'شارژ اعتبار با درگاه — method: iBank | loan (پیش‌فرض iBank)',
   })
   @ApiOkResponse({ type: TopUpApiResponseDto })
   createTopUp(
     @Req() req: { user: { sub: string } },
     @Body() dto: CreateTopUpDto,
   ) {
-    return this.depositsService.createTopUp(
+    return this.depositsService.createWalletTopUp(
       req.user.sub,
       dto.amount,
-      dto.paymentMethod,
+      dto.method ?? 'iBank',
+    );
+  }
+
+  @Post('request')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard)
+  @ApiResponseMeta({
+    code: 'PAYMENT_REQUESTED',
+    message: 'Payment request created successfully',
+  })
+  @ApiOperation({
+    summary: 'Request order payment',
+    description:
+      'درخواست پرداخت سفارش\n\nuserId از JWT. method: credit | iBank | loan. iBank = درگاه بانکی (زیبال).',
+  })
+  @ApiOkResponse({ type: DepositApiResponseDto })
+  requestPayment(
+    @Req() req: { user: { sub: string } },
+    @Body() dto: RequestDepositDto,
+  ) {
+    return this.depositsService.requestPayment(
+      req.user.sub,
+      this.requireOrderId(dto.orderId),
+      dto.method,
     );
   }
 
@@ -85,11 +146,17 @@ export class DepositsController {
     summary: 'List my deposits',
     description: 'لیست واریزهای من',
   })
-  listMine(
+  async listMine(
     @Req() req: { user: { sub: string } },
     @Query() query: ListDepositsQueryDto,
   ) {
-    return this.depositsService.listDepositsPaged(query, req.user.sub);
+    const { page, limit, offset } = getPaginationParams(query);
+    const [items, total] = await this.depositsService.listDeposits(
+      offset,
+      limit,
+      { userId: req.user.sub, status: query.status },
+    );
+    return paginatedList(items, page, limit, total);
   }
 
   @Get()
@@ -104,61 +171,24 @@ export class DepositsController {
     summary: 'List deposits (admin)',
     description: 'لیست همه واریزها',
   })
-  listAll(@Query() query: ListDepositsQueryDto) {
-    return this.depositsService.listDepositsPaged(query);
-  }
-
-  @Get('verify/:method')
-  @ApiParam({ name: 'method', enum: DepositMethod })
-  @ApiOperation({
-    summary: 'Gateway callback — verify then redirect frontend',
-    description:
-      'کال‌بک درگاه‌ها (zarinpal|zibal|loan) سپس ریدایرکت به success/failed',
-  })
-  async verify(
-    @Param('method') method: string,
-    @Query() query: VerifyDepositQueryDto,
-    @Res() res: Response,
-  ) {
-    if (
-      !Object.values(DepositMethod).includes(method as DepositMethod) ||
-      method === DepositMethod.CREDIT ||
-      !isDepositGatewayMethod(method as DepositMethod)
-    ) {
-      return this.redirectPaymentResult(res, false);
-    }
-
-    try {
-      const data = await this.depositsService.verifyByMethod(
-        method as DepositMethod,
-        query,
-      );
-      return this.redirectPaymentResult(res, true, data);
-    } catch {
-      return this.redirectPaymentResult(res, false);
-    }
-  }
-
-  private redirectPaymentResult(
-    res: Response,
-    ok: boolean,
-    data?: {
-      orderId?: string | null;
-      depositId?: string;
-      amount?: number;
-      refId?: string;
-    },
-  ) {
-    const base = this.config.get(
-      ok ? 'PAYMENT_SUCCESS_REDIRECT_URL' : 'PAYMENT_FAILED_REDIRECT_URL',
+  async listAll(@Query() query: ListDepositsQueryDto) {
+    const { page, limit, offset } = getPaginationParams(query);
+    const [items, total] = await this.depositsService.listDeposits(
+      offset,
+      limit,
+      { userId: query.userId, status: query.status },
     );
-    const url = new URL(base);
-    if (data?.orderId) url.searchParams.set('orderId', data.orderId);
-    if (data?.depositId) url.searchParams.set('depositId', data.depositId);
-    if (data?.amount != null) {
-      url.searchParams.set('amount', String(data.amount));
+    return paginatedList(items, page, limit, total);
+  }
+
+  private requireOrderId(orderId?: string): string {
+    if (!orderId) {
+      throw new ApiException(
+        'ORDER_ID_REQUIRED',
+        'orderId برای پرداخت سفارش الزامی است',
+        HttpStatus.BAD_REQUEST,
+      );
     }
-    if (data?.refId) url.searchParams.set('refId', data.refId);
-    return res.redirect(302, url.toString());
+    return orderId;
   }
 }

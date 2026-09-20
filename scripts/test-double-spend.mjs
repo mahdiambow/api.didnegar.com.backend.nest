@@ -129,16 +129,14 @@ async function checkout(token, offerId, addressId, shippingId, conn) {
       );
     }
   }
-  let r = await api('POST', '/shopping-cart/items', {
+  const r = await api('POST', '/orders', {
     token,
-    body: { offerId, quantity: 1 },
+    body: {
+      products: [{ offerId, quantity: 1 }],
+      shippingMethodId: shippingId,
+    },
   });
-  assert(r.status < 400, `cart: ${JSON.stringify(r.json)}`);
-  r = await api('POST', '/shopping-cart/checkout', {
-    token,
-    body: { addressId, shippingMethodIds: [shippingId] },
-  });
-  assert(r.status < 400, `checkout: ${JSON.stringify(r.json)}`);
+  assert(r.status < 400, `order: ${JSON.stringify(r.json)}`);
   return r.json.data;
 }
 
@@ -160,111 +158,30 @@ async function main() {
   const fx = await createFixtures(conn, userId, mobile);
   console.log('user', userId);
 
-  // --- A) Replay verify (sequential) ---
-  console.log('\nA) Sequential double verify');
+  // --- A) iBank request creates pending deposit (verify is client-side) ---
+  console.log('\nA) iBank request + reuse pending');
   const orderA = await checkout(token, fx.offerId, fx.addressId, fx.shippingId, conn);
-  let r = await api('POST', '/deposits/zarinpal/request', {
+  let r = await api('POST', '/deposits/request', {
     token,
-    body: { orderId: orderA.id },
+    body: { orderId: orderA.id, method: 'iBank' },
   });
   assert(r.status < 400, `payA: ${JSON.stringify(r.json)}`);
-  const authorityA = r.json.data.trackId;
-  const paymentIdA = r.json.data.paymentId;
+  assert(r.json.data?.paymentUrl, 'iBank must return paymentUrl');
+  const trackIdA = r.json.data.trackId;
 
-  const v1 = await api(
-    'GET',
-    `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authorityA)}&Status=OK`,
-  );
-  assert(v1.status < 400 && v1.json.data?.status === 'success', 'first verify must succeed');
-
-  const v2 = await api(
-    'GET',
-    `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authorityA)}&Status=OK`,
-  );
-  assert(v2.status < 400 && v2.json.data?.status === 'success', 'replay verify should be idempotent OK');
-  assert(
-    String(v2.json.data?.gatewayMessage || '').includes('قبلاً') ||
-      v2.json.data?.creditBalance === undefined ||
-      Number(v2.json.data?.creditBalance) === 0,
-    'replay should not re-settle wallet oddly',
-  );
-
-  let counts = await countLogs(conn, userId, paymentIdA);
-  console.log('   logs for payment', paymentIdA, counts);
-  assert(counts.in === 1 && counts.out === 1, 'replay must not create second in/out');
-
-  // pay again on same order
-  r = await api('POST', '/deposits/zarinpal/request', {
+  r = await api('POST', '/deposits/request', {
     token,
-    body: { orderId: orderA.id },
+    body: { orderId: orderA.id, method: 'iBank' },
   });
-  console.log('   second request on paid order', r.status, r.code);
-  assert(r.status >= 400, 'second payment request on paid order must fail');
+  assert(r.status < 400, `reuse pending: ${JSON.stringify(r.json)}`);
   assert(
-    ['ORDER_ALREADY_PAID', 'ORDER_NOT_PAYABLE'].includes(
-      r.code || r.json?.code,
-    ),
-    `expect ORDER_ALREADY_PAID or ORDER_NOT_PAYABLE, got ${r.code || r.json?.code}`,
+    r.json.data?.trackId === trackIdA,
+    'second iBank request should reuse pending deposit trackId',
   );
+  console.log('   reused pending deposit', trackIdA);
 
-  r = await api('POST', '/deposits/credit/request', {
-    token,
-    body: { orderId: orderA.id },
-  });
-  console.log('   credit on paid order', r.status, r.code || r.json?.code);
-  assert(r.status >= 400, 'credit on paid order must fail');
-  assert(
-    ['ORDER_ALREADY_PAID', 'ORDER_NOT_PAYABLE', 'INSUFFICIENT_CREDIT'].includes(
-      r.code || r.json?.code,
-    ),
-    'credit on paid order must be rejected',
-  );
-
-  // --- B) Concurrent verify race ---
-  console.log('\nB) Concurrent double verify race');
-  const orderB = await checkout(token, fx.offerId, fx.addressId, fx.shippingId, conn);
-  r = await api('POST', '/deposits/zarinpal/request', {
-    token,
-    body: { orderId: orderB.id },
-  });
-  assert(r.status < 400, `payB: ${JSON.stringify(r.json)}`);
-  const authorityB = r.json.data.trackId;
-  const paymentIdB = r.json.data.paymentId;
-
-  const race = await Promise.all([
-    api(
-      'GET',
-      `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authorityB)}&Status=OK`,
-    ),
-    api(
-      'GET',
-      `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authorityB)}&Status=OK`,
-    ),
-    api(
-      'GET',
-      `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authorityB)}&Status=OK`,
-    ),
-  ]);
-  const ok = race.filter((x) => x.status < 400 && x.json.data?.status === 'success');
-  console.log(
-    '   race results',
-    race.map((x) => ({ status: x.status, code: x.code, msg: x.json?.data?.gatewayMessage || x.json?.message })),
-  );
-  assert(ok.length >= 1, 'at least one verify must succeed');
-
-  counts = await countLogs(conn, userId, paymentIdB);
-  console.log('   logs for payment', paymentIdB, counts);
-  assert(counts.in === 1 && counts.out === 1, 'race must settle credit exactly once (1 in + 1 out)');
-
-  const [balRows] = await conn.query(
-    `SELECT amount, lockedAmount FROM user_credits WHERE userId = ?`,
-    [userId],
-  );
-  console.log('   wallet', balRows[0]);
-  assert(Number(balRows[0]?.amount ?? 0) === 0, 'wallet amount must stay 0');
-
-  // --- C) Concurrent credit spends (fund wallet first via SQL) ---
-  console.log('\nC) Concurrent credit payments on same order');
+  // --- B) Concurrent credit spends (fund wallet first via SQL) ---
+  console.log('\nB) Concurrent credit payments on same order');
   const orderC = await checkout(token, fx.offerId, fx.addressId, fx.shippingId, conn);
   const amount = Number(orderC.amount);
 
@@ -277,9 +194,18 @@ async function main() {
   );
 
   const creditRace = await Promise.all([
-    api('POST', '/deposits/credit/request', { token, body: { orderId: orderC.id } }),
-    api('POST', '/deposits/credit/request', { token, body: { orderId: orderC.id } }),
-    api('POST', '/deposits/credit/request', { token, body: { orderId: orderC.id } }),
+    api('POST', '/deposits/request', {
+      token,
+      body: { orderId: orderC.id, method: 'credit' },
+    }),
+    api('POST', '/deposits/request', {
+      token,
+      body: { orderId: orderC.id, method: 'credit' },
+    }),
+    api('POST', '/deposits/request', {
+      token,
+      body: { orderId: orderC.id, method: 'credit' },
+    }),
   ]);
   const creditOk = creditRace.filter((x) => x.status < 400);
   const creditFail = creditRace.filter((x) => x.status >= 400);

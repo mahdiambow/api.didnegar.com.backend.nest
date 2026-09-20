@@ -204,9 +204,29 @@ async function migrateListings(source, target, sellerMap, report) {
             );
             count.updated += 1;
           } else {
+            const insertValues = [
+              newId(),
+              null,
+              'seller_variant_listings',
+              row.id,
+              sellerId,
+              products[0].id,
+              JSON.stringify({}),
+              ...values.slice(2, 11),
+              0,
+              ...values.slice(11, 19),
+              'approved',
+              values[19],
+              values[20],
+            ];
             await target.execute(
-              "INSERT INTO seller_offers (id,legacyId,legacyTable,legacySourceId,sellerId,productId,attributes,sku,price,minPrice,maxPrice,stock,stockStatus,isActive,isVirtual,isDownloadable,isOnSale,taxStatus,taxClass,description,weight,length,width,height,image,approvalStatus,createdAt,updatedAt) VALUES (?,NULL,'seller_variant_listings',?,?,?,CAST('{}' AS JSON),?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,'approved',?,?)",
-              [newId(), row.id, ...values],
+              `INSERT INTO seller_offers (
+                id, legacyId, legacyTable, legacySourceId, sellerId, productId, attributes, sku,
+                price, minPrice, maxPrice, stock, stockStatus, isActive, isVirtual, isDownloadable,
+                isOnSale, taxStatus, taxClass, description, weight, length, width, height, image,
+                approvalStatus, createdAt, updatedAt
+              ) VALUES (${insertValues.map(() => '?').join(', ')})`,
+              insertValues,
             );
             count.added += 1;
           }
@@ -219,6 +239,173 @@ async function migrateListings(source, target, sellerMap, report) {
       console.log(
         JSON.stringify(
           { entity: 'seller_offers', batch, offset, ...count },
+          null,
+          2,
+        ),
+      );
+      add(totals, count);
+    },
+  );
+  return { batchCount, totals };
+}
+
+async function migrateProducts(source, target) {
+  const totals = { read: 0, added: 0, updated: 0, skipped: 0 };
+  const batchCount = await batches(
+    source,
+    'SELECT id, legacyId, name, slug, description, shortDescription, status, sku, minPrice, maxPrice, isVirtual, isDownloadable, stockQuantity, stockStatus, ratingCount, averageRating, totalSales, taxStatus, taxClass, globalUniqueId, weight, length, width, height, featuredImage, createdAt, updatedAt FROM products ORDER BY legacyId, id',
+    async (rows, offset, batch) => {
+      const count = { read: rows.length, added: 0, updated: 0, skipped: 0 };
+      await target.beginTransaction();
+      try {
+        for (const row of rows) {
+          const price = Number(row.maxPrice ?? row.minPrice ?? 0);
+          const finalPrice = Number(row.minPrice ?? row.maxPrice ?? 0);
+          const values = [
+            row.legacyId,
+            'products',
+            row.name,
+            row.slug,
+            row.description,
+            row.shortDescription,
+            row.sku || null,
+            row.status || 'publish',
+            asBoolean(row.isVirtual) ? 1 : 0,
+            asBoolean(row.isDownloadable) ? 1 : 0,
+            JSON.stringify({
+              featuredImg: row.featuredImage || null,
+              gallery: [],
+            }),
+            JSON.stringify([
+              {
+                attributeIds: [],
+                price,
+                discountPercentage: null,
+                discountAmount: null,
+                expireDate: null,
+                maxQuantity: null,
+                minQuantity: 1,
+                finalPrice,
+              },
+            ]),
+            row.ratingCount || 0,
+            row.averageRating || 0,
+            row.totalSales || 0,
+            row.taxStatus,
+            row.taxClass,
+            row.globalUniqueId,
+            row.weight,
+            row.length,
+            row.width,
+            row.height,
+            row.createdAt,
+            row.updatedAt,
+          ];
+          const [existing] = await target.execute(
+            'SELECT id FROM products WHERE legacyTable = ? AND legacyId = ? LIMIT 1',
+            ['products', row.legacyId],
+          );
+          const id = existing[0]?.id || row.id;
+          if (existing[0]) {
+            await target.execute(
+              'UPDATE products SET name=?,slug=?,description=?,shortDescription=?,sku=?,status=?,isVirtual=?,isDownloadable=?,image=CAST(? AS JSON),price=CAST(? AS JSON),ratingCount=?,averageRating=?,totalSales=?,taxStatus=?,taxClass=?,globalUniqueId=?,weight=?,length=?,width=?,height=?,createdAt=?,updatedAt=? WHERE id=?',
+              [
+                row.name,
+                row.slug,
+                row.description,
+                row.shortDescription,
+                row.sku || null,
+                row.status || 'publish',
+                asBoolean(row.isVirtual) ? 1 : 0,
+                asBoolean(row.isDownloadable) ? 1 : 0,
+                values[10],
+                values[11],
+                ...values.slice(12),
+                id,
+              ],
+            );
+            count.updated += 1;
+          } else {
+            const insertValues = [
+              id,
+              row.legacyId,
+              'products',
+              row.name,
+              row.slug,
+              row.description,
+              row.shortDescription,
+              row.sku || null,
+              row.status || 'publish',
+              'approved',
+              null,
+              asBoolean(row.isVirtual) ? 1 : 0,
+              asBoolean(row.isDownloadable) ? 1 : 0,
+              1,
+              0,
+              JSON.stringify([]),
+              values[10],
+              values[11],
+              JSON.stringify([]),
+              row.ratingCount || 0,
+              row.averageRating || 0,
+              row.totalSales || 0,
+              row.taxStatus,
+              row.taxClass,
+              row.globalUniqueId,
+              row.weight,
+              row.length,
+              row.width,
+              row.height,
+              JSON.stringify([]),
+              JSON.stringify([]),
+              row.createdAt,
+              row.updatedAt,
+            ];
+            await target.execute(
+              `INSERT INTO products (
+                id, legacyId, legacyTable, name, slug, description, shortDescription, sku, status,
+                approvalStatus, brandId, isVirtual, isDownloadable, isActive, isFeatured, seo, image,
+                price, tableInfo, ratingCount, averageRating, totalSales, taxStatus, taxClass,
+                globalUniqueId, weight, length, width, height, attributeIds, sellerIds, createdAt, updatedAt
+              ) VALUES (${insertValues.map(() => '?').join(', ')})`,
+              insertValues,
+            );
+            count.added += 1;
+          }
+          const [stockRows] = await target.execute(
+            'SELECT id FROM product_stocks WHERE productId = ? LIMIT 1',
+            [id],
+          );
+          if (stockRows[0])
+            await target.execute(
+              'UPDATE product_stocks SET stock=?,createdAt=?,updatedAt=? WHERE id=?',
+              [
+                Math.max(0, Math.floor(Number(row.stockQuantity) || 0)),
+                row.createdAt,
+                row.updatedAt,
+                stockRows[0].id,
+              ],
+            );
+          else
+            await target.execute(
+              'INSERT INTO product_stocks (id,productId,stock,createdAt,updatedAt) VALUES (?,?,?,?,?)',
+              [
+                newId(),
+                id,
+                Math.max(0, Math.floor(Number(row.stockQuantity) || 0)),
+                row.createdAt,
+                row.updatedAt,
+              ],
+            );
+        }
+        await target.commit();
+      } catch (error) {
+        await target.rollback();
+        throw error;
+      }
+      console.log(
+        JSON.stringify(
+          { entity: 'products', batch, offset, ...count },
           null,
           2,
         ),
@@ -263,11 +450,14 @@ async function main() {
       'Target',
     );
     const sellers = await migrateSellers(source, target, report);
+    const products = await migrateProducts(source, target);
     const listings = await migrateListings(source, target, sellers.map, report);
     const summary = {
       complete: true,
       sellerBatches: sellers.batchCount,
       sellers: sellers.totals,
+      productBatches: products.batchCount,
+      products: products.totals,
       reportPath,
       listingBatches: listings.batchCount,
       listings: listings.totals,

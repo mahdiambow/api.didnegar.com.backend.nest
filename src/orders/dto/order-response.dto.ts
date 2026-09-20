@@ -71,33 +71,19 @@ export class OrderResponseDto {
 
   @ApiProperty()
   updatedAt: Date;
-}
 
-/** پاسخ ایجاد سفارش + نتیجه پرداخت */
-export class CreateOrderResponseDto extends OrderResponseDto {
-  @ApiProperty({ enum: ['credit', 'zarinpal', 'zibal', 'loan'] })
-  paymentMethod: string;
-
-  @ApiPropertyOptional({ description: 'URL درگاه — برای credit خالی است' })
+  @ApiPropertyOptional({
+    description: 'لینک پرداخت درگاه (پس از ساخت سفارش با iBank)',
+  })
   paymentUrl?: string;
-
-  @ApiPropertyOptional()
-  depositId?: string;
-
-  @ApiPropertyOptional()
-  transactionId?: string;
-
-  @ApiPropertyOptional()
-  trackId?: string;
-
-  @ApiPropertyOptional()
-  gatewayMessage?: string;
-
-  @ApiPropertyOptional()
-  creditBalance?: number;
 }
 
-export function toOrderResponse(order: Order): OrderResponseDto {
+export function toOrderResponse(
+  order: Order,
+  payment?: {
+    paymentUrl?: string;
+  },
+): OrderResponseDto {
   const subtotal = Number(order.subtotal);
   const shippingAmount = Number(order.shippingAmount);
 
@@ -128,5 +114,8 @@ export function toOrderResponse(order: Order): OrderResponseDto {
       : null,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
+    ...(payment?.paymentUrl !== undefined
+      ? { paymentUrl: payment.paymentUrl }
+      : {}),
   };
 }
