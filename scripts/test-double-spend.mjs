@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 /**
- * Double-spending tests:
- * 1) Replay verify on same authority → no second IN/OUT
- * 2) Concurrent verify race → only one settlement
- * 3) Second payment on already-paid order → rejected
- * 4) Concurrent credit pays on same order → at most one success
+ * Order payment smoke tests (payment starts on POST /orders):
+ * 1) Order create returns paymentUrl + pending deposit
+ * 2) Concurrent order creates each get their own pending deposit
  */
 import 'dotenv/config';
 import mysql from 'mysql2/promise';
@@ -140,17 +138,6 @@ async function checkout(token, offerId, addressId, shippingId, conn) {
   return r.json.data;
 }
 
-async function countLogs(conn, userId, sourceId) {
-  const [rows] = await conn.query(
-    `SELECT sourceType, COUNT(*) c FROM credit_logs
-     WHERE userId = ? AND sourceId = ?
-     GROUP BY sourceType`,
-    [userId, sourceId],
-  );
-  const map = Object.fromEntries(rows.map((x) => [x.sourceType, Number(x.c)]));
-  return { in: map.in ?? 0, out: map.out ?? 0, rows };
-}
-
 async function main() {
   console.log('BASE', BASE);
   const { token, userId, mobile } = await signup();
@@ -158,95 +145,42 @@ async function main() {
   const fx = await createFixtures(conn, userId, mobile);
   console.log('user', userId);
 
-  // --- A) iBank request creates pending deposit (verify is client-side) ---
-  console.log('\nA) iBank request + reuse pending');
+  console.log('\nA) Order create starts iBank payment');
   const orderA = await checkout(token, fx.offerId, fx.addressId, fx.shippingId, conn);
-  let r = await api('POST', '/deposits/request', {
-    token,
-    body: { orderId: orderA.id, method: 'iBank' },
-  });
-  assert(r.status < 400, `payA: ${JSON.stringify(r.json)}`);
-  assert(r.json.data?.paymentUrl, 'iBank must return paymentUrl');
-  const trackIdA = r.json.data.trackId;
+  assert(orderA.paymentUrl, 'order must return paymentUrl');
+  const [depsA] = await conn.query(
+    `SELECT id, trackId, status FROM deposits WHERE orderId = ?`,
+    [orderA.id],
+  );
+  assert(depsA.length === 1, 'exactly one pending deposit per order');
+  assert(depsA[0].status === 'pending', 'deposit pending');
+  console.log('   deposit', depsA[0].trackId);
 
-  r = await api('POST', '/deposits/request', {
-    token,
-    body: { orderId: orderA.id, method: 'iBank' },
-  });
-  assert(r.status < 400, `reuse pending: ${JSON.stringify(r.json)}`);
+  console.log('\nB) Concurrent order creates each get their own deposit');
+  const race = await Promise.all([
+    checkout(token, fx.offerId, fx.addressId, fx.shippingId, conn),
+    checkout(token, fx.offerId, fx.addressId, fx.shippingId, conn),
+    checkout(token, fx.offerId, fx.addressId, fx.shippingId, conn),
+  ]);
   assert(
-    r.json.data?.trackId === trackIdA,
-    'second iBank request should reuse pending deposit trackId',
+    race.every((o) => o.paymentUrl),
+    'each concurrent order must return paymentUrl',
   );
-  console.log('   reused pending deposit', trackIdA);
-
-  // --- B) Concurrent credit spends (fund wallet first via SQL) ---
-  console.log('\nB) Concurrent credit payments on same order');
-  const orderC = await checkout(token, fx.offerId, fx.addressId, fx.shippingId, conn);
-  const amount = Number(orderC.amount);
-
-  // ensure wallet has enough for one payment only
-  await conn.execute(
-    `INSERT INTO user_credits (id, userId, amount, lockedAmount, createdAt, updatedAt)
-     VALUES (?, ?, ?, 0, NOW(6), NOW(6))
-     ON DUPLICATE KEY UPDATE amount = ?`,
-    [ulid(), userId, amount, amount],
+  const orderIds = race.map((o) => o.id);
+  assert(new Set(orderIds).size === 3, 'three distinct orders');
+  const [depsB] = await conn.query(
+    `SELECT orderId, trackId FROM deposits WHERE orderId IN (?, ?, ?)`,
+    orderIds,
   );
-
-  const creditRace = await Promise.all([
-    api('POST', '/deposits/request', {
-      token,
-      body: { orderId: orderC.id, method: 'credit' },
-    }),
-    api('POST', '/deposits/request', {
-      token,
-      body: { orderId: orderC.id, method: 'credit' },
-    }),
-    api('POST', '/deposits/request', {
-      token,
-      body: { orderId: orderC.id, method: 'credit' },
-    }),
-  ]);
-  const creditOk = creditRace.filter((x) => x.status < 400);
-  const creditFail = creditRace.filter((x) => x.status >= 400);
-  console.log(
-    '   credit race',
-    creditRace.map((x) => ({ status: x.status, code: x.code || x.json?.code })),
+  assert(depsB.length === 3, `expected 3 deposits, got ${depsB.length}`);
+  assert(
+    new Set(depsB.map((d) => d.trackId)).size === 3,
+    'each order must have its own trackId',
   );
-  assert(creditOk.length === 1, `exactly one credit pay should succeed, got ${creditOk.length}`);
-  assert(creditFail.length === 2, 'other credit pays must fail');
-  for (const fail of creditFail) {
-    assert(fail.status < 500, `loser must not be 500, got ${fail.status} ${fail.code || fail.json?.code}`);
-    assert(
-      ['ORDER_ALREADY_PAID', 'ORDER_NOT_PAYABLE', 'INSUFFICIENT_CREDIT'].includes(
-        fail.code || fail.json?.code,
-      ),
-      `unexpected fail code ${fail.code || fail.json?.code}`,
-    );
-  }
-
-  const [balAfter] = await conn.query(
-    `SELECT amount FROM user_credits WHERE userId = ?`,
-    [userId],
-  );
-  console.log('   wallet after credit race', balAfter[0]);
-  assert(Number(balAfter[0].amount) === 0, 'wallet should be fully spent once');
-
-  const [orderRow] = await conn.query(`SELECT status FROM orders WHERE id = ?`, [
-    orderC.id,
-  ]);
-  assert(orderRow[0].status === 'paid', 'order C must be paid once');
-
-  // total outs for this user should equal successful settlements (A + B + C = 3 outs from gateway A,B and credit C)
-  // A and B each have in+out; C has out only (no depositFromGateway)
-  const [allLogs] = await conn.query(
-    `SELECT sourceType, COUNT(*) c FROM credit_logs WHERE userId = ? GROUP BY sourceType`,
-    [userId],
-  );
-  console.log('\nTotal credit_logs', allLogs);
+  console.log('   deposits', depsB.map((d) => d.trackId));
 
   await conn.end();
-  console.log('\n✅ Double-spending checks passed');
+  console.log('\n✅ Order payment checks passed');
 }
 
 main().catch((e) => {

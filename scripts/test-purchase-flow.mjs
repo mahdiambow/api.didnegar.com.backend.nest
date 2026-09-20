@@ -138,50 +138,28 @@ async function main() {
   console.log('5) Order', { id: order.id, amount: order.amount, status: order.status });
   assert(order.status === 'pending', 'order pending');
   assert(order.paymentUrl, 'order must return paymentUrl');
+  console.log('6) Order paymentUrl', order.paymentUrl);
 
-  r = await api('POST', '/deposits/request', {
-    token,
-    body: { orderId: order.id, method: 'credit' },
-  });
-  console.log('6) Credit pay (empty wallet) status', r.status, r.json?.code || r.json?.message);
-  assert(r.status >= 400, 'credit pay must fail with empty wallet');
+  const [deps] = await conn.query(
+    `SELECT id, trackId, gateway, status FROM deposits WHERE orderId = ?`,
+    [order.id],
+  );
+  assert(deps[0], 'order create must create pending deposit');
+  assert(deps[0].gateway === 'iBank', 'deposit gateway must be iBank');
+  assert(deps[0].status === 'pending', 'deposit must be pending');
+  console.log('7) Pending deposit', deps[0]);
 
-  r = await api('POST', '/deposits/request', {
+  r = await api('POST', '/deposits', {
     token,
-    body: { orderId: order.id, method: 'iBank' },
+    body: { amount: 50000, method: 'iBank' },
   });
-  assert(r.status < 400, `iBank request failed: ${JSON.stringify(r.json)}`);
-  assert(r.json.data?.paymentUrl, 'iBank must return paymentUrl');
-  console.log('7) iBank request', {
-    trackId: r.json.data.trackId,
+  assert(r.status < 400, `top-up failed: ${JSON.stringify(r.json)}`);
+  assert(r.json.data?.paymentUrl, 'top-up must return paymentUrl');
+  console.log('8) Wallet top-up', {
+    depositId: r.json.data.depositId,
     paymentUrl: r.json.data.paymentUrl,
   });
 
-  // pay with credit after funding wallet (verify is handled outside this API)
-  await conn.execute(
-    `INSERT INTO user_credits (id, userId, amount, lockedAmount, createdAt, updatedAt)
-     VALUES (?, ?, ?, 0, NOW(6), NOW(6))
-     ON DUPLICATE KEY UPDATE amount = ?`,
-    [ulid(), userId, Number(order.amount), Number(order.amount)],
-  );
-
-  r = await api('POST', '/deposits/request', {
-    token,
-    body: { orderId: order.id, method: 'credit' },
-  });
-  assert(r.status < 400, `credit pay failed: ${JSON.stringify(r.json)}`);
-  console.log('8) Credit pay OK', {
-    gateway: r.json.data?.gateway,
-    creditBalance: r.json.data?.creditBalance,
-  });
-
-  r = await api('GET', '/credit/balance', { token });
-  const bal1 = r.json.data;
-  console.log('9) Credit after pay', bal1);
-  assert(Number(bal1.amount) === 0, 'after credit pay amount back to 0');
-
-  // Loan path on a second order — request only
-  console.log('10) Loan path — second order');
   r = await api('POST', '/orders', {
     token,
     body: {
@@ -191,20 +169,9 @@ async function main() {
   });
   assert(r.status < 400, `2nd order failed: ${JSON.stringify(r.json)}`);
   const order2 = r.json.data;
-  console.log('    order2', order2.id, order2.amount);
+  assert(order2.paymentUrl, '2nd order must return paymentUrl');
+  console.log('9) Second order', { id: order2.id, paymentUrl: order2.paymentUrl });
 
-  r = await api('POST', '/deposits/request', {
-    token,
-    body: { orderId: order2.id, method: 'loan' },
-  });
-  assert(r.status < 400, `loan request failed: ${JSON.stringify(r.json)}`);
-  assert(r.json.data?.paymentUrl, 'loan must return paymentUrl');
-  console.log('11) Loan request', {
-    trackId: r.json.data.trackId,
-    paymentUrl: r.json.data.paymentUrl,
-  });
-
-  // keep offer (referenced by order_items); only remove unused shipping fixture if unused
   await conn.execute(
     `DELETE FROM shipping_methods WHERE id = ? AND id NOT IN (SELECT shippingMethodId FROM orders WHERE shippingMethodId IS NOT NULL)`,
     [shippingId],
@@ -212,9 +179,9 @@ async function main() {
   await conn.end();
 
   console.log('\n✅ Purchase flow OK');
-  console.log('   - empty wallet cannot pay with credit');
-  console.log('   - iBank/loan request return paymentUrl (verify handled client-side)');
-  console.log('   - credit pay settles order');
+  console.log('   - order create returns paymentUrl (iBank)');
+  console.log('   - pending deposit row created');
+  console.log('   - POST /deposits top-up returns paymentUrl');
 }
 
 main().catch((e) => {
