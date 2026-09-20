@@ -126,14 +126,18 @@ async function main() {
   assert(r.status < 400, `add cart failed: ${JSON.stringify(r.json)}`);
   console.log('4) Cart item added');
 
-  r = await api('POST', '/shopping-cart/checkout', {
+  r = await api('POST', '/orders', {
     token,
-    body: { addressId, shippingMethodIds: [shippingId] },
+    body: {
+      products: [{ offerId, quantity: 1 }],
+      shippingMethodId: shippingId,
+    },
   });
-  assert(r.status < 400, `checkout failed: ${JSON.stringify(r.json)}`);
+  assert(r.status < 400, `order failed: ${JSON.stringify(r.json)}`);
   const order = r.json.data;
   console.log('5) Order', { id: order.id, amount: order.amount, status: order.status });
   assert(order.status === 'pending', 'order pending');
+  assert(order.paymentUrl, 'order must return paymentUrl');
 
   r = await api('POST', '/deposits/request', {
     token,
@@ -176,18 +180,16 @@ async function main() {
   console.log('9) Credit after pay', bal1);
   assert(Number(bal1.amount) === 0, 'after credit pay amount back to 0');
 
-  // Loan path on a second checkout — request only
+  // Loan path on a second order — request only
   console.log('10) Loan path — second order');
-  r = await api('POST', '/shopping-cart/items', {
+  r = await api('POST', '/orders', {
     token,
-    body: { offerId, quantity: 1 },
+    body: {
+      products: [{ offerId, quantity: 1 }],
+      shippingMethodId: shippingId,
+    },
   });
-  assert(r.status < 400, `2nd add cart failed: ${JSON.stringify(r.json)}`);
-  r = await api('POST', '/shopping-cart/checkout', {
-    token,
-    body: { addressId, shippingMethodIds: [shippingId] },
-  });
-  assert(r.status < 400, `2nd checkout failed: ${JSON.stringify(r.json)}`);
+  assert(r.status < 400, `2nd order failed: ${JSON.stringify(r.json)}`);
   const order2 = r.json.data;
   console.log('    order2', order2.id, order2.amount);
 

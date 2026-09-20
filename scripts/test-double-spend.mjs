@@ -129,16 +129,14 @@ async function checkout(token, offerId, addressId, shippingId, conn) {
       );
     }
   }
-  let r = await api('POST', '/shopping-cart/items', {
+  const r = await api('POST', '/orders', {
     token,
-    body: { offerId, quantity: 1 },
+    body: {
+      products: [{ offerId, quantity: 1 }],
+      shippingMethodId: shippingId,
+    },
   });
-  assert(r.status < 400, `cart: ${JSON.stringify(r.json)}`);
-  r = await api('POST', '/shopping-cart/checkout', {
-    token,
-    body: { addressId, shippingMethodIds: [shippingId] },
-  });
-  assert(r.status < 400, `checkout: ${JSON.stringify(r.json)}`);
+  assert(r.status < 400, `order: ${JSON.stringify(r.json)}`);
   return r.json.data;
 }
 
