@@ -4,6 +4,7 @@ import {
   PARENT_CATEGORY_RESPONSE_EXAMPLE,
   SUB_CATEGORY_RESPONSE_EXAMPLE,
 } from './category.examples.js';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 
 /** سطح ۳ — sub-category */
 export class MenuSubCategoryDto {
@@ -118,3 +119,6 @@ export class MenuParentCategoryDto {
   })
   categories: MenuCategoryDto[];
 }
+
+/** Query منوی ادمین — pagination روی parent categories */
+export class ListMenuQueryDto extends PaginationQueryDto {}

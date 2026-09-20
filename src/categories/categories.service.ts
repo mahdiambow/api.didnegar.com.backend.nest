@@ -61,7 +61,76 @@ export class CategoriesService {
       this.categoryRepository.findFiltered({ isActive: true }),
       this.subCategoryRepository.findFiltered({ isActive: true }),
     ]);
+    return this.buildMenuTree(parents, categories, subCategories);
+  }
 
+  /** منوی ادمین با pagination روی parent categories */
+  async getMenuPaginated(query: { page?: string | number; limit?: string | number }) {
+    const { page, limit, offset } = getPaginationParams(query);
+    const [parents, total] = await this.parentCategoryRepository.findPaginated(
+      offset,
+      limit,
+      { isActive: true },
+    );
+
+    if (!parents.length) {
+      return paginatedList([], page, limit, total);
+    }
+
+    const parentIds = parents.map((parent) => parent.id);
+    const categories = await this.categoryRepository.findFiltered({
+      isActive: true,
+      parentCategoryIds: parentIds,
+    });
+    const categoryIds = categories
+      .filter((category) => category.id !== category.parentCategoryId)
+      .map((category) => category.id);
+    const subCategories = categoryIds.length
+      ? await this.subCategoryRepository.findFiltered({
+          isActive: true,
+          categoryIds,
+        })
+      : [];
+
+    return paginatedList(
+      this.buildMenuTree(parents, categories, subCategories),
+      page,
+      limit,
+      total,
+    );
+  }
+
+  private buildMenuTree(
+    parents: Array<{
+      id: string;
+      name: string;
+      nameEn: string | null;
+      slug: string;
+      icon: string | null;
+      image: string | null;
+      sort: number;
+    }>,
+    categories: Array<{
+      id: string;
+      parentCategoryId: string;
+      name: string;
+      nameEn: string | null;
+      slug: string;
+      icon: string | null;
+      image: string | null;
+      sort: number;
+    }>,
+    subCategories: Array<{
+      id: string;
+      categoryId: string;
+      name: string;
+      nameEn: string | null;
+      slug: string;
+      icon: string | null;
+      image: string | null;
+      sort: number;
+    }>,
+  ) {
     type MenuNode = {
       id: string;
       name: string;

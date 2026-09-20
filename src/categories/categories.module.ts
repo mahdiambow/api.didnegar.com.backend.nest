@@ -11,7 +11,7 @@ import {
   SubCategoriesController,
   ProductCategoriesController,
 } from './categories.controller.js';
-import { MenuController } from './menu.controller.js';
+import { MenuController, AdminMenuController } from './menu.controller.js';
 import { CategoriesSeedService } from './categories.seed.service.js';
 import { ParentCategoryRepository } from './repositories/parent-category.repository.js';
 import { CategoryRepository } from './repositories/category.repository.js';
@@ -33,6 +33,7 @@ import { AuthModule } from '../utils/auth/auth.module.js';
   ],
   controllers: [
     MenuController,
+    AdminMenuController,
     ParentCategoriesController,
     CategoriesController,
     SubCategoriesController,

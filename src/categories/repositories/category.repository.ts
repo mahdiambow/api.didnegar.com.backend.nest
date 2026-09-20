@@ -5,6 +5,7 @@ import { Category } from '../entities/category.entity.js';
 
 export type CategoryFilters = {
   parentCategoryId?: string;
+  parentCategoryIds?: string[];
   search?: string;
   name?: string;
   slug?: string;
@@ -59,6 +60,12 @@ export class CategoryRepository {
     if (filters.parentCategoryId) {
       qb.andWhere('category.parentCategoryId = :parentCategoryId', {
         parentCategoryId: filters.parentCategoryId,
+      });
+    }
+
+    if (filters.parentCategoryIds?.length) {
+      qb.andWhere('category.parentCategoryId IN (:...parentCategoryIds)', {
+        parentCategoryIds: filters.parentCategoryIds,
       });
     }
 
