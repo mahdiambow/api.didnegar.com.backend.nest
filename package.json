@@ -35,7 +35,8 @@
     "db:migrate:categories": "node scripts/migration-scripts/migrate-categories.mjs",
     "db:migrate:attributes": "node scripts/migration-scripts/migrate-attributes.mjs",
     "db:migrate:catalog": "node scripts/migration-scripts/migrate-catalog.mjs",
-    "db:migrate:product-relations": "node scripts/migration-scripts/migrate-product-relations.mjs"
+    "db:migrate:product-relations": "node scripts/migration-scripts/migrate-product-relations.mjs",
+    "db:migrate:offer-attributes": "node scripts/migration-scripts/migrate-offer-attributes.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
