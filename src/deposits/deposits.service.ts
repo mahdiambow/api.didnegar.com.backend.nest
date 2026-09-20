@@ -2,6 +2,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ConfigService } from '../config/config.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
+import { newId } from '../common/id/ulid.js';
 import { toShippingMethodResponse } from '../shipping/dto/shipping.dto.js';
 import { OrderRepository } from '../orders/repositories/order.repository.js';
 import { CreditService } from '../credit/credit.service.js';
@@ -9,10 +10,12 @@ import { LoanMockService } from './services/loan-mock.service.js';
 import type { ExternalPaymentProvider } from './services/deposit-gateway.interface.js';
 import { DepositRepository } from './repositories/deposit.repository.js';
 import { TransactionService } from '../transactions/transaction.service.js';
+import type { TransactionSourceType } from '../transactions/entities/transaction.types.js';
 import { toDepositResponse } from './dto/deposit.dto.js';
 import { Deposit } from './entities/deposit.entity.js';
 import { Order } from '../orders/entities/order.entity.js';
 import { ZIBAL_PROVIDER } from './zibal.constants.js';
+import { buildPaymentCallbackUrl } from './payment-callback.util.js';
 
 export type DepositMethod = 'credit' | 'iBank' | 'loan';
 
@@ -62,21 +65,21 @@ export class DepositsService {
     }
 
     const provider = this.providers[gateway];
-    const callbackUrl =
-      gateway === 'iBank'
-        ? this.config.get('ZIBAL_CALLBACK_URL')
-        : this.config.get('LOAN_CALLBACK_URL');
+    const depositId = newId();
+    const callbackUrl = this.resolveCallbackUrl(gateway, 'DEPOSIT', depositId);
 
     const gatewayResult = await provider.requestPayment(
       rounded,
       'شارژ کیف پول',
       userId,
+      callbackUrl,
     );
 
     const entity = await this.dataSource.transaction(async (manager) => {
       const depositRepo = manager.getRepository(Deposit);
       const deposit = await depositRepo.save(
         depositRepo.create({
+          id: depositId,
           userId,
           orderId: null,
           gateway,
@@ -209,16 +212,18 @@ export class DepositsService {
         .filter(Boolean)
         .join('، ') || 'سفارش';
 
+    const callbackUrl = this.resolveCallbackUrl(
+      gateway,
+      'ORDER_PAYMENT',
+      order.id,
+    );
+
     const gatewayResult = await provider.requestPayment(
       amount,
       productName,
       order.id,
+      callbackUrl,
     );
-
-    const callbackUrl =
-      gateway === 'iBank'
-        ? this.config.get('ZIBAL_CALLBACK_URL')
-        : this.config.get('LOAN_CALLBACK_URL');
 
     const deposit = await this.dataSource.transaction(async (manager) => {
       const depositRepo = manager.getRepository(Deposit);
@@ -290,6 +295,18 @@ export class DepositsService {
         ? 'درخواست واریز قبلی برای این سفارش فعال است'
         : gatewayResult.message,
     });
+  }
+
+  private resolveCallbackUrl(
+    gateway: Exclude<DepositMethod, 'credit'>,
+    sourceType: TransactionSourceType,
+    sourceId: string,
+  ): string {
+    const base =
+      gateway === 'iBank'
+        ? this.config.get('ZIBAL_CALLBACK_URL')
+        : this.config.get('LOAN_CALLBACK_URL');
+    return buildPaymentCallbackUrl(base, sourceType, sourceId);
   }
 
   private async requirePayableOrder(userId: string, orderId: string) {

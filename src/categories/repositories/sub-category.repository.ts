@@ -5,6 +5,7 @@ import { SubCategory } from '../entities/sub-category.entity.js';
 
 export type SubCategoryFilters = {
   categoryId?: string;
+  categoryIds?: string[];
   parentCategoryId?: string;
   search?: string;
   name?: string;
@@ -76,6 +77,12 @@ export class SubCategoryRepository {
     if (filters.categoryId) {
       qb.andWhere('sub.categoryId = :categoryId', {
         categoryId: filters.categoryId,
+      });
+    }
+
+    if (filters.categoryIds?.length) {
+      qb.andWhere('sub.categoryId IN (:...categoryIds)', {
+        categoryIds: filters.categoryIds,
       });
     }
 

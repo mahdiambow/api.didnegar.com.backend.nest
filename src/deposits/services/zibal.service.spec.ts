@@ -40,7 +40,12 @@ describe('ZibalService (IPG verify)', () => {
     ) as typeof fetch;
 
     const service = new ZibalService(mockConfig());
-    const result = await service.requestPayment(15000, 'test order', '01ORDER');
+    const result = await service.requestPayment(
+      15000,
+      'test order',
+      '01ORDER',
+      'https://frontend.example.com/payment/callback?sourceType=ORDER_PAYMENT&sourceId=01ORDER',
+    );
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
       'https://gateway.zibal.ir/v1/request',
@@ -49,7 +54,8 @@ describe('ZibalService (IPG verify)', () => {
         body: JSON.stringify({
           merchant: 'zibal',
           amount: 15000,
-          callbackUrl: 'https://frontend.example.com/payment/callback',
+          callbackUrl:
+            'https://frontend.example.com/payment/callback?sourceType=ORDER_PAYMENT&sourceId=01ORDER',
           description: 'test order',
           orderId: '01ORDER',
         }),

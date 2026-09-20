@@ -23,6 +23,7 @@ export class ZibalMockService implements IBank {
     amount: number,
     description: string,
     orderId: string,
+    _callbackUrl?: string,
   ): PaymentRequestResult {
     const trackId = String(randomInt(100000000, 999999999));
 
