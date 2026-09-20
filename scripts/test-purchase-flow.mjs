@@ -135,26 +135,26 @@ async function main() {
   console.log('5) Order', { id: order.id, amount: order.amount, status: order.status });
   assert(order.status === 'pending', 'order pending');
 
-  r = await api('POST', '/deposits/credit/request', {
+  r = await api('POST', '/deposits/request', {
     token,
-    body: { orderId: order.id },
+    body: { orderId: order.id, method: 'credit' },
   });
   console.log('6) Credit pay (empty wallet) status', r.status, r.json?.code || r.json?.message);
   assert(r.status >= 400, 'credit pay must fail with empty wallet');
 
-  r = await api('POST', '/deposits/zarinpal/request', {
+  r = await api('POST', '/deposits/request', {
     token,
-    body: { orderId: order.id },
+    body: { orderId: order.id, method: 'iBank' },
   });
-  assert(r.status < 400, `zarinpal request failed: ${JSON.stringify(r.json)}`);
-  const authority = r.json.data.trackId;
-  console.log('7) Zarinpal authority', authority);
+  assert(r.status < 400, `iBank request failed: ${JSON.stringify(r.json)}`);
+  const trackId = r.json.data.trackId;
+  console.log('7) iBank trackId', trackId);
 
   r = await api(
     'GET',
-    `/deposits/zarinpal/verify?Authority=${encodeURIComponent(authority)}&Status=OK`,
+    `/deposits/iBank/verify?trackId=${encodeURIComponent(trackId)}&success=1&status=2`,
   );
-  assert(r.status < 400, `zarinpal verify failed: ${JSON.stringify(r.json)}`);
+  assert(r.status < 400, `iBank verify failed: ${JSON.stringify(r.json)}`);
   console.log('8) Verify', {
     status: r.json.data?.status,
     creditBalance: r.json.data?.creditBalance,
@@ -196,9 +196,9 @@ async function main() {
   const order2 = r.json.data;
   console.log('    order2', order2.id, order2.amount);
 
-  r = await api('POST', '/deposits/loan/request', {
+  r = await api('POST', '/deposits/request', {
     token,
-    body: { orderId: order2.id },
+    body: { orderId: order2.id, method: 'loan' },
   });
   assert(r.status < 400, `loan request failed: ${JSON.stringify(r.json)}`);
   const loanAuth = r.json.data.trackId;
@@ -231,7 +231,7 @@ async function main() {
   console.log('\n✅ Purchase flow OK');
   console.log('   - new user credit amount=0');
   console.log('   - empty wallet cannot pay with credit');
-  console.log('   - zarinpal/loan: credit IN then OUT (net 0)');
+  console.log('   - iBank/loan: credit IN then OUT (net 0)');
 }
 
 main().catch((e) => {

@@ -517,7 +517,7 @@ export class InitMariaDbSchema1790000000000 implements MigrationInterface {
       CREATE TABLE \`payments\` (
         \`id\` CHAR(26) NOT NULL,
         \`orderId\` CHAR(26) NOT NULL,
-        \`gateway\` VARCHAR(20) NOT NULL DEFAULT 'zarinpal',
+        \`gateway\` VARCHAR(20) NOT NULL DEFAULT 'iBank',
         \`authority\` VARCHAR(100) NOT NULL,
         \`refId\` VARCHAR(100) NULL,
         \`amount\` DECIMAL(19,4) NOT NULL,

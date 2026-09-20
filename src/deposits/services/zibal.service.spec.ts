@@ -8,7 +8,7 @@ function mockConfig(overrides: Record<string, string> = {}): ConfigService {
     ZIBAL_MERCHANT: 'zibal',
     ZIBAL_API_BASE: 'https://gateway.zibal.ir',
     ZIBAL_START_URL: 'https://gateway.zibal.ir/start',
-    ZIBAL_CALLBACK_URL: 'https://api.example.com/deposits/zibal/verify',
+    ZIBAL_CALLBACK_URL: 'https://api.example.com/deposits/iBank/verify',
     ...overrides,
   };
   return {
@@ -49,7 +49,7 @@ describe('ZibalService (IPG verify)', () => {
         body: JSON.stringify({
           merchant: 'zibal',
           amount: 15000,
-          callbackUrl: 'https://api.example.com/deposits/zibal/verify',
+          callbackUrl: 'https://api.example.com/deposits/iBank/verify',
           description: 'test order',
           orderId: '01ORDER',
         }),

@@ -6,7 +6,6 @@ import { Transaction } from './entities/transaction.entity.js';
 import { DepositsService } from './deposits.service.js';
 import { DepositsController } from './deposits.controller.js';
 import { TransactionService } from './transaction.service.js';
-import { ZarinpalMockService } from './services/zarinpal-mock.service.js';
 import { ZibalService } from './services/zibal.service.js';
 import { ZibalMockService } from './services/zibal-mock.service.js';
 import { LoanMockService } from './services/loan-mock.service.js';
@@ -30,7 +29,6 @@ import { ZIBAL_PROVIDER } from './zibal.constants.js';
   providers: [
     DepositsService,
     TransactionService,
-    ZarinpalMockService,
     ZibalService,
     ZibalMockService,
     LoanMockService,

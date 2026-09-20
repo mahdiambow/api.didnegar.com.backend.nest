@@ -3,11 +3,11 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Min } from 'class-validator';
 
 /**
- * Query params از callback زیبال:
+ * Query params از callback زیبال (متد API: iBank):
  * https://help.zibal.ir/ipg/ — success, trackId, status, orderId
  * success=1 و status=2 → کاربر پرداخت را انجام داده؛ سپس باید v1/verify زده شود.
  */
-export class VerifyZibalPaymentQueryDto {
+export class VerifyIBankPaymentQueryDto {
   @ApiProperty({ example: 123456789, description: 'trackId برگشتی از زیبال' })
   @Type(() => Number)
   @IsInt()

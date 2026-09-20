@@ -12,7 +12,7 @@ import type { Order } from '../../orders/entities/order.entity.js';
 import type { User } from '../../users/entities/user.entity.js';
 
 export type DepositStatus = 'pending' | 'success' | 'failed';
-export type DepositGateway = 'zarinpal' | 'zibal' | 'loan' | 'credit';
+export type DepositGateway = 'iBank' | 'loan' | 'credit';
 
 /** واریز به کیف پول — orderId اختیاری است */
 @Entity('deposits')
@@ -29,7 +29,7 @@ export class Deposit {
   @Column({ type: 'varchar', length: 26, nullable: true })
   orderId: string | null;
 
-  @Column({ type: 'varchar', length: 20, default: 'zarinpal' })
+  @Column({ type: 'varchar', length: 20, default: 'iBank' })
   gateway: DepositGateway;
 
   @Index({ unique: true })

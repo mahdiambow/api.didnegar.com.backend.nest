@@ -5,7 +5,6 @@ import { ApiException } from '../common/exceptions/api.exception.js';
 import { toShippingMethodResponse } from '../shipping/dto/shipping.dto.js';
 import { OrderRepository } from '../orders/repositories/order.repository.js';
 import { CreditService } from '../credit/credit.service.js';
-import { ZarinpalMockService } from './services/zarinpal-mock.service.js';
 import { LoanMockService } from './services/loan-mock.service.js';
 import type { ExternalPaymentProvider } from './services/deposit-gateway.interface.js';
 import { DepositRepository } from './repositories/deposit.repository.js';
@@ -18,7 +17,7 @@ import { Deposit } from './entities/deposit.entity.js';
 import { Order } from '../orders/entities/order.entity.js';
 import { ZIBAL_PROVIDER } from './zibal.constants.js';
 
-export type DepositMethod = 'credit' | 'zarinpal' | 'zibal' | 'loan';
+export type DepositMethod = 'credit' | 'iBank' | 'loan';
 
 @Injectable()
 export class DepositsService {
@@ -34,31 +33,13 @@ export class DepositsService {
     private readonly depositRepository: DepositRepository,
     private readonly transactionService: TransactionService,
     private readonly creditService: CreditService,
-    zarinpalMockService: ZarinpalMockService,
     @Inject(ZIBAL_PROVIDER) zibalProvider: ExternalPaymentProvider,
     loanMockService: LoanMockService,
   ) {
     this.providers = {
-      zarinpal: zarinpalMockService,
-      zibal: zibalProvider,
+      iBank: zibalProvider,
       loan: loanMockService,
     };
-  }
-
-  createZarinpalPayment(userId: string, orderId: string) {
-    return this.requestPayment(userId, orderId, 'zarinpal');
-  }
-
-  createZibalPayment(userId: string, orderId: string) {
-    return this.requestPayment(userId, orderId, 'zibal');
-  }
-
-  createLoanPayment(userId: string, orderId: string) {
-    return this.requestPayment(userId, orderId, 'loan');
-  }
-
-  createCreditPayment(userId: string, orderId: string) {
-    return this.requestPayment(userId, orderId, 'credit');
   }
 
   requestPayment(userId: string, orderId: string, method: DepositMethod) {
@@ -68,15 +49,11 @@ export class DepositsService {
     return this.createOrderGatewayDeposit(userId, orderId, method);
   }
 
-  verifyZarinpalPayment(trackId: string, status: string) {
-    return this.verifyGatewayDeposit('zarinpal', trackId, status === 'OK');
-  }
-
-  verifyZibalPayment(trackId: number, success: number, status?: number) {
+  verifyIBankPayment(trackId: number, success: number, status?: number) {
     // طبق callback زیبال: success=1 و status=2 یعنی کاربر پرداخت را کامل کرده
     const paidAtGateway =
       success === 1 && (status == null || Number(status) === 2);
-    return this.verifyGatewayDeposit('zibal', String(trackId), paidAtGateway);
+    return this.verifyGatewayDeposit('iBank', String(trackId), paidAtGateway);
   }
 
   verifyLoanPayment(trackId: string, success: number) {
@@ -87,7 +64,7 @@ export class DepositsService {
   async createWalletTopUp(
     userId: string,
     amount: number,
-    gateway: Exclude<DepositMethod, 'credit'>,
+    gateway: Exclude<DepositMethod, 'credit'> = 'iBank',
   ) {
     const rounded = Math.round(Number(amount));
     if (!Number.isInteger(rounded) || rounded <= 0) {
@@ -100,11 +77,9 @@ export class DepositsService {
 
     const provider = this.providers[gateway];
     const callbackUrl =
-      gateway === 'zarinpal'
-        ? this.config.get('ZARINPAL_CALLBACK_URL')
-        : gateway === 'zibal'
-          ? this.config.get('ZIBAL_CALLBACK_URL')
-          : this.config.get('LOAN_CALLBACK_URL');
+      gateway === 'iBank'
+        ? this.config.get('ZIBAL_CALLBACK_URL')
+        : this.config.get('LOAN_CALLBACK_URL');
 
     const gatewayResult = await provider.requestPayment(
       rounded,
@@ -255,11 +230,9 @@ export class DepositsService {
     );
 
     const callbackUrl =
-      gateway === 'zarinpal'
-        ? this.config.get('ZARINPAL_CALLBACK_URL')
-        : gateway === 'zibal'
-          ? this.config.get('ZIBAL_CALLBACK_URL')
-          : this.config.get('LOAN_CALLBACK_URL');
+      gateway === 'iBank'
+        ? this.config.get('ZIBAL_CALLBACK_URL')
+        : this.config.get('LOAN_CALLBACK_URL');
 
     const deposit = await this.dataSource.transaction(async (manager) => {
       const depositRepo = manager.getRepository(Deposit);

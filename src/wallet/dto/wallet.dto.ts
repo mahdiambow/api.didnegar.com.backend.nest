@@ -73,11 +73,12 @@ export class CreateWalletDepositDto {
   amount: number;
 
   @ApiProperty({
-    enum: ['zarinpal', 'zibal'],
-    description: 'درگاه بانکی برای شارژ کیف پول',
+    enum: ['iBank'],
+    description: 'درگاه بانکی برای شارژ کیف پول (زیبال)',
+    default: 'iBank',
   })
-  @IsIn(['zarinpal', 'zibal'])
-  method: 'zarinpal' | 'zibal';
+  @IsIn(['iBank'])
+  method: 'iBank';
 }
 
 export class CreateWalletWithdrawDto {

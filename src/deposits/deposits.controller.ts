@@ -23,16 +23,11 @@ import { ApiException } from '../common/exceptions/api.exception.js';
 import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
 import { DepositsService } from './deposits.service.js';
 import {
-  CreateDepositDto,
   DepositResponseDto,
   DepositVerifyResponseDto,
   RequestDepositDto,
 } from './dto/deposit.dto.js';
-import {
-  CreateZarinpalPaymentDto,
-  VerifyZarinpalPaymentQueryDto,
-} from './dto/zarinpal-deposit.dto.js';
-import { VerifyZibalPaymentQueryDto } from './dto/zibal-deposit.dto.js';
+import { VerifyIBankPaymentQueryDto } from './dto/ibank-deposit.dto.js';
 
 class VerifyLoanPaymentQueryDto {
   @ApiProperty()
@@ -76,7 +71,7 @@ export class DepositsController {
   @ApiOperation({
     summary: 'Request order payment',
     description:
-      'درخواست پرداخت سفارش\n\nuserId از JWT. method: credit | zarinpal | zibal | loan. در موفقیت درگاه، ابتدا credit شارژ و سپس کسر می‌شود.',
+      'درخواست پرداخت سفارش\n\nuserId از JWT. method: credit | iBank | loan. iBank = درگاه بانکی (زیبال). در موفقیت درگاه، ابتدا credit شارژ و سپس کسر می‌شود.',
   })
   @ApiOkResponse({ type: DepositApiResponseDto })
   requestPayment(
@@ -90,105 +85,22 @@ export class DepositsController {
     );
   }
 
-  @Post('zarinpal/request')
-  @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
-  @ApiResponseMeta({
-    code: 'PAYMENT_REQUESTED',
-    message: 'Payment request created successfully',
-  })
-  @ApiOperation({
-    summary: 'Request Zarinpal payment (IBank mock)',
-    description: 'درخواست پرداخت زرین‌پال (IBank mock)',
-  })
-  @ApiOkResponse({ type: DepositApiResponseDto })
-  requestZarinpalPayment(
-    @Req() req: { user: { sub: string } },
-    @Body() dto: CreateZarinpalPaymentDto,
-  ) {
-    return this.depositsService.createZarinpalPayment(
-      req.user.sub,
-      this.requireOrderId(dto.orderId),
-    );
-  }
-
-  @Get('zarinpal/verify')
+  @Get('iBank/verify')
   @ApiResponseMeta({
     code: 'PAYMENT_VERIFIED',
     message: 'Payment verified successfully',
   })
   @ApiOperation({
-    summary: 'Confirm Zarinpal — deposit then charge from credit',
-    description: 'تأیید زرین‌پال — deposit سپس charge از credit',
-  })
-  @ApiOkResponse({ type: DepositVerifyApiResponseDto })
-  verifyZarinpalPayment(@Query() query: VerifyZarinpalPaymentQueryDto) {
-    return this.depositsService.verifyZarinpalPayment(
-      query.Authority,
-      query.Status,
-    );
-  }
-
-  @Post('zibal/request')
-  @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
-  @ApiResponseMeta({
-    code: 'PAYMENT_REQUESTED',
-    message: 'Payment request created successfully',
-  })
-  @ApiOperation({
-    summary: 'Request Zibal payment (IBank mock)',
-    description: 'درخواست پرداخت زیبال (IBank mock)',
-  })
-  @ApiOkResponse({ type: DepositApiResponseDto })
-  requestZibalPayment(
-    @Req() req: { user: { sub: string } },
-    @Body() dto: CreateDepositDto,
-  ) {
-    return this.depositsService.createZibalPayment(
-      req.user.sub,
-      this.requireOrderId(dto.orderId),
-    );
-  }
-
-  @Get('zibal/verify')
-  @ApiResponseMeta({
-    code: 'PAYMENT_VERIFIED',
-    message: 'Payment verified successfully',
-  })
-  @ApiOperation({
-    summary: 'Verify Zibal callback then POST /v1/verify',
+    summary: 'Verify iBank (Zibal) callback then POST /v1/verify',
     description:
-      'تأیید زیبال مطابق IPG: بعد از callback با success=1 و status=2، سرویس POST gateway.zibal.ir/v1/verify را با merchant و trackId می‌زند (result 100 یا 201).',
+      'Callback درگاه بانکی (زیبال): success=1 و status=2 → POST gateway.zibal.ir/v1/verify',
   })
   @ApiOkResponse({ type: DepositVerifyApiResponseDto })
-  verifyZibalPayment(@Query() query: VerifyZibalPaymentQueryDto) {
-    return this.depositsService.verifyZibalPayment(
+  verifyIBankPayment(@Query() query: VerifyIBankPaymentQueryDto) {
+    return this.depositsService.verifyIBankPayment(
       query.trackId,
       query.success,
       query.status,
-    );
-  }
-
-  @Post('loan/request')
-  @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
-  @ApiResponseMeta({
-    code: 'PAYMENT_REQUESTED',
-    message: 'Payment request created successfully',
-  })
-  @ApiOperation({
-    summary: 'Request loan payment (ILoan mock)',
-    description: 'درخواست پرداخت وام (ILoan mock)',
-  })
-  @ApiOkResponse({ type: DepositApiResponseDto })
-  requestLoanPayment(
-    @Req() req: { user: { sub: string } },
-    @Body() dto: CreateDepositDto,
-  ) {
-    return this.depositsService.createLoanPayment(
-      req.user.sub,
-      this.requireOrderId(dto.orderId),
     );
   }
 
@@ -204,28 +116,6 @@ export class DepositsController {
   @ApiOkResponse({ type: DepositVerifyApiResponseDto })
   verifyLoanPayment(@Query() query: VerifyLoanPaymentQueryDto) {
     return this.depositsService.verifyLoanPayment(query.trackId, query.success);
-  }
-
-  @Post('credit/request')
-  @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
-  @ApiResponseMeta({
-    code: 'PAYMENT_REQUESTED',
-    message: 'Payment request created successfully',
-  })
-  @ApiOperation({
-    summary: 'Pay directly from wallet (credit)',
-    description: 'پرداخت مستقیم از کیف پول (credit)',
-  })
-  @ApiOkResponse({ type: DepositApiResponseDto })
-  requestCreditPayment(
-    @Req() req: { user: { sub: string } },
-    @Body() dto: CreateDepositDto,
-  ) {
-    return this.depositsService.createCreditPayment(
-      req.user.sub,
-      this.requireOrderId(dto.orderId),
-    );
   }
 
   private requireOrderId(orderId?: string): string {
