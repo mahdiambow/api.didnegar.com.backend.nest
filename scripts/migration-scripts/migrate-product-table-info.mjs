@@ -55,16 +55,17 @@ async function readBatches(source, sql, onBatch) {
 
 async function loadTargetMaps(target) {
   const [products] = await target.execute(
-    "SELECT id, legacyId FROM products WHERE legacyTable = 'products'",
+    "SELECT id, legacyId FROM products WHERE legacyTable = 'products' AND legacyId IS NOT NULL",
   );
   const [attributes] = await target.execute(
-    "SELECT id, legacyId, name, label FROM attributes WHERE legacyTable = 'attributes'",
+    "SELECT id, legacyId, name, label FROM attributes WHERE legacyTable = 'attributes' AND legacyId IS NOT NULL",
   );
   const [values] = await target.execute(
     `SELECT value_row.id, value_row.legacyId, value_row.attributeId,
             value_row.value, value_row.label
      FROM attribute_values value_row
-     WHERE value_row.legacyTable = 'attribute_values'`,
+     WHERE value_row.legacyTable = 'attribute_values'
+       AND value_row.legacyId IS NOT NULL`,
   );
   return {
     products: new Map(
