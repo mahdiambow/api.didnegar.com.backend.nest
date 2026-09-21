@@ -72,6 +72,16 @@ Run after categories and catalog. Imports legacy `product_categories`, resolving
 products, categories, and sub-categories through their legacy identities. Invalid
 references are skipped and recorded in `migration-product-relations-report.jsonl`.
 
+## Product-brand relations
+
+```sh
+npm run db:migrate:product-brands
+```
+
+Run after brands and catalog. It links only imported legacy products to imported
+brands by the exact `(legacyTable, legacyId)` identity; it never guesses by name or
+slug. Missing links are recorded in `migration-product-brands-report.jsonl`.
+
 ## Seller-offer attributes
 
 ```sh

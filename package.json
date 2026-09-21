@@ -35,6 +35,7 @@
     "db:migrate:categories": "node scripts/migration-scripts/migrate-categories.mjs",
     "db:migrate:attributes": "node scripts/migration-scripts/migrate-attributes.mjs",
     "db:migrate:catalog": "node scripts/migration-scripts/migrate-catalog.mjs",
+    "db:migrate:product-brands": "node scripts/migration-scripts/migrate-product-brands.mjs",
     "db:migrate:product-relations": "node scripts/migration-scripts/migrate-product-relations.mjs",
     "db:migrate:offer-attributes": "node scripts/migration-scripts/migrate-offer-attributes.mjs",
     "db:migrate:product-table-info": "node scripts/migration-scripts/migrate-product-table-info.mjs",
