@@ -3,6 +3,7 @@
  * { featuredImg: string | null, gallery: string[] }.
  *
  * Target product_variants and seller_offers are deliberately not involved.
+ * product_media preserves the normalized product-to-media relation.
  */
 import { appendFile, writeFile } from 'node:fs/promises';
 import {
@@ -21,7 +22,7 @@ const reportPath =
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: node scripts/migration-scripts/migrate-product-images.mjs
 
-Maps legacy product_variant_images/media URLs into products.image.
+Maps legacy product_variant_images/media URLs into products.image and product_media.
 Run after db:migrate:catalog and db:migrate:media. Invalid source links are recorded in ${reportPath}.`);
   process.exit(0);
 }
@@ -100,7 +101,7 @@ async function loadTargetProducts(target) {
 
 async function loadMigratedMedia(target) {
   const [rows] = await target.execute('SELECT id, url FROM media');
-  return new Map(rows.map((row) => [row.id, row.url]));
+  return new Map(rows.map((row) => [row.id, { url: row.url }]));
 }
 
 async function main() {
