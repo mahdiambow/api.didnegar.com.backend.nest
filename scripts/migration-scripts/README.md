@@ -83,6 +83,17 @@ into `products.price[].valueAttributeIds`; the Nest `product_variants` table is
 not populated. Invalid links are recorded in
 `migration-offer-attributes-report.jsonl`.
 
+## Product table information
+
+```sh
+npm run db:migrate:product-table-info
+```
+
+Run after attributes and catalog. It gathers all distinct legacy variant attribute
+values for each product and writes them as `products.tableInfo` under `مشخصات فنی`.
+Each item has the imported attribute label as `key` and its distinct imported values
+as `val`. Price combinations remain in `products.price[].valueAttributeIds`.
+
 ## Product images
 
 ```sh
