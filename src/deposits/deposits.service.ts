@@ -17,14 +17,13 @@ import { Order } from '../orders/entities/order.entity.js';
 import { ZIBAL_PROVIDER } from './zibal.constants.js';
 import { buildPaymentCallbackUrl } from './payment-callback.util.js';
 
-export type DepositMethod = 'credit' | 'iBank' | 'loan';
+export type DepositMethod = 'credit' | 'iBank' | 'loan' | 'partial-bank';
+
+type GatewayMethod = Exclude<DepositMethod, 'credit' | 'partial-bank'>;
 
 @Injectable()
 export class DepositsService {
-  private readonly providers: Record<
-    Exclude<DepositMethod, 'credit'>,
-    ExternalPaymentProvider
-  >;
+  private readonly providers: Record<GatewayMethod, ExternalPaymentProvider>;
 
   constructor(
     private readonly config: ConfigService,
@@ -46,6 +45,9 @@ export class DepositsService {
     if (method === 'credit') {
       return this.payOrderWithCredit(userId, orderId);
     }
+    if (method === 'partial-bank') {
+      return this.payOrderWithPartialBank(userId, orderId);
+    }
     return this.createOrderGatewayDeposit(userId, orderId, method);
   }
 
@@ -53,7 +55,7 @@ export class DepositsService {
   async createWalletTopUp(
     userId: string,
     amount: number,
-    gateway: Exclude<DepositMethod, 'credit'> = 'iBank',
+    gateway: GatewayMethod = 'iBank',
   ) {
     const rounded = Math.round(Number(amount));
     if (!Number.isInteger(rounded) || rounded <= 0) {
@@ -85,6 +87,7 @@ export class DepositsService {
           gateway,
           trackId: gatewayResult.trackId,
           amount: rounded,
+          creditApplied: 0,
           status: 'pending',
           callbackUrl,
         }),
@@ -114,6 +117,8 @@ export class DepositsService {
       trackId: entity.trackId,
       paymentUrl: provider.buildPaymentUrl(entity.trackId),
       amount: rounded,
+      creditApplied: 0,
+      bankAmount: rounded,
       gatewayMessage: gatewayResult.message,
     });
   }
@@ -183,6 +188,8 @@ export class DepositsService {
       trackId: `TX-${result.transactionId.slice(-10)}`,
       paymentUrl: '',
       amount,
+      creditApplied: amount,
+      bankAmount: 0,
       ...breakdown,
       shippingMethod: order.shippingMethod
         ? toShippingMethodResponse(order.shippingMethod)
@@ -192,10 +199,184 @@ export class DepositsService {
     });
   }
 
+  /**
+   * پرداخت ترکیبی: موجودی کیف پول (کمتر از مبلغ سفارش) قفل می‌شود
+   * و مابقی از درگاه بانکی (iBank) گرفته می‌شود.
+   */
+  private async payOrderWithPartialBank(userId: string, orderId: string) {
+    const order = await this.requirePayableOrder(userId, orderId);
+    const orderAmount = Math.round(Number(order.amount));
+    const breakdown = this.getOrderBreakdown(order);
+    const shippingMethod = order.shippingMethod
+      ? toShippingMethodResponse(order.shippingMethod)
+      : null;
+
+    const balance = await this.creditService.getBalance(userId);
+    const available = Math.round(Number(balance.amount));
+
+    if (available <= 0) {
+      throw new ApiException(
+        'NO_CREDIT_FOR_PARTIAL',
+        'برای پرداخت ترکیبی باید موجودی کیف پول داشته باشید',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (available >= orderAmount) {
+      return this.payOrderWithCredit(userId, orderId);
+    }
+
+    const creditApplied = available;
+    const bankAmount = orderAmount - creditApplied;
+    const provider = this.providers.iBank;
+    const productName =
+      order.items
+        ?.map((item) => item.product?.name)
+        .filter(Boolean)
+        .join('، ') || 'سفارش';
+
+    const depositId = newId();
+    const callbackUrl = this.resolveCallbackUrl(
+      'iBank',
+      'ORDER_PAYMENT',
+      order.id,
+    );
+
+    const gatewayResult = await provider.requestPayment(
+      bankAmount,
+      productName,
+      order.id,
+      callbackUrl,
+    );
+
+    const deposit = await this.dataSource.transaction(async (manager) => {
+      const orderRepo = manager.getRepository(Order);
+      const lockedOrder = await orderRepo.findOne({
+        where: { id: order.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!lockedOrder || lockedOrder.status !== 'pending') {
+        throw new ApiException(
+          'ORDER_ALREADY_PAID',
+          'این سفارش قبلاً پرداخت شده است',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      const depositRepo = manager.getRepository(Deposit);
+      const existing = await depositRepo.findOne({
+        where: {
+          userId,
+          orderId: order.id,
+          gateway: 'iBank',
+          status: 'pending',
+        },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (existing) {
+        const existingCredit = Math.round(Number(existing.creditApplied ?? 0));
+        const existingBank = Math.round(Number(existing.amount));
+        if (
+          existingCredit === creditApplied &&
+          existingBank === bankAmount
+        ) {
+          return { reuse: true as const, entity: existing };
+        }
+        throw new ApiException(
+          'PAYMENT_PENDING_MISMATCH',
+          'درخواست پرداخت قبلی برای این سفارش با مبلغ متفاوت فعال است',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      const successExists = await depositRepo.findOne({
+        where: { orderId: order.id, status: 'success' },
+      });
+      if (successExists) {
+        throw new ApiException(
+          'ORDER_ALREADY_PAID',
+          'این سفارش قبلاً پرداخت شده است',
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      const entity = await depositRepo.save(
+        depositRepo.create({
+          id: depositId,
+          userId,
+          orderId: order.id,
+          gateway: 'iBank',
+          trackId: gatewayResult.trackId,
+          amount: bankAmount,
+          creditApplied,
+          status: 'pending',
+          callbackUrl,
+        }),
+      );
+
+      await this.creditService.lock(
+        userId,
+        creditApplied,
+        { sourceId: entity.id },
+        manager,
+      );
+
+      await this.transactionService.addTransactions(
+        [
+          {
+            userId,
+            amount: bankAmount,
+            type: 'credit',
+            sourceType: 'DEPOSIT',
+            sourceId: entity.id,
+            orderId: order.id,
+            state: 'pending',
+            description: 'درخواست واریز بانکی (مابقی سفارش)',
+          },
+          {
+            userId,
+            amount: creditApplied,
+            type: 'debit',
+            sourceType: 'ORDER_PAYMENT',
+            sourceId: entity.id,
+            orderId: order.id,
+            state: 'pending',
+            description: 'سهم کیف پول در پرداخت ترکیبی (قفل‌شده)',
+          },
+        ],
+        manager,
+      );
+
+      return { reuse: false as const, entity };
+    });
+
+    const entity = deposit.entity;
+    const applied = Math.round(Number(entity.creditApplied ?? 0));
+    const bank = Math.round(Number(entity.amount));
+
+    return toDepositResponse({
+      orderId: order.id,
+      depositId: entity.id,
+      gateway: 'partial-bank',
+      trackId: entity.trackId,
+      paymentUrl: provider.buildPaymentUrl(entity.trackId),
+      amount: orderAmount,
+      creditApplied: applied,
+      bankAmount: bank,
+      ...breakdown,
+      shippingMethod,
+      gatewayMessage: deposit.reuse
+        ? 'درخواست پرداخت ترکیبی قبلی برای این سفارش فعال است'
+        : `${gatewayResult.message} — ${applied} از کیف پول، ${bank} از درگاه`,
+      creditBalance: 0,
+    });
+  }
+
   private async createOrderGatewayDeposit(
     userId: string,
     orderId: string,
-    gateway: Exclude<DepositMethod, 'credit'>,
+    gateway: GatewayMethod,
   ) {
     const provider = this.providers[gateway];
     const order = await this.requirePayableOrder(userId, orderId);
@@ -238,6 +419,13 @@ export class DepositsService {
       });
 
       if (existing) {
+        if (Math.round(Number(existing.creditApplied ?? 0)) > 0) {
+          throw new ApiException(
+            'PAYMENT_PENDING_MISMATCH',
+            'درخواست پرداخت ترکیبی قبلی برای این سفارش فعال است',
+            HttpStatus.CONFLICT,
+          );
+        }
         return { reuse: true as const, entity: existing };
       }
 
@@ -259,6 +447,7 @@ export class DepositsService {
           gateway,
           trackId: gatewayResult.trackId,
           amount,
+          creditApplied: 0,
           status: 'pending',
           callbackUrl,
         }),
@@ -289,6 +478,8 @@ export class DepositsService {
       trackId: entity.trackId,
       paymentUrl: provider.buildPaymentUrl(entity.trackId),
       amount: Number(entity.amount),
+      creditApplied: 0,
+      bankAmount: Number(entity.amount),
       ...breakdown,
       shippingMethod,
       gatewayMessage: deposit.reuse
@@ -298,7 +489,7 @@ export class DepositsService {
   }
 
   private resolveCallbackUrl(
-    gateway: Exclude<DepositMethod, 'credit'>,
+    gateway: GatewayMethod,
     sourceType: TransactionSourceType,
     sourceId: string,
   ): string {

@@ -42,6 +42,10 @@ export class Deposit {
   @Column({ type: 'bigint' })
   amount: number;
 
+  /** مبلغ قفل‌شده از کیف پول در پرداخت ترکیبی (partial-bank)؛ درگاه فقط amount را می‌گیرد */
+  @Column({ type: 'bigint', default: 0 })
+  creditApplied: number;
+
   @Column({ type: 'varchar', length: 20, default: 'pending' })
   status: DepositStatus;
 

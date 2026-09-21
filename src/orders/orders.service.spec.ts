@@ -92,6 +92,20 @@ describe('multi-product orders', () => {
     expect(products.decrementStockForPurchase).toHaveBeenCalled();
   });
 
+  it('passes paymentMethod partial-bank to deposits', async () => {
+    const { service, deposits } = setup();
+    await service.create('user', {
+      products: [{ offerId }],
+      shippingMethodId,
+      paymentMethod: 'partial-bank',
+    });
+    expect(deposits.requestPayment).toHaveBeenCalledWith(
+      'user',
+      'order',
+      'partial-bank',
+    );
+  });
+
   it('does not save when any selected offer is unavailable', async () => {
     const { service, dataSource, products } = setup();
     products.resolvePurchasable.mockRejectedValueOnce(
