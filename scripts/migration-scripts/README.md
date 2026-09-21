@@ -56,6 +56,18 @@ skipped row and its reason is written to
 `migration-addresses-report.jsonl` (or the path configured by
 `MIGRATION_ADDRESSES_REPORT_PATH`).
 
+## Customers
+
+```sh
+npm run db:migrate:customers
+```
+
+Run the normal Nest schema migration first, then run this after users and locations.
+It preserves the legacy customer ID and source identity for upcoming order migration.
+Customer records are not skipped when an optional user, country, state, or city link
+cannot be found; that foreign key is set to `NULL` and the issue is recorded in
+`migration-customers-report.jsonl`.
+
 ## Categories
 
 ```sh
