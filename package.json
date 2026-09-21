@@ -37,6 +37,7 @@
     "db:migrate:catalog": "node scripts/migration-scripts/migrate-catalog.mjs",
     "db:migrate:product-relations": "node scripts/migration-scripts/migrate-product-relations.mjs",
     "db:migrate:offer-attributes": "node scripts/migration-scripts/migrate-offer-attributes.mjs",
+    "db:migrate:media": "node scripts/migration-scripts/migrate-media.mjs",
     "db:migrate:product-images": "node scripts/migration-scripts/migrate-product-images.mjs"
   },
   "dependencies": {
