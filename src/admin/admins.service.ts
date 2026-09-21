@@ -36,7 +36,7 @@ export class AdminsService {
       query.search,
     );
     const data = await Promise.all(
-      items.map((admin) => this.buildResponse(admin)),
+      items.map((admin) => this.buildResponse(admin, 'list')),
     );
     return paginatedList(data, page, limit, total);
   }
@@ -51,7 +51,7 @@ export class AdminsService {
         HttpStatus.NOT_FOUND,
       );
     }
-    return this.buildResponse(admin);
+    return this.buildResponse(admin, 'detail');
   }
 
   async create(scope: TenantScope, dto: CreateAdminDto) {
@@ -168,7 +168,16 @@ export class AdminsService {
 
   private async buildResponse(
     admin: NonNullable<Awaited<ReturnType<AdminRepository['findById']>>>,
+    mode: 'list' | 'detail' = 'detail',
   ) {
+    if (mode === 'list') {
+      const userIds = await this.userRepository.findUserIdsByAdminId(admin.id);
+      return toAdminResponse(admin, {
+        userIds,
+        users: undefined,
+      });
+    }
+
     const users = await this.userRepository.findUsersByAdminId(admin.id);
     const mapped = await Promise.all(
       users.map(async (user) => {

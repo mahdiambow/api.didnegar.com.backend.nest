@@ -137,7 +137,14 @@ export class MediaService {
 
   private async toEnrichedResponses(
     assets: MediaAsset[],
+    mode: 'list' | 'detail' = 'detail',
   ): Promise<MediaAssetResponseDto[]> {
+    if (mode === 'list') {
+      return assets.map((asset) =>
+        this.toResponse(asset, { seller: null, uploadedByUser: null }),
+      );
+    }
+
     const sellerIds = [
       ...new Set(assets.map((asset) => asset.sellerId).filter(Boolean)),
     ];
@@ -220,7 +227,7 @@ export class MediaService {
       .getManyAndCount();
 
     return paginatedList(
-      await this.toEnrichedResponses(items),
+      await this.toEnrichedResponses(items, 'list'),
       page,
       limit,
       total,

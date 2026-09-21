@@ -38,7 +38,8 @@ export class CreditService {
   ): Promise<[UserCredit[], number]> {
     const qb = this.credits
       .createQueryBuilder('wallet')
-      .leftJoinAndSelect('wallet.user', 'user')
+      .leftJoin('wallet.user', 'user')
+      .addSelect(['user.id', 'user.username', 'user.displayName'])
       .orderBy('wallet.createdAt', 'DESC')
       .skip(offset)
       .take(limit);

@@ -41,9 +41,9 @@ export class OrderRepository {
     const qb = this.repo
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.items', 'item')
-      .leftJoinAndSelect('item.product', 'product')
+      .leftJoin('item.product', 'product')
+      .addSelect(['product.id', 'product.name'])
       .leftJoinAndSelect('order.shippingMethod', 'shippingMethod')
-      .leftJoinAndSelect('order.deposits', 'deposit')
       .orderBy('order.createdAt', 'DESC')
       .skip(offset)
       .take(limit);

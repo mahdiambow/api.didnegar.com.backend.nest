@@ -99,6 +99,9 @@ export class ProductRepository {
   }
 
   findByFilters(filters: ProductFilters = {}, includeRelations = false) {
+    const needsCategoryFilter = Boolean(
+      filters.categoryId || filters.subCategoryId,
+    );
     const qb = this.repo
       .createQueryBuilder('product')
       .orderBy('product.createdAt', 'DESC');
@@ -144,8 +147,7 @@ export class ProductRepository {
         `(product.name LIKE :search
           OR product.subtitle LIKE :search
           OR product.slug LIKE :search
-          OR product.sku LIKE :search
-          OR product.shortDescription LIKE :search)`,
+          OR product.sku LIKE :search)`,
         { search },
       );
     }
@@ -154,7 +156,7 @@ export class ProductRepository {
       qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
-    if (filters.categoryId || filters.subCategoryId) {
+    if (needsCategoryFilter) {
       qb.innerJoin('product.productCategories', 'pcFilter');
       if (filters.categoryId) {
         qb.andWhere('pcFilter.categoryId = :categoryId', {
@@ -168,7 +170,11 @@ export class ProductRepository {
       }
     }
 
-    return qb.distinct(true).getMany();
+    if (needsCategoryFilter || includeRelations) {
+      qb.distinct(true);
+    }
+
+    return qb.getMany();
   }
 
   findFiltered(filters: ProductFilters = {}, includeRelations = false) {
