@@ -1,24 +1,5 @@
-import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn } from 'class-validator';
 import { ShippingMethodResponseDto } from '../../shipping/dto/shipping.dto.js';
-
-export class RequestDepositDto {
-  @ApiProperty({
-    example: '01JEX000000000000000000010',
-    description: 'شناسه سفارش برای پرداخت',
-  })
-  @IsULID()
-  orderId: string;
-
-  @ApiProperty({
-    enum: ['credit', 'iBank', 'loan', 'partial-bank'],
-    description:
-      'credit = کیف پول کامل | iBank = فقط درگاه | loan = وام | partial-bank = کیف پول (ناقص) + مابقی بانک',
-  })
-  @IsIn(['credit', 'iBank', 'loan', 'partial-bank'])
-  method: 'credit' | 'iBank' | 'loan' | 'partial-bank';
-}
 
 export class DepositResponseDto {
   @ApiPropertyOptional({ nullable: true })
