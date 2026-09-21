@@ -14,6 +14,17 @@ export interface ProductFilters {
   subCategoryId?: string;
 }
 
+/** none = بدون join | list = برند+دسته خلاصه | detail = درخت کامل */
+export type ProductRelationMode = 'none' | 'list' | 'detail';
+
+function toRelationMode(
+  includeRelations: boolean | ProductRelationMode,
+): ProductRelationMode {
+  if (includeRelations === true) return 'detail';
+  if (includeRelations === false) return 'none';
+  return includeRelations;
+}
+
 @Injectable()
 export class ProductRepository {
   constructor(
@@ -37,11 +48,52 @@ export class ProductRepository {
     });
   }
 
-  findByIds(ids: string[], includeRelations = false) {
+  findByIds(
+    ids: string[],
+    includeRelations: boolean | ProductRelationMode = false,
+  ) {
     if (ids.length === 0) return Promise.resolve([] as Product[]);
-    return this.repo.find({
-      where: { id: In([...new Set(ids)]) },
-      relations: includeRelations
+    const mode = toRelationMode(includeRelations);
+    if (mode === 'list') {
+      return this.repo
+        .createQueryBuilder('product')
+        .select([
+          'product.id',
+          'product.name',
+          'product.slug',
+          'product.price',
+          'product.image',
+          'product.brandId',
+        ])
+        .leftJoin('product.brand', 'brand')
+        .addSelect([
+          'brand.id',
+          'brand.name',
+          'brand.slug',
+          'brand.logoUrl',
+        ])
+        .leftJoin('product.productCategories', 'productCategories')
+        .addSelect([
+          'productCategories.id',
+          'productCategories.categoryId',
+          'productCategories.subCategoryId',
+          'productCategories.isPrimary',
+          'productCategories.position',
+        ])
+        .leftJoin('productCategories.category', 'category')
+        .addSelect(['category.id', 'category.name', 'category.slug'])
+        .leftJoin('productCategories.subCategory', 'subCategory')
+        .addSelect([
+          'subCategory.id',
+          'subCategory.name',
+          'subCategory.slug',
+          'subCategory.categoryId',
+        ])
+        .where('product.id IN (:...ids)', { ids: [...new Set(ids)] })
+        .getMany();
+    }
+    const relations =
+      mode === 'detail'
         ? {
             brand: true,
             shippingMethod: true,
@@ -51,7 +103,10 @@ export class ProductRepository {
               subCategory: { category: { parentCategory: true } },
             },
           }
-        : undefined,
+        : undefined;
+    return this.repo.find({
+      where: { id: In([...new Set(ids)]) },
+      relations,
     });
   }
 
@@ -80,6 +135,9 @@ export class ProductRepository {
   }
 
   findByFilters(filters: ProductFilters = {}, includeRelations = false) {
+    const needsCategoryFilter = Boolean(
+      filters.categoryId || filters.subCategoryId,
+    );
     const qb = this.repo
       .createQueryBuilder('product')
       .orderBy('product.createdAt', 'DESC');
@@ -135,7 +193,7 @@ export class ProductRepository {
       qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
-    if (filters.categoryId || filters.subCategoryId) {
+    if (needsCategoryFilter) {
       qb.innerJoin('product.productCategories', 'pcFilter');
       if (filters.categoryId) {
         qb.andWhere('pcFilter.categoryId = :categoryId', {
@@ -149,7 +207,11 @@ export class ProductRepository {
       }
     }
 
-    return qb.distinct(true).getMany();
+    if (needsCategoryFilter || includeRelations) {
+      qb.distinct(true);
+    }
+
+    return qb.getMany();
   }
 
   findFiltered(filters: ProductFilters = {}, includeRelations = false) {
@@ -166,15 +228,53 @@ export class ProductRepository {
     offset: number,
     limit: number,
     filters: ProductFilters = {},
-    includeRelations = false,
+    includeRelations: boolean | ProductRelationMode = false,
   ) {
+    const mode = toRelationMode(includeRelations);
+    const needsCategoryFilter = Boolean(
+      filters.categoryId || filters.subCategoryId,
+    );
     const qb = this.repo
       .createQueryBuilder('product')
       .orderBy('product.createdAt', 'DESC')
       .skip(offset)
       .take(limit);
 
-    if (includeRelations) {
+    if (mode === 'list') {
+      qb.select([
+        'product.id',
+        'product.name',
+        'product.slug',
+        'product.price',
+        'product.image',
+        'product.brandId',
+        'product.createdAt',
+      ])
+        .leftJoin('product.brand', 'brand')
+        .addSelect([
+          'brand.id',
+          'brand.name',
+          'brand.slug',
+          'brand.logoUrl',
+        ])
+        .leftJoin('product.productCategories', 'productCategories')
+        .addSelect([
+          'productCategories.id',
+          'productCategories.categoryId',
+          'productCategories.subCategoryId',
+          'productCategories.isPrimary',
+          'productCategories.position',
+        ])
+        .leftJoin('productCategories.category', 'category')
+        .addSelect(['category.id', 'category.name', 'category.slug'])
+        .leftJoin('productCategories.subCategory', 'subCategory')
+        .addSelect([
+          'subCategory.id',
+          'subCategory.name',
+          'subCategory.slug',
+          'subCategory.categoryId',
+        ]);
+    } else if (mode === 'detail') {
       qb.leftJoinAndSelect('product.brand', 'brand')
         .leftJoinAndSelect('product.shippingMethod', 'shippingMethod')
         .leftJoinAndSelect('product.productStock', 'productStock')
@@ -189,7 +289,7 @@ export class ProductRepository {
         );
     }
 
-    if (filters.categoryId || filters.subCategoryId) {
+    if (needsCategoryFilter) {
       qb.innerJoin('product.productCategories', 'pcFilter');
       if (filters.categoryId) {
         qb.andWhere('pcFilter.categoryId = :categoryId', {
@@ -239,7 +339,12 @@ export class ProductRepository {
       qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
-    return qb.distinct(true).getManyAndCount();
+    // list همیشه join دسته دارد → ممکن است ردیف تکراری شود
+    if (needsCategoryFilter || mode === 'detail' || mode === 'list') {
+      qb.distinct(true);
+    }
+
+    return qb.getManyAndCount();
   }
 
   getNextLegacyId() {

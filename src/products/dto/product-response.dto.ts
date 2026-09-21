@@ -429,3 +429,85 @@ export function toProductResponse(
         : undefined,
   };
 }
+
+/** خلاصه دسته برای کارت لیست — فقط نام/شناسه */
+export class ProductListCategoryDto {
+  @ApiPropertyOptional({ nullable: true })
+  categoryId: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  categoryName: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  subCategoryId: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  subCategoryName: string | null;
+}
+
+/** خلاصه برند برای کارت لیست */
+export class ProductListBrandDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  slug: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  logoUrl: string | null;
+}
+
+/**
+ * پاسخ لیست محصول — فقط فیلدهای کارت:
+ * نام، دسته، قیمت، برند، عکس (+ id/slug برای لینک)
+ */
+export class ProductListItemDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  slug: string;
+
+  @ApiProperty({ type: ProductImageDto })
+  image: ProductImageData;
+
+  @ApiProperty({ type: [ProductPriceResponseDto] })
+  price: ProductPriceResponseDto[];
+
+  @ApiPropertyOptional({ type: ProductListBrandDto, nullable: true })
+  brand: ProductListBrandDto | null;
+
+  @ApiProperty({ type: [ProductListCategoryDto] })
+  categories: ProductListCategoryDto[];
+}
+
+export function toProductListResponse(product: Product): ProductListItemDto {
+  return {
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    image: normalizeImage(product.image),
+    price: toPriceResponses(product.price),
+    brand: product.brand
+      ? {
+          id: product.brand.id,
+          name: product.brand.name,
+          slug: product.brand.slug,
+          logoUrl: product.brand.logoUrl ?? null,
+        }
+      : null,
+    categories: (product.productCategories ?? []).map((link) => ({
+      categoryId: link.categoryId ?? link.subCategory?.categoryId ?? null,
+      categoryName:
+        link.category?.name ?? link.subCategory?.category?.name ?? null,
+      subCategoryId: link.subCategoryId,
+      subCategoryName: link.subCategory?.name ?? null,
+    })),
+  };
+}

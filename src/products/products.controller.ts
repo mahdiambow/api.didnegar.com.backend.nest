@@ -20,6 +20,7 @@ import { UpdateProductDto } from './dto/update-product.dto.js';
 import { ReviewProductDto } from './dto/review-product.dto.js';
 import {
   BrandResponseDto,
+  ProductListItemDto,
   ProductPriceResponseDto,
   ProductResponseDto,
 } from './dto/product-response.dto.js';
@@ -33,7 +34,7 @@ const ProductApiResponseDto = createSuccessResponseDto(ProductResponseDto, {
 });
 
 const ProductsPaginatedApiResponseDto = createPaginatedResponseDto(
-  ProductResponseDto,
+  ProductListItemDto,
   {
     code: 'PRODUCTS_FOUND',
     message: 'Products retrieved successfully',
@@ -50,6 +51,7 @@ const BrandsListApiResponseDto = createSuccessResponseDto(BrandResponseDto, {
 @ApiTags('Products')
 @ApiExtraModels(
   ProductResponseDto,
+  ProductListItemDto,
   ProductPriceResponseDto,
   AttributeValueResponseDto,
 )

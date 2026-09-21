@@ -9,7 +9,10 @@ import { Transform, Type } from 'class-transformer';
 import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { CreateProductDto } from '../../products/dto/create-product.dto.js';
-import { ProductResponseDto } from '../../products/dto/product-response.dto.js';
+import {
+  ProductListItemDto,
+  ProductResponseDto,
+} from '../../products/dto/product-response.dto.js';
 import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
 
 /** آپدیت فیلدهای کاتالوگ محصول هنگام ثبت/ویرایش آفر (بدون approval) */
@@ -143,10 +146,11 @@ export class SellerOfferResponseDto extends OmitType(SellerOfferItemDto, [
   @ApiPropertyOptional({ nullable: true })
   rejectionReason: string | null;
   @ApiPropertyOptional({
-    type: ProductResponseDto,
-    description: 'جزئیات محصول مرتبط با پیشنهاد',
+    type: ProductListItemDto,
+    description:
+      'خلاصه محصول در لیست (نام/دسته/قیمت/برند/عکس) — جزئیات کامل در GET تکی',
   })
-  product?: ProductResponseDto;
+  product?: ProductListItemDto | ProductResponseDto;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
 }
