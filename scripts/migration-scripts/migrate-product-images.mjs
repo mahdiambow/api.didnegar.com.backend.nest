@@ -3,6 +3,7 @@
  * { featuredImg: string | null, gallery: string[] }.
  *
  * Target product_variants and seller_offers are deliberately not involved.
+ * product_media preserves the normalized product-to-media relation.
  */
 import { appendFile, writeFile } from 'node:fs/promises';
 import {
@@ -21,8 +22,8 @@ const reportPath =
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: node scripts/migration-scripts/migrate-product-images.mjs
 
-Maps legacy product_variant_images/media URLs into products.image.
-Run after db:migrate:catalog. Invalid source links are recorded in ${reportPath}.`);
+Maps legacy product_variant_images/media URLs into products.image and product_media.
+Run after db:migrate:catalog and db:migrate:media. Invalid source links are recorded in ${reportPath}.`);
   process.exit(0);
 }
 
@@ -98,6 +99,11 @@ async function loadTargetProducts(target) {
   };
 }
 
+async function loadMigratedMedia(target) {
+  const [rows] = await target.execute('SELECT id, url FROM media');
+  return new Map(rows.map((row) => [row.id, { url: row.url }]));
+}
+
 async function main() {
   const source = await openLegacyConnection();
   const target = await openTargetConnection();
@@ -108,7 +114,7 @@ async function main() {
     await assertTables(
       source,
       legacyDatabase,
-      ['products', 'product_variants', 'product_variant_images', 'media'],
+      ['products', 'product_variants', 'product_variant_images'],
       'Legacy',
     );
     await assertColumns(
@@ -129,15 +135,44 @@ async function main() {
       source,
       legacyDatabase,
       'product_variant_images',
-      ['id', 'productVariantId', 'mediaId', 'sortOrder', 'isPrimary'],
+      [
+        'id',
+        'productVariantId',
+        'mediaId',
+        'sortOrder',
+        'isPrimary',
+        'createdAt',
+        'updatedAt',
+      ],
       'Legacy',
     );
+    await assertTables(
+      target,
+      targetDatabase,
+      ['media', 'product_media'],
+      'Target',
+    );
     await assertColumns(
-      source,
-      legacyDatabase,
+      target,
+      targetDatabase,
       'media',
       ['id', 'url'],
-      'Legacy',
+      'Target',
+    );
+    await assertColumns(
+      target,
+      targetDatabase,
+      'product_media',
+      [
+        'id',
+        'productId',
+        'mediaId',
+        'sortOrder',
+        'isPrimary',
+        'createdAt',
+        'updatedAt',
+      ],
+      'Target',
     );
     await assertTables(target, targetDatabase, ['products'], 'Target');
     await assertColumns(
@@ -154,6 +189,7 @@ async function main() {
       'utf8',
     );
     const targetProducts = await loadTargetProducts(target);
+    const migratedMedia = await loadMigratedMedia(target);
     const initialized = new Set();
     const totals = {
       read: 0,
@@ -162,6 +198,7 @@ async function main() {
       skipped: 0,
       missingProducts: 0,
       missingMediaUrls: 0,
+      relationsUpserted: 0,
     };
 
     const batchCount = await readBatches(
@@ -172,12 +209,12 @@ async function main() {
          pvi.mediaId,
          pvi.sortOrder,
          pvi.isPrimary,
-         p.legacyId AS productLegacyId,
-         media.url AS mediaUrl
+         pvi.createdAt,
+         pvi.updatedAt,
+         p.legacyId AS productLegacyId
        FROM product_variant_images pvi
        INNER JOIN product_variants pv ON pv.id = pvi.productVariantId
        INNER JOIN products p ON p.id = pv.productId
-       LEFT JOIN media ON media.id = pvi.mediaId
        ORDER BY p.legacyId, pvi.isPrimary DESC, pvi.sortOrder ASC, pvi.id ASC`,
       async (rows, offset, batch) => {
         const count = {
@@ -187,8 +224,10 @@ async function main() {
           skipped: 0,
           missingProducts: 0,
           missingMediaUrls: 0,
+          relationsUpserted: 0,
         };
         const changedProductIds = new Set();
+        const relations = new Map();
 
         for (const row of rows) {
           const targetProduct = targetProducts.byLegacyId.get(
@@ -206,11 +245,37 @@ async function main() {
             continue;
           }
 
-          const url =
-            typeof row.mediaUrl === 'string' ? row.mediaUrl.trim() : '';
+          const media = migratedMedia.get(row.mediaId);
+          if (!media) {
+            await writeReport({
+              type: 'missing-migrated-media',
+              variantImageId: row.variantImageId,
+              productVariantId: row.productVariantId,
+              mediaId: row.mediaId,
+              productLegacyId: row.productLegacyId,
+            });
+            count.missingMediaUrls += 1;
+            count.skipped += 1;
+            continue;
+          }
+
+          const relationKey = `${targetProduct.id}:${row.mediaId}`;
+          if (!relations.has(relationKey)) {
+            relations.set(relationKey, {
+              id: row.variantImageId,
+              productId: targetProduct.id,
+              mediaId: row.mediaId,
+              sortOrder: Number(row.sortOrder) || 0,
+              isPrimary: row.isPrimary ? 1 : 0,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+            });
+          }
+
+          const url = typeof media.url === 'string' ? media.url.trim() : '';
           if (!url) {
             await writeReport({
-              type: 'missing-media-url',
+              type: 'missing-migrated-media-url',
               variantImageId: row.variantImageId,
               productVariantId: row.productVariantId,
               mediaId: row.mediaId,
@@ -237,6 +302,25 @@ async function main() {
 
         await target.beginTransaction();
         try {
+          for (const relation of relations.values()) {
+            await target.execute(
+              `INSERT INTO product_media (id, productId, mediaId, sortOrder, isPrimary, createdAt, updatedAt)
+               VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE
+                 productId = VALUES(productId), mediaId = VALUES(mediaId), sortOrder = VALUES(sortOrder),
+                 isPrimary = VALUES(isPrimary), createdAt = VALUES(createdAt), updatedAt = VALUES(updatedAt)`,
+              [
+                relation.id,
+                relation.productId,
+                relation.mediaId,
+                relation.sortOrder,
+                relation.isPrimary,
+                relation.createdAt,
+                relation.updatedAt,
+              ],
+            );
+            count.relationsUpserted += 1;
+          }
           for (const productId of changedProductIds) {
             const targetProduct = targetProducts.byId.get(productId);
             await target.execute(
