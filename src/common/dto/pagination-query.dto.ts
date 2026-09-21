@@ -3,7 +3,8 @@ import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
 
 export const DEFAULT_PAGE = 1;
-export const DEFAULT_LIMIT = 300;
+/** پیش‌فرض سبک برای لیست‌ها — کلاینت می‌تواند تا MAX_LIMIT بخواهد */
+export const DEFAULT_LIMIT = 20;
 export const MAX_LIMIT = 300;
 
 function toPositiveInt(value: unknown, fallback: number): number {
@@ -12,7 +13,7 @@ function toPositiveInt(value: unknown, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-/** Query params مشترک لیست‌ها — اگر نفرستند: page=1, limit=300 */
+/** Query params مشترک لیست‌ها — اگر نفرستند: page=1, limit=20 */
 export class PaginationQueryDto {
   @ApiPropertyOptional({
     default: DEFAULT_PAGE,
@@ -29,7 +30,7 @@ export class PaginationQueryDto {
     default: DEFAULT_LIMIT,
     example: DEFAULT_LIMIT,
     maximum: MAX_LIMIT,
-    description: 'تعداد در هر صفحه (پیش‌فرض و حداکثر ۳۰۰)',
+    description: 'تعداد در هر صفحه (پیش‌فرض ۲۰، حداکثر ۳۰۰)',
   })
   @IsOptional()
   @Transform(({ value }) => toPositiveInt(value, DEFAULT_LIMIT))

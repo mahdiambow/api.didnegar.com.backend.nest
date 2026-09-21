@@ -70,11 +70,11 @@ export class ProductsService {
         categoryId: query.categoryId,
         subCategoryId: query.subCategoryId,
       },
-      true,
+      'list',
     );
 
     return paginatedList(
-      await this.toEnrichedProductResponses(items),
+      await this.toEnrichedProductResponses(items, 'list'),
       page,
       limit,
       total,
@@ -105,11 +105,11 @@ export class ProductsService {
         categoryId: query.categoryId,
         subCategoryId: query.subCategoryId,
       },
-      true,
+      'list',
     );
 
     return paginatedList(
-      await this.toEnrichedProductResponses(items),
+      await this.toEnrichedProductResponses(items, 'list'),
       page,
       limit,
       total,
@@ -368,6 +368,7 @@ export class ProductsService {
 
   private async toEnrichedProductResponses(
     products: Product[],
+    mode: 'list' | 'detail' = 'detail',
   ): Promise<ProductResponseDto[]> {
     const priceValueIds = [
       ...new Set(
@@ -388,13 +389,16 @@ export class ProductsService {
         ),
       ),
     ];
-    const shippingMethodIds = [
-      ...new Set(
-        products.flatMap((product) =>
-          product.shippingMethodId ? [product.shippingMethodId] : [],
-        ),
-      ),
-    ];
+    const shippingMethodIds =
+      mode === 'detail'
+        ? [
+            ...new Set(
+              products.flatMap((product) =>
+                product.shippingMethodId ? [product.shippingMethodId] : [],
+              ),
+            ),
+          ]
+        : [];
 
     const priceValues =
       await this.attributeValueRepository.findByIds(priceValueIds);
@@ -403,20 +407,27 @@ export class ProductsService {
     ];
 
     const [attributes, sellers, shippingMethods] = await Promise.all([
-      this.attributeRepository.findByIdsWithValues(attributeIds),
+      mode === 'list'
+        ? this.attributeRepository.findByIds(attributeIds)
+        : this.attributeRepository.findByIdsWithValues(attributeIds),
       this.sellerRepository.findByIds(sellerIds),
-      this.shippingMethodRepository.findByIds(shippingMethodIds),
+      shippingMethodIds.length
+        ? this.shippingMethodRepository.findByIds(shippingMethodIds)
+        : Promise.resolve([]),
     ]);
 
+    const includeAttributeValues = mode === 'detail';
     const attributeMap = new Map(
       attributes.map((attribute) => [
         attribute.id,
-        toAttributeResponse(attribute, true),
+        toAttributeResponse(attribute, includeAttributeValues),
       ]),
     );
     const attributeValueById = new Map(
       [
-        ...attributes.flatMap((attribute) => attribute.values ?? []),
+        ...(includeAttributeValues
+          ? attributes.flatMap((attribute) => attribute.values ?? [])
+          : []),
         ...priceValues,
       ].map((value) => [value.id, toAttributeValueResponse(value)]),
     );
@@ -446,7 +457,7 @@ export class ProductsService {
             .filter((id): id is string => Boolean(id)),
         ),
       ];
-      return toProductResponse(product, true, {
+      const response = toProductResponse(product, true, {
         attributes: productAttributeIds
           .map((id) => attributeMap.get(id))
           .filter((item): item is NonNullable<typeof item> => Boolean(item)),
@@ -461,6 +472,11 @@ export class ProductsService {
           ? (shippingMethodMap.get(product.shippingMethodId) ?? null)
           : null,
       });
+      if (mode === 'list') {
+        // payload سبک‌تر برای لیست — جزئیات کامل در GET تک‌محصول
+        response.description = null;
+      }
+      return response;
     });
   }
 
