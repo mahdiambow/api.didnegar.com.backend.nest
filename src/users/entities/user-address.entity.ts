@@ -1,4 +1,12 @@
-import { PrimaryColumn, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
+import {
+  PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  UpdateDateColumn,
+} from 'typeorm';
 import type { User } from './user.entity.js';
 
 @Entity('user_addresses')
@@ -42,8 +50,8 @@ export class UserAddress {
   @Column({ type: 'varchar', length: 150 })
   recipientFullName: string;
 
-  @Column({ type: 'varchar', length: 20 })
-  recipientPhone: string;
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  recipientPhone: string | null;
 
   @Column({ type: 'boolean', default: false })
   isDefault: boolean;

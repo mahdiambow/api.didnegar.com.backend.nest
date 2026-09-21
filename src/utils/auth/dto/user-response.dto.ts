@@ -91,7 +91,7 @@ export class UserAddressResponseDto {
   recipientFullName: string;
 
   @ApiProperty({ example: '09333333333' })
-  recipientPhone: string;
+  recipientPhone: string | null;
 
   @ApiProperty({ example: true })
   isDefault: boolean;
@@ -130,10 +130,7 @@ export class UserResponseDto {
 
   @ApiProperty({
     type: [String],
-    example: [
-      '01JEX000000000000000000030',
-      '01JEX000000000000000000040',
-    ],
+    example: ['01JEX000000000000000000030', '01JEX000000000000000000040'],
     description: 'شناسه همه نقش‌ها — اولین مورد نقش اصلی است',
   })
   roleIds: string[];
