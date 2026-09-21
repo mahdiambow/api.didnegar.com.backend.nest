@@ -54,20 +54,56 @@ export class ProductRepository {
   ) {
     if (ids.length === 0) return Promise.resolve([] as Product[]);
     const mode = toRelationMode(includeRelations);
+    if (mode === 'list') {
+      return this.repo
+        .createQueryBuilder('product')
+        .select([
+          'product.id',
+          'product.name',
+          'product.slug',
+          'product.price',
+          'product.image',
+          'product.brandId',
+        ])
+        .leftJoin('product.brand', 'brand')
+        .addSelect([
+          'brand.id',
+          'brand.name',
+          'brand.slug',
+          'brand.logoUrl',
+        ])
+        .leftJoin('product.productCategories', 'productCategories')
+        .addSelect([
+          'productCategories.id',
+          'productCategories.categoryId',
+          'productCategories.subCategoryId',
+          'productCategories.isPrimary',
+          'productCategories.position',
+        ])
+        .leftJoin('productCategories.category', 'category')
+        .addSelect(['category.id', 'category.name', 'category.slug'])
+        .leftJoin('productCategories.subCategory', 'subCategory')
+        .addSelect([
+          'subCategory.id',
+          'subCategory.name',
+          'subCategory.slug',
+          'subCategory.categoryId',
+        ])
+        .where('product.id IN (:...ids)', { ids: [...new Set(ids)] })
+        .getMany();
+    }
     const relations =
-      mode === 'list'
-        ? { brand: true, productStock: true }
-        : mode === 'detail'
-          ? {
-              brand: true,
-              shippingMethod: true,
-              productStock: true,
-              productCategories: {
-                category: { parentCategory: true },
-                subCategory: { category: { parentCategory: true } },
-              },
-            }
-          : undefined;
+      mode === 'detail'
+        ? {
+            brand: true,
+            shippingMethod: true,
+            productStock: true,
+            productCategories: {
+              category: { parentCategory: true },
+              subCategory: { category: { parentCategory: true } },
+            },
+          }
+        : undefined;
     return this.repo.find({
       where: { id: In([...new Set(ids)]) },
       relations,
@@ -204,10 +240,39 @@ export class ProductRepository {
       .take(limit);
 
     if (mode === 'list') {
-      qb.leftJoinAndSelect('product.brand', 'brand').leftJoinAndSelect(
-        'product.productStock',
-        'productStock',
-      );
+      qb.select([
+        'product.id',
+        'product.name',
+        'product.slug',
+        'product.price',
+        'product.image',
+        'product.brandId',
+        'product.createdAt',
+      ])
+        .leftJoin('product.brand', 'brand')
+        .addSelect([
+          'brand.id',
+          'brand.name',
+          'brand.slug',
+          'brand.logoUrl',
+        ])
+        .leftJoin('product.productCategories', 'productCategories')
+        .addSelect([
+          'productCategories.id',
+          'productCategories.categoryId',
+          'productCategories.subCategoryId',
+          'productCategories.isPrimary',
+          'productCategories.position',
+        ])
+        .leftJoin('productCategories.category', 'category')
+        .addSelect(['category.id', 'category.name', 'category.slug'])
+        .leftJoin('productCategories.subCategory', 'subCategory')
+        .addSelect([
+          'subCategory.id',
+          'subCategory.name',
+          'subCategory.slug',
+          'subCategory.categoryId',
+        ]);
     } else if (mode === 'detail') {
       qb.leftJoinAndSelect('product.brand', 'brand')
         .leftJoinAndSelect('product.shippingMethod', 'shippingMethod')
@@ -272,8 +337,8 @@ export class ProductRepository {
       qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
-    // distinct فقط وقتی join فیلتر دسته باعث تکرار ردیف می‌شود
-    if (needsCategoryFilter || mode === 'detail') {
+    // list همیشه join دسته دارد → ممکن است ردیف تکراری شود
+    if (needsCategoryFilter || mode === 'detail' || mode === 'list') {
       qb.distinct(true);
     }
 

@@ -23,7 +23,10 @@ import {
   SellerOfferItemDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
-import type { ProductResponseDto } from '../products/dto/product-response.dto.js';
+import type {
+  ProductListItemDto,
+  ProductResponseDto,
+} from '../products/dto/product-response.dto.js';
 import type { CreateProductDto } from '../products/dto/create-product.dto.js';
 
 export function assertOfferAccess(user: AuthUser, sellerId: string) {
@@ -58,7 +61,7 @@ export function isImmediateOfferUpdate(dto: UpdateSellerOfferDto): boolean {
 
 export const toOfferResponse = (
   offer: SellerOffer,
-  product?: ProductResponseDto,
+  product?: ProductResponseDto | ProductListItemDto,
 ) => ({
   offerId: offer.id,
   sellerId: offer.sellerId,

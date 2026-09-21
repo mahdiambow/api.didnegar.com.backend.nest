@@ -1,6 +1,5 @@
 import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsNotEmpty,
@@ -26,17 +25,6 @@ export class ListAttributesQueryDto {
   @IsOptional()
   @IsULID()
   valueId?: string;
-
-  @ApiPropertyOptional({
-    default: false,
-    description: 'اگر true باشد، همهٔ values هر ویژگی هم برمی‌گردد',
-  })
-  @IsOptional()
-  @Transform(({ value }) =>
-    value === 'true' ? true : value === 'false' ? false : value,
-  )
-  @IsBoolean()
-  includeValues?: boolean = false;
 }
 
 export class CreateAttributeDto {
