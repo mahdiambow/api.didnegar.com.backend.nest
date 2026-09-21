@@ -49,8 +49,11 @@ export class AttributesService {
       return [toAttributeResponse(attribute, true)];
     }
 
-    const items = await this.attributeRepository.findAllWithValues();
-    return items.map((item) => toAttributeResponse(item, true));
+    const includeValues = query.includeValues === true;
+    const items = includeValues
+      ? await this.attributeRepository.findAllWithValues()
+      : await this.attributeRepository.findAll();
+    return items.map((item) => toAttributeResponse(item, includeValues));
   }
 
   async findAttribute(id: string) {
