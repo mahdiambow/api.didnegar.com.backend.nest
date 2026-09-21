@@ -34,7 +34,7 @@ export class OrderResponseDto {
   id: string;
 
   @ApiProperty()
-  userId: string;
+  userId: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   addressId: string | null;

@@ -21,8 +21,8 @@ export class Order {
   @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
 
-  @Column({ type: 'varchar', length: 26 })
-  userId: string;
+  @Column({ type: 'varchar', length: 26, nullable: true })
+  userId: string | null;
 
   @Column({ type: 'varchar', length: 26, nullable: true })
   addressId: string | null;
@@ -52,9 +52,9 @@ export class Order {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne('User', { onDelete: 'CASCADE' })
+  @ManyToOne('User', { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user: User | null;
 
   @ManyToOne('UserAddress', { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'addressId' })

@@ -139,19 +139,17 @@ async function main() {
               r.customerLegacyId === null
                 ? null
                 : customers.get(key(r.customerLegacyTable, r.customerLegacyId));
-            if (!customer?.userId) {
+            if (r.customerId && !customer) {
               await report({
-                type: 'missing-customer-user',
+                type: 'missing-imported-customer',
                 legacyOrderId: r.id,
                 legacyOrderLegacyId: r.legacyId,
                 legacyCustomerId: r.customerId,
               });
-              count.skipped++;
-              continue;
             }
             const values = [
-              customer.userId,
-              customer.id,
+              customer?.userId || null,
+              customer?.id || null,
               null,
               null,
               amount(r.netTotal),
