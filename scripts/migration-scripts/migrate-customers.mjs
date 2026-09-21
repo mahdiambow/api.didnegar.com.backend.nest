@@ -17,8 +17,9 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: npm run db:migrate:customers
 
 Imports legacy customers after users and locations. A customer is retained even when
-its optional user or location link is unavailable; such links become NULL and are
-recorded in ${reportPath}.`);
+its optional user, state, or city link is unavailable; those links become NULL.
+An unresolved legacy country link is assigned to the target country with code IR.
+Every fallback is recorded in ${reportPath}.`);
   process.exit(0);
 }
 
@@ -61,7 +62,7 @@ async function loadTargetMaps(target) {
     target.execute(
       'SELECT id, legacyId, legacyTable FROM users WHERE legacyId IS NOT NULL AND legacyTable IS NOT NULL',
     ),
-    target.execute('SELECT id FROM countries'),
+    target.execute('SELECT id, code FROM countries'),
     target.execute('SELECT id FROM states'),
     target.execute('SELECT id FROM cities'),
     target.execute('SELECT id FROM customers'),
@@ -71,6 +72,14 @@ async function loadTargetMaps(target) {
   const [states] = results[2];
   const [cities] = results[3];
   const [customers] = results[4];
+  const defaultCountry = countries.find(
+    (row) => String(row.code).trim().toUpperCase() === 'IR',
+  );
+  if (!defaultCountry) {
+    throw new Error(
+      'Target countries table has no country with code IR; run the locations migration before customer migration.',
+    );
+  }
   return {
     users: new Map(
       users.map((row) => [
@@ -79,6 +88,7 @@ async function loadTargetMaps(target) {
       ]),
     ),
     countryIds: new Set(countries.map((row) => String(row.id))),
+    defaultCountryId: String(defaultCountry.id),
     stateIds: new Set(states.map((row) => String(row.id))),
     cityIds: new Set(cities.map((row) => String(row.id))),
     customerIds: new Set(customers.map((row) => String(row.id))),
@@ -102,6 +112,7 @@ async function main() {
     updated: 0,
     unlinkedUsers: 0,
     missingCountries: 0,
+    defaultedCountries: 0,
     missingStates: 0,
     missingCities: 0,
   };
@@ -200,6 +211,7 @@ async function main() {
           updated: 0,
           unlinkedUsers: 0,
           missingCountries: 0,
+          defaultedCountries: 0,
           missingStates: 0,
           missingCities: 0,
         };
@@ -213,9 +225,12 @@ async function main() {
                 : maps.users.get(
                     sourceKey(row.userLegacyTable, row.userLegacyId),
                   ) || null;
-            const countryId =
+            const hasMissingCountry =
               row.legacyCountryId &&
-              maps.countryIds.has(String(row.legacyCountryId))
+              !maps.countryIds.has(String(row.legacyCountryId));
+            const countryId = hasMissingCountry
+              ? maps.defaultCountryId
+              : row.legacyCountryId
                 ? String(row.legacyCountryId)
                 : null;
             const stateId =
@@ -235,13 +250,16 @@ async function main() {
               });
               count.unlinkedUsers += 1;
             }
-            if (row.legacyCountryId && !countryId) {
+            if (hasMissingCountry) {
               await writeReport({
-                type: 'missing-imported-country',
+                type: 'defaulted-missing-country-to-ir',
                 ...base,
                 legacyCountryId: row.legacyCountryId,
+                targetCountryId: maps.defaultCountryId,
+                targetCountryCode: 'IR',
               });
               count.missingCountries += 1;
+              count.defaultedCountries += 1;
             }
             if (row.legacyStateId && !stateId) {
               await writeReport({

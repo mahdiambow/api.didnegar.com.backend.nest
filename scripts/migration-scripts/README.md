@@ -65,7 +65,8 @@ npm run db:migrate:customers
 Run the normal Nest schema migration first, then run this after users and locations.
 It preserves the legacy customer ID and source identity for upcoming order migration.
 Customer records are not skipped when an optional user, country, state, or city link
-cannot be found; that foreign key is set to `NULL` and the issue is recorded in
+cannot be found; user/state/city links become `NULL`. An unresolved legacy country
+link is assigned to the target country with code `IR`. Every fallback is recorded in
 `migration-customers-report.jsonl`.
 
 ## Categories
