@@ -21,6 +21,7 @@ import {
   OFFER_IMMEDIATE_FIELDS,
   ReviewSellerOfferDto,
   SellerOfferItemDto,
+  SellerOfferListItemDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
 import type {
@@ -81,6 +82,23 @@ export const toOfferResponse = (
   updatedAt: offer.updatedAt,
 });
 
+export const toOfferListResponse = (
+  offer: SellerOffer,
+  product?: ProductListItemDto,
+): SellerOfferListItemDto => ({
+  offerId: offer.id,
+  sellerId: offer.sellerId,
+  productId: offer.productId,
+  sku: offer.sku,
+  price: Number(offer.price),
+  stock: offer.stock,
+  stockStatus: offer.stockStatus,
+  isOnSale: offer.isOnSale,
+  isActive: offer.isActive,
+  ...(product ? { product } : {}),
+  createdAt: offer.createdAt,
+});
+
 @Injectable()
 export class OffersService {
   constructor(
@@ -103,6 +121,18 @@ export class OffersService {
     );
     const qb = this.offers
       .createQueryBuilder('offer')
+      .select([
+        'offer.id',
+        'offer.sellerId',
+        'offer.productId',
+        'offer.sku',
+        'offer.price',
+        'offer.stock',
+        'offer.stockStatus',
+        'offer.isOnSale',
+        'offer.isActive',
+        'offer.createdAt',
+      ])
       .andWhere('offer.approvalStatus = :approved', { approved: 'approved' });
 
     for (const field of ['sellerId', 'productId', 'isActive'] as const)
@@ -143,7 +173,7 @@ export class OffersService {
 
     return paginatedList(
       items.map((offer) =>
-        toOfferResponse(offer, productById.get(offer.productId)),
+        toOfferListResponse(offer, productById.get(offer.productId)),
       ),
       page,
       limit,

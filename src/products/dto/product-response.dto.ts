@@ -460,6 +460,27 @@ export class ProductListBrandDto {
   logoUrl: string | null;
 }
 
+/** تصویر کارت لیست — فقط featured (بدون gallery) */
+export class ProductListImageDto {
+  @ApiPropertyOptional({ nullable: true })
+  featuredImg: string | null;
+}
+
+/** قیمت کارت لیست — بدون valueAttributes و فیلدهای فرم */
+export class ProductListPriceDto {
+  @ApiPropertyOptional({ example: 68000000, nullable: true })
+  price: number | null;
+
+  @ApiPropertyOptional({ example: 10, nullable: true })
+  discountPercentage: number | null;
+
+  @ApiPropertyOptional({ example: 2000000, nullable: true })
+  discountAmount: number | null;
+
+  @ApiPropertyOptional({ example: 66000000, nullable: true })
+  finalPrice: number | null;
+}
+
 /**
  * پاسخ لیست محصول — فقط فیلدهای کارت:
  * نام، دسته، قیمت، برند، عکس (+ id/slug برای لینک)
@@ -474,11 +495,11 @@ export class ProductListItemDto {
   @ApiProperty()
   slug: string;
 
-  @ApiProperty({ type: ProductImageDto })
-  image: ProductImageData;
+  @ApiProperty({ type: ProductListImageDto })
+  image: ProductListImageDto;
 
-  @ApiProperty({ type: [ProductPriceResponseDto] })
-  price: ProductPriceResponseDto[];
+  @ApiProperty({ type: [ProductListPriceDto] })
+  price: ProductListPriceDto[];
 
   @ApiPropertyOptional({ type: ProductListBrandDto, nullable: true })
   brand: ProductListBrandDto | null;
@@ -487,13 +508,24 @@ export class ProductListItemDto {
   categories: ProductListCategoryDto[];
 }
 
+function toListPriceResponses(
+  price: Product['price'] | ProductPriceData | null | undefined,
+): ProductListPriceDto[] {
+  return normalizePriceResponse(price).map((item) => ({
+    price: item.price ?? null,
+    discountPercentage: item.discountPercentage ?? null,
+    discountAmount: item.discountAmount ?? null,
+    finalPrice: item.finalPrice ?? null,
+  }));
+}
+
 export function toProductListResponse(product: Product): ProductListItemDto {
   return {
     id: product.id,
     name: product.name,
     slug: product.slug,
-    image: normalizeImage(product.image),
-    price: toPriceResponses(product.price),
+    image: { featuredImg: product.image?.featuredImg ?? null },
+    price: toListPriceResponses(product.price),
     brand: product.brand
       ? {
           id: product.brand.id,

@@ -155,6 +155,42 @@ export class SellerOfferResponseDto extends OmitType(SellerOfferItemDto, [
   @ApiProperty() updatedAt: Date;
 }
 
+/** پاسخ لیست آفر — فقط فیلدهای کارت/جدول */
+export class SellerOfferListItemDto {
+  @ApiProperty({ format: 'ulid' })
+  offerId: string;
+
+  @ApiProperty()
+  sellerId: string;
+
+  @ApiProperty({ format: 'ulid' })
+  productId: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  sku: string | null;
+
+  @ApiProperty({ example: 68000000 })
+  price: number;
+
+  @ApiProperty({ example: 10 })
+  stock: number;
+
+  @ApiProperty({ enum: ['instock', 'outofstock', 'onbackorder'] })
+  stockStatus: string;
+
+  @ApiProperty()
+  isOnSale: boolean;
+
+  @ApiProperty()
+  isActive: boolean;
+
+  @ApiPropertyOptional({ type: ProductListItemDto })
+  product?: ProductListItemDto;
+
+  @ApiProperty()
+  createdAt: Date;
+}
+
 /** فیلدهایی که تغییرشان فوری اعمال می‌شود */
 export const OFFER_IMMEDIATE_FIELDS = new Set([
   'price',

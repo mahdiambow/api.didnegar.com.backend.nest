@@ -152,6 +152,14 @@ export class ProductsService {
 
   async findByIds(
     ids: string[],
+    mode: 'list',
+  ): Promise<ProductListItemDto[]>;
+  async findByIds(
+    ids: string[],
+    mode?: 'detail',
+  ): Promise<ProductResponseDto[]>;
+  async findByIds(
+    ids: string[],
     mode: 'list' | 'detail' = 'detail',
   ): Promise<ProductResponseDto[] | ProductListItemDto[]> {
     const uniqueIds = [...new Set(ids.filter(Boolean))];

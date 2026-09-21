@@ -254,7 +254,6 @@ export class ProductRepository {
         'product.price',
         'product.image',
         'product.brandId',
-        'product.createdAt',
       ])
         .leftJoin('product.brand', 'brand')
         .addSelect([
