@@ -28,10 +28,7 @@ import { PermissionsGuard } from '../utils/auth/guards/permissions.guard.js';
 import { RequirePermissions } from '../utils/auth/decorators/require-permissions.decorator.js';
 import { PERMISSIONS } from '../roles/permissions.js';
 import { DepositsService } from './deposits.service.js';
-import {
-  DepositResponseDto,
-  RequestDepositDto,
-} from './dto/deposit.dto.js';
+import { DepositResponseDto } from './dto/deposit.dto.js';
 
 class CreateTopUpDto {
   @ApiProperty({ example: 500000, description: 'مبلغ واریز (ریال، عدد صحیح)' })
@@ -75,42 +72,10 @@ const TopUpApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
   name: 'DepositTopUp',
 });
 
-const DepositApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
-  code: 'PAYMENT_REQUESTED',
-  message: 'Payment request created successfully',
-  name: 'Deposit',
-});
-
 @ApiTags('Deposits')
 @Controller('deposits')
 export class DepositsController {
   constructor(private readonly depositsService: DepositsService) {}
-
-  @Post('request')
-  @ApiBearerAuth('access-token')
-  @UseGuards(JwtAuthGuard)
-  @ApiResponseMeta({
-    code: 'PAYMENT_REQUESTED',
-    message: 'Payment request created successfully',
-  })
-  @ApiOperation({
-    summary: 'Request order payment',
-    description:
-      'درخواست پرداخت سفارش\n\nmethod: credit | iBank | loan | partial-bank\n' +
-      'partial-bank = استفاده از موجودی ناقص کیف پول + مابقی از درگاه بانکی\n' +
-      'تأیید پرداخت از طریق callback تنظیم‌شده انجام می‌شود (بدون endpoint verify در این API).',
-  })
-  @ApiOkResponse({ type: DepositApiResponseDto })
-  requestPayment(
-    @Req() req: { user: { sub: string } },
-    @Body() dto: RequestDepositDto,
-  ) {
-    return this.depositsService.requestPayment(
-      req.user.sub,
-      dto.orderId,
-      dto.method,
-    );
-  }
 
   @Post()
   @ApiBearerAuth('access-token')
