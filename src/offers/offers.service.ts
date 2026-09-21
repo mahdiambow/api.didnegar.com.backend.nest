@@ -23,10 +23,7 @@ import {
   SellerOfferItemDto,
   UpdateSellerOfferDto,
 } from './dto/seller-offer.dto.js';
-import type {
-  ProductListItemDto,
-  ProductResponseDto,
-} from '../products/dto/product-response.dto.js';
+import type { ProductResponseDto } from '../products/dto/product-response.dto.js';
 import type { CreateProductDto } from '../products/dto/create-product.dto.js';
 
 export function assertOfferAccess(user: AuthUser, sellerId: string) {
@@ -61,7 +58,7 @@ export function isImmediateOfferUpdate(dto: UpdateSellerOfferDto): boolean {
 
 export const toOfferResponse = (
   offer: SellerOffer,
-  product?: ProductResponseDto | ProductListItemDto,
+  product?: ProductResponseDto,
 ) => ({
   offerId: offer.id,
   sellerId: offer.sellerId,
@@ -98,9 +95,6 @@ export class OffersService {
 
   async findAll(query: ListSellerOffersDto) {
     const { page, limit, offset } = getPaginationParams(query);
-    const needsCategoryFilter = Boolean(
-      query.categoryId || query.subCategoryId,
-    );
     const qb = this.offers
       .createQueryBuilder('offer')
       .andWhere('offer.approvalStatus = :approved', { approved: 'approved' });
@@ -109,7 +103,7 @@ export class OffersService {
       if (query[field] !== undefined)
         qb.andWhere(`offer.${field} = :${field}`, { [field]: query[field] });
 
-    if (needsCategoryFilter) {
+    if (query.categoryId || query.subCategoryId) {
       qb.innerJoin('offer.product', 'filterProduct').innerJoin(
         'filterProduct.productCategories',
         'pcFilter',
@@ -124,20 +118,18 @@ export class OffersService {
           subCategoryId: query.subCategoryId,
         });
       }
-      qb.distinct(true);
     }
 
     const [items, total] = await qb
+      .distinct(true)
       .orderBy('offer.price', 'ASC')
       .addOrderBy('offer.id', 'ASC')
       .skip(offset)
       .take(limit)
       .getManyAndCount();
 
-    // لیست: محصول سبک (بدون description / درخت دسته / همه attribute values)
     const products = await this.productsService.findByIds(
       items.map((offer) => offer.productId),
-      'list',
     );
     const productById = new Map(products.map((product) => [product.id, product]));
 

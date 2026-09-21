@@ -14,17 +14,6 @@ export interface ProductFilters {
   subCategoryId?: string;
 }
 
-/** none = بدون join | list = برند+موجودی | detail = درخت کامل */
-export type ProductRelationMode = 'none' | 'list' | 'detail';
-
-function toRelationMode(
-  includeRelations: boolean | ProductRelationMode,
-): ProductRelationMode {
-  if (includeRelations === true) return 'detail';
-  if (includeRelations === false) return 'none';
-  return includeRelations;
-}
-
 @Injectable()
 export class ProductRepository {
   constructor(
@@ -48,52 +37,11 @@ export class ProductRepository {
     });
   }
 
-  findByIds(
-    ids: string[],
-    includeRelations: boolean | ProductRelationMode = false,
-  ) {
+  findByIds(ids: string[], includeRelations = false) {
     if (ids.length === 0) return Promise.resolve([] as Product[]);
-    const mode = toRelationMode(includeRelations);
-    if (mode === 'list') {
-      return this.repo
-        .createQueryBuilder('product')
-        .select([
-          'product.id',
-          'product.name',
-          'product.slug',
-          'product.price',
-          'product.image',
-          'product.brandId',
-        ])
-        .leftJoin('product.brand', 'brand')
-        .addSelect([
-          'brand.id',
-          'brand.name',
-          'brand.slug',
-          'brand.logoUrl',
-        ])
-        .leftJoin('product.productCategories', 'productCategories')
-        .addSelect([
-          'productCategories.id',
-          'productCategories.categoryId',
-          'productCategories.subCategoryId',
-          'productCategories.isPrimary',
-          'productCategories.position',
-        ])
-        .leftJoin('productCategories.category', 'category')
-        .addSelect(['category.id', 'category.name', 'category.slug'])
-        .leftJoin('productCategories.subCategory', 'subCategory')
-        .addSelect([
-          'subCategory.id',
-          'subCategory.name',
-          'subCategory.slug',
-          'subCategory.categoryId',
-        ])
-        .where('product.id IN (:...ids)', { ids: [...new Set(ids)] })
-        .getMany();
-    }
-    const relations =
-      mode === 'detail'
+    return this.repo.find({
+      where: { id: In([...new Set(ids)]) },
+      relations: includeRelations
         ? {
             brand: true,
             shippingMethod: true,
@@ -103,10 +51,7 @@ export class ProductRepository {
               subCategory: { category: { parentCategory: true } },
             },
           }
-        : undefined;
-    return this.repo.find({
-      where: { id: In([...new Set(ids)]) },
-      relations,
+        : undefined,
     });
   }
 
@@ -135,9 +80,6 @@ export class ProductRepository {
   }
 
   findByFilters(filters: ProductFilters = {}, includeRelations = false) {
-    const needsCategoryFilter = Boolean(
-      filters.categoryId || filters.subCategoryId,
-    );
     const qb = this.repo
       .createQueryBuilder('product')
       .orderBy('product.createdAt', 'DESC');
@@ -183,7 +125,8 @@ export class ProductRepository {
         `(product.name LIKE :search
           OR product.subtitle LIKE :search
           OR product.slug LIKE :search
-          OR product.sku LIKE :search)`,
+          OR product.sku LIKE :search
+          OR product.shortDescription LIKE :search)`,
         { search },
       );
     }
@@ -192,7 +135,7 @@ export class ProductRepository {
       qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
-    if (needsCategoryFilter) {
+    if (filters.categoryId || filters.subCategoryId) {
       qb.innerJoin('product.productCategories', 'pcFilter');
       if (filters.categoryId) {
         qb.andWhere('pcFilter.categoryId = :categoryId', {
@@ -206,11 +149,7 @@ export class ProductRepository {
       }
     }
 
-    if (needsCategoryFilter || includeRelations) {
-      qb.distinct(true);
-    }
-
-    return qb.getMany();
+    return qb.distinct(true).getMany();
   }
 
   findFiltered(filters: ProductFilters = {}, includeRelations = false) {
@@ -227,53 +166,15 @@ export class ProductRepository {
     offset: number,
     limit: number,
     filters: ProductFilters = {},
-    includeRelations: boolean | ProductRelationMode = false,
+    includeRelations = false,
   ) {
-    const mode = toRelationMode(includeRelations);
-    const needsCategoryFilter = Boolean(
-      filters.categoryId || filters.subCategoryId,
-    );
     const qb = this.repo
       .createQueryBuilder('product')
       .orderBy('product.createdAt', 'DESC')
       .skip(offset)
       .take(limit);
 
-    if (mode === 'list') {
-      qb.select([
-        'product.id',
-        'product.name',
-        'product.slug',
-        'product.price',
-        'product.image',
-        'product.brandId',
-        'product.createdAt',
-      ])
-        .leftJoin('product.brand', 'brand')
-        .addSelect([
-          'brand.id',
-          'brand.name',
-          'brand.slug',
-          'brand.logoUrl',
-        ])
-        .leftJoin('product.productCategories', 'productCategories')
-        .addSelect([
-          'productCategories.id',
-          'productCategories.categoryId',
-          'productCategories.subCategoryId',
-          'productCategories.isPrimary',
-          'productCategories.position',
-        ])
-        .leftJoin('productCategories.category', 'category')
-        .addSelect(['category.id', 'category.name', 'category.slug'])
-        .leftJoin('productCategories.subCategory', 'subCategory')
-        .addSelect([
-          'subCategory.id',
-          'subCategory.name',
-          'subCategory.slug',
-          'subCategory.categoryId',
-        ]);
-    } else if (mode === 'detail') {
+    if (includeRelations) {
       qb.leftJoinAndSelect('product.brand', 'brand')
         .leftJoinAndSelect('product.shippingMethod', 'shippingMethod')
         .leftJoinAndSelect('product.productStock', 'productStock')
@@ -288,7 +189,7 @@ export class ProductRepository {
         );
     }
 
-    if (needsCategoryFilter) {
+    if (filters.categoryId || filters.subCategoryId) {
       qb.innerJoin('product.productCategories', 'pcFilter');
       if (filters.categoryId) {
         qb.andWhere('pcFilter.categoryId = :categoryId', {
@@ -328,7 +229,8 @@ export class ProductRepository {
         `(product.name LIKE :search
           OR product.subtitle LIKE :search
           OR product.slug LIKE :search
-          OR product.sku LIKE :search)`,
+          OR product.sku LIKE :search
+          OR product.shortDescription LIKE :search)`,
         { search },
       );
     }
@@ -337,12 +239,7 @@ export class ProductRepository {
       qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
-    // list همیشه join دسته دارد → ممکن است ردیف تکراری شود
-    if (needsCategoryFilter || mode === 'detail' || mode === 'list') {
-      qb.distinct(true);
-    }
-
-    return qb.getManyAndCount();
+    return qb.distinct(true).getManyAndCount();
   }
 
   getNextLegacyId() {
