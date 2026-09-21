@@ -40,6 +40,8 @@ export class UserRepository {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('user.seller', 'seller')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('user.addresses', 'addresses')
       .orderBy('user.createdAt', 'DESC')
       .skip(offset)
       .take(limit);
@@ -100,13 +102,9 @@ export class UserRepository {
   }
 
   findAdminIdsBySellerId(sellerId: string) {
-    return this.repo
-      .createQueryBuilder('user')
-      .select('user.id', 'id')
-      .where('user.sellerId = :sellerId', { sellerId })
-      .orderBy('user.createdAt', 'ASC')
-      .getRawMany<{ id: string }>()
-      .then((rows) => rows.map((row) => row.id));
+    return this.findUsersBySellerId(sellerId).then((users) =>
+      users.map((user) => user.id),
+    );
   }
 
   findUsersBySellerId(sellerId: string) {
@@ -127,16 +125,6 @@ export class UserRepository {
       .where('user.adminId = :adminId', { adminId })
       .orderBy('user.createdAt', 'ASC')
       .getMany();
-  }
-
-  findUserIdsByAdminId(adminId: string) {
-    return this.repo
-      .createQueryBuilder('user')
-      .select('user.id', 'id')
-      .where('user.adminId = :adminId', { adminId })
-      .orderBy('user.createdAt', 'ASC')
-      .getRawMany<{ id: string }>()
-      .then((rows) => rows.map((row) => row.id));
   }
 
   async setUsersAdminId(userIds: string[], adminId: string | null) {

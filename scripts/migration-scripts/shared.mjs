@@ -41,19 +41,11 @@ export async function assertTables(connection, database, tableNames, side) {
   const found = new Set(rows.map((row) => row.TABLE_NAME));
   const missing = tableNames.filter((table) => !found.has(table));
   if (missing.length) {
-    throw new Error(
-      `${side} database is missing required table(s): ${missing.join(', ')}`,
-    );
+    throw new Error(`${side} database is missing required table(s): ${missing.join(', ')}`);
   }
 }
 
-export async function assertColumns(
-  connection,
-  database,
-  tableName,
-  columnNames,
-  side,
-) {
+export async function assertColumns(connection, database, tableName, columnNames, side) {
   const [rows] = await connection.execute(
     `SELECT COLUMN_NAME FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
@@ -63,9 +55,7 @@ export async function assertColumns(
   const found = new Set(rows.map((row) => row.COLUMN_NAME));
   const missing = columnNames.filter((column) => !found.has(column));
   if (missing.length) {
-    throw new Error(
-      `${side} table ${tableName} is missing required column(s): ${missing.join(', ')}`,
-    );
+    throw new Error(`${side} table ${tableName} is missing required column(s): ${missing.join(', ')}`);
   }
 }
 

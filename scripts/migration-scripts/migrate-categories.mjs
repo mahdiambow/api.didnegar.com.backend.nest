@@ -211,24 +211,10 @@ async function migrateCategoryBatch({
 
 async function ensureDefaultCategory(target, parentCategoryId) {
   const [existing] = await target.execute(
-    'SELECT id, parentCategoryId, legacyTable FROM categories WHERE slug = ? LIMIT 1',
-    [DEFAULT_CATEGORY_SLUG],
+    'SELECT id FROM categories WHERE parentCategoryId = ? AND slug = ? LIMIT 1',
+    [parentCategoryId, DEFAULT_CATEGORY_SLUG],
   );
-  if (existing[0]) {
-    // slug is globally unique. A prior migration may already have created the
-    // generated default beneath an older selected parent; reuse it rather than
-    // attempting an impossible second `default` insert.
-    if (
-      existing[0].legacyTable === 'migration_defaults' &&
-      existing[0].parentCategoryId !== parentCategoryId
-    ) {
-      await target.execute(
-        'UPDATE categories SET parentCategoryId = ?, updatedAt = NOW() WHERE id = ?',
-        [parentCategoryId, existing[0].id],
-      );
-    }
-    return existing[0].id;
-  }
+  if (existing[0]) return existing[0].id;
   const id = newId();
   await target.execute(
     `INSERT INTO categories (id, parentCategoryId, legacyId, legacyTable, name, nameEn, slug, icon, image,

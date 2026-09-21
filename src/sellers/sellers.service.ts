@@ -47,7 +47,7 @@ export class SellersService {
     );
 
     const data = await Promise.all(
-      items.map((seller) => this.buildSellerResponse(seller, 'list')),
+      items.map((seller) => this.buildSellerResponse(seller)),
     );
 
     return paginatedList(data, page, limit, total);
@@ -64,7 +64,7 @@ export class SellersService {
     }
 
     this.assertSellerAccessible(scope, seller.id);
-    return this.buildSellerResponse(seller, 'detail');
+    return this.buildSellerResponse(seller);
   }
 
   async create(scope: TenantScope, dto: CreateSellerDto) {
@@ -235,29 +235,15 @@ export class SellersService {
     return {};
   }
 
-  private async buildSellerResponse(
-    seller: Awaited<ReturnType<SellerRepository['findById']>>,
-    mode: 'list' | 'detail' = 'detail',
-  ) {
+  private async buildSellerResponse(seller: Awaited<
+    ReturnType<SellerRepository['findById']>
+  >) {
     if (!seller) {
       throw new ApiException(
         'SELLER_NOT_FOUND',
         'فروشنده یافت نشد',
         HttpStatus.NOT_FOUND,
       );
-    }
-
-    if (mode === 'list') {
-      const [contract, adminIds] = await Promise.all([
-        this.contractRepository.findLatestBySellerId(seller.id),
-        this.userRepository.findAdminIdsBySellerId(seller.id),
-      ]);
-      return toSellerResponse(seller, {
-        contractId: contract?.id ?? null,
-        adminIds,
-        admins: [],
-        contract: null,
-      });
     }
 
     const [contract, users] = await Promise.all([

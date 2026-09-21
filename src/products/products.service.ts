@@ -19,10 +19,8 @@ import {
   toAttributeResponse,
   toAttributeValueResponse,
   toBrandResponse,
-  toProductListResponse,
   toProductResponse,
   toSellerResponse,
-  type ProductListItemDto,
   type ProductResponseDto,
 } from './dto/product-response.dto.js';
 import { BrandRepository } from '../brands/repositories/brand.repository.js';
@@ -72,11 +70,11 @@ export class ProductsService {
         categoryId: query.categoryId,
         subCategoryId: query.subCategoryId,
       },
-      'list',
+      true,
     );
 
     return paginatedList(
-      await this.toEnrichedProductResponses(items, 'list'),
+      await this.toEnrichedProductResponses(items),
       page,
       limit,
       total,
@@ -107,11 +105,11 @@ export class ProductsService {
         categoryId: query.categoryId,
         subCategoryId: query.subCategoryId,
       },
-      'list',
+      true,
     );
 
     return paginatedList(
-      await this.toEnrichedProductResponses(items, 'list'),
+      await this.toEnrichedProductResponses(items),
       page,
       limit,
       total,
@@ -150,17 +148,11 @@ export class ProductsService {
     return response;
   }
 
-  async findByIds(
-    ids: string[],
-    mode: 'list' | 'detail' = 'detail',
-  ): Promise<ProductResponseDto[] | ProductListItemDto[]> {
+  async findByIds(ids: string[]) {
     const uniqueIds = [...new Set(ids.filter(Boolean))];
-    if (uniqueIds.length === 0) return [];
-    const products = await this.productRepository.findByIds(uniqueIds, mode);
-    if (mode === 'list') {
-      return this.toEnrichedProductResponses(products, 'list');
-    }
-    return this.toEnrichedProductResponses(products, 'detail');
+    if (uniqueIds.length === 0) return [] as ProductResponseDto[];
+    const products = await this.productRepository.findByIds(uniqueIds, true);
+    return this.toEnrichedProductResponses(products);
   }
 
   async create(dto: CreateProductDto) {
@@ -376,20 +368,7 @@ export class ProductsService {
 
   private async toEnrichedProductResponses(
     products: Product[],
-    mode: 'list',
-  ): Promise<ProductListItemDto[]>;
-  private async toEnrichedProductResponses(
-    products: Product[],
-    mode?: 'detail',
-  ): Promise<ProductResponseDto[]>;
-  private async toEnrichedProductResponses(
-    products: Product[],
-    mode: 'list' | 'detail' = 'detail',
-  ): Promise<ProductResponseDto[] | ProductListItemDto[]> {
-    if (mode === 'list') {
-      return products.map(toProductListResponse);
-    }
-
+  ): Promise<ProductResponseDto[]> {
     const priceValueIds = [
       ...new Set(
         products.flatMap((product) => {
@@ -426,9 +405,7 @@ export class ProductsService {
     const [attributes, sellers, shippingMethods] = await Promise.all([
       this.attributeRepository.findByIdsWithValues(attributeIds),
       this.sellerRepository.findByIds(sellerIds),
-      shippingMethodIds.length
-        ? this.shippingMethodRepository.findByIds(shippingMethodIds)
-        : Promise.resolve([]),
+      this.shippingMethodRepository.findByIds(shippingMethodIds),
     ]);
 
     const attributeMap = new Map(

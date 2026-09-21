@@ -56,36 +56,34 @@ export class ProductCategoryRepository {
       categoryId?: string;
       subCategoryId?: string;
     },
-    mode: 'list' | 'detail' = 'list',
   ) {
     const qb = this.repo
       .createQueryBuilder('pc')
+      .leftJoinAndSelect('pc.category', 'category')
+      .leftJoinAndSelect('category.parentCategory', 'parentCategory')
+      .leftJoinAndSelect('pc.subCategory', 'subCategory')
+      .leftJoinAndSelect('subCategory.category', 'subCategoryCategory')
+      .leftJoinAndSelect(
+        'subCategoryCategory.parentCategory',
+        'subParentCategory',
+      )
       .orderBy('pc.position', 'ASC')
       .addOrderBy('pc.createdAt', 'ASC')
       .skip(offset)
       .take(limit);
-
-    if (mode === 'detail') {
-      qb.leftJoinAndSelect('pc.category', 'category')
-        .leftJoinAndSelect('category.parentCategory', 'parentCategory')
-        .leftJoinAndSelect('pc.subCategory', 'subCategory')
-        .leftJoinAndSelect('subCategory.category', 'subCategoryCategory')
-        .leftJoinAndSelect(
-          'subCategoryCategory.parentCategory',
-          'subParentCategory',
-        );
-    }
 
     if (filters.productId) {
       qb.andWhere('pc.productId = :productId', {
         productId: filters.productId,
       });
     }
+
     if (filters.categoryId) {
       qb.andWhere('pc.categoryId = :categoryId', {
         categoryId: filters.categoryId,
       });
     }
+
     if (filters.subCategoryId) {
       qb.andWhere('pc.subCategoryId = :subCategoryId', {
         subCategoryId: filters.subCategoryId,
