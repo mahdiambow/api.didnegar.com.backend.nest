@@ -34,6 +34,7 @@
     "db:migrate:locations": "node scripts/migration-scripts/migrate-locations.mjs",
     "db:migrate:addresses": "node scripts/migration-scripts/migrate-addresses.mjs",
     "db:migrate:customers": "node scripts/migration-scripts/migrate-customers.mjs",
+    "db:migrate:orders": "node scripts/migration-scripts/migrate-orders.mjs",
     "db:migrate:categories": "node scripts/migration-scripts/migrate-categories.mjs",
     "db:migrate:attributes": "node scripts/migration-scripts/migrate-attributes.mjs",
     "db:migrate:catalog": "node scripts/migration-scripts/migrate-catalog.mjs",
