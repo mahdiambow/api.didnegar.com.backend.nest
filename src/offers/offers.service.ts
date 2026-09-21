@@ -95,6 +95,9 @@ export class OffersService {
 
   async findAll(query: ListSellerOffersDto) {
     const { page, limit, offset } = getPaginationParams(query);
+    const needsCategoryFilter = Boolean(
+      query.categoryId || query.subCategoryId,
+    );
     const qb = this.offers
       .createQueryBuilder('offer')
       .andWhere('offer.approvalStatus = :approved', { approved: 'approved' });
@@ -103,7 +106,7 @@ export class OffersService {
       if (query[field] !== undefined)
         qb.andWhere(`offer.${field} = :${field}`, { [field]: query[field] });
 
-    if (query.categoryId || query.subCategoryId) {
+    if (needsCategoryFilter) {
       qb.innerJoin('offer.product', 'filterProduct').innerJoin(
         'filterProduct.productCategories',
         'pcFilter',
@@ -118,18 +121,20 @@ export class OffersService {
           subCategoryId: query.subCategoryId,
         });
       }
+      qb.distinct(true);
     }
 
     const [items, total] = await qb
-      .distinct(true)
       .orderBy('offer.price', 'ASC')
       .addOrderBy('offer.id', 'ASC')
       .skip(offset)
       .take(limit)
       .getManyAndCount();
 
+    // لیست: محصول سبک (بدون description / درخت دسته / همه attribute values)
     const products = await this.productsService.findByIds(
       items.map((offer) => offer.productId),
+      'list',
     );
     const productById = new Map(products.map((product) => [product.id, product]));
 

@@ -48,21 +48,29 @@ export class ProductRepository {
     });
   }
 
-  findByIds(ids: string[], includeRelations = false) {
+  findByIds(
+    ids: string[],
+    includeRelations: boolean | ProductRelationMode = false,
+  ) {
     if (ids.length === 0) return Promise.resolve([] as Product[]);
+    const mode = toRelationMode(includeRelations);
+    const relations =
+      mode === 'list'
+        ? { brand: true, productStock: true }
+        : mode === 'detail'
+          ? {
+              brand: true,
+              shippingMethod: true,
+              productStock: true,
+              productCategories: {
+                category: { parentCategory: true },
+                subCategory: { category: { parentCategory: true } },
+              },
+            }
+          : undefined;
     return this.repo.find({
       where: { id: In([...new Set(ids)]) },
-      relations: includeRelations
-        ? {
-            brand: true,
-            shippingMethod: true,
-            productStock: true,
-            productCategories: {
-              category: { parentCategory: true },
-              subCategory: { category: { parentCategory: true } },
-            },
-          }
-        : undefined,
+      relations,
     });
   }
 

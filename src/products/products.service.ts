@@ -148,11 +148,14 @@ export class ProductsService {
     return response;
   }
 
-  async findByIds(ids: string[]) {
+  async findByIds(ids: string[], mode: 'list' | 'detail' = 'detail') {
     const uniqueIds = [...new Set(ids.filter(Boolean))];
     if (uniqueIds.length === 0) return [] as ProductResponseDto[];
-    const products = await this.productRepository.findByIds(uniqueIds, true);
-    return this.toEnrichedProductResponses(products);
+    const products = await this.productRepository.findByIds(
+      uniqueIds,
+      mode,
+    );
+    return this.toEnrichedProductResponses(products, mode);
   }
 
   async create(dto: CreateProductDto) {
