@@ -135,15 +135,43 @@ async function main() {
       source,
       legacyDatabase,
       'product_variant_images',
-      ['id', 'productVariantId', 'mediaId', 'sortOrder', 'isPrimary'],
+      [
+        'id',
+        'productVariantId',
+        'mediaId',
+        'sortOrder',
+        'isPrimary',
+        'createdAt',
+        'updatedAt',
+      ],
       'Legacy',
     );
-    await assertTables(target, targetDatabase, ['media'], 'Target');
+    await assertTables(
+      target,
+      targetDatabase,
+      ['media', 'product_media'],
+      'Target',
+    );
     await assertColumns(
       target,
       targetDatabase,
       'media',
       ['id', 'url'],
+      'Target',
+    );
+    await assertColumns(
+      target,
+      targetDatabase,
+      'product_media',
+      [
+        'id',
+        'productId',
+        'mediaId',
+        'sortOrder',
+        'isPrimary',
+        'createdAt',
+        'updatedAt',
+      ],
       'Target',
     );
     await assertTables(target, targetDatabase, ['products'], 'Target');
@@ -170,6 +198,7 @@ async function main() {
       skipped: 0,
       missingProducts: 0,
       missingMediaUrls: 0,
+      relationsUpserted: 0,
     };
 
     const batchCount = await readBatches(
@@ -180,6 +209,8 @@ async function main() {
          pvi.mediaId,
          pvi.sortOrder,
          pvi.isPrimary,
+         pvi.createdAt,
+         pvi.updatedAt,
          p.legacyId AS productLegacyId
        FROM product_variant_images pvi
        INNER JOIN product_variants pv ON pv.id = pvi.productVariantId
@@ -193,8 +224,10 @@ async function main() {
           skipped: 0,
           missingProducts: 0,
           missingMediaUrls: 0,
+          relationsUpserted: 0,
         };
         const changedProductIds = new Set();
+        const relations = new Map();
 
         for (const row of rows) {
           const targetProduct = targetProducts.byLegacyId.get(
@@ -212,8 +245,34 @@ async function main() {
             continue;
           }
 
-          const mediaUrl = migratedMedia.get(row.mediaId);
-          const url = typeof mediaUrl === 'string' ? mediaUrl.trim() : '';
+          const media = migratedMedia.get(row.mediaId);
+          if (!media) {
+            await writeReport({
+              type: 'missing-migrated-media',
+              variantImageId: row.variantImageId,
+              productVariantId: row.productVariantId,
+              mediaId: row.mediaId,
+              productLegacyId: row.productLegacyId,
+            });
+            count.missingMediaUrls += 1;
+            count.skipped += 1;
+            continue;
+          }
+
+          const relationKey = `${targetProduct.id}:${row.mediaId}`;
+          if (!relations.has(relationKey)) {
+            relations.set(relationKey, {
+              id: row.variantImageId,
+              productId: targetProduct.id,
+              mediaId: row.mediaId,
+              sortOrder: Number(row.sortOrder) || 0,
+              isPrimary: row.isPrimary ? 1 : 0,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+            });
+          }
+
+          const url = typeof media.url === 'string' ? media.url.trim() : '';
           if (!url) {
             await writeReport({
               type: 'missing-migrated-media-url',
@@ -243,6 +302,25 @@ async function main() {
 
         await target.beginTransaction();
         try {
+          for (const relation of relations.values()) {
+            await target.execute(
+              `INSERT INTO product_media (id, productId, mediaId, sortOrder, isPrimary, createdAt, updatedAt)
+               VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON DUPLICATE KEY UPDATE
+                 productId = VALUES(productId), mediaId = VALUES(mediaId), sortOrder = VALUES(sortOrder),
+                 isPrimary = VALUES(isPrimary), createdAt = VALUES(createdAt), updatedAt = VALUES(updatedAt)`,
+              [
+                relation.id,
+                relation.productId,
+                relation.mediaId,
+                relation.sortOrder,
+                relation.isPrimary,
+                relation.createdAt,
+                relation.updatedAt,
+              ],
+            );
+            count.relationsUpserted += 1;
+          }
           for (const productId of changedProductIds) {
             const targetProduct = targetProducts.byId.get(productId);
             await target.execute(

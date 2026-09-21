@@ -94,7 +94,10 @@ First run the normal Nest schema migrations to create the Nest database's
 legacy-compatible `media` table. `db:migrate:media` then preserves all legacy media
 metadata and IDs in that table. Run it after catalog, then run the product image
 migration. It maps legacy `product_variant_images` through the migrated Nest media table into the existing product
-`image` JSON: `{ "featuredImg": "...", "gallery": ["..."] }`.
+`image` JSON: `{ "featuredImg": "...", "gallery": ["..."] }` and creates the
+normalized `product_media` relation rows. The `product_media` table is the Nest
+equivalent of legacy `product_variant_images`, using `productId` because target
+product variants are intentionally not stored.
 The first valid image ordered by legacy primary flag and sort order becomes
 `featuredImg`; all unique URLs are retained in `gallery`. No target schema migration
 or seller-offer image column is used.
