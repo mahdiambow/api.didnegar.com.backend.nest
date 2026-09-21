@@ -49,7 +49,7 @@ export class OffersController {
   @ApiOperation({
     summary: 'List approved seller offers',
     description:
-      'لیست پیشنهادهای فروش تأییدشده (خلاصه)\n\nفقط آفرهای approved؛ بدون tax/rejectionReason/description — جزئیات در GET تکی.',
+      'لیست پیشنهادهای فروش تأییدشده (خلاصه)\n\nفقط آفرهای approved؛ بدون tax/rejectionReason/description — جزئیات در GET تکی.\n\nبرای سرعت بیشتر می‌توانید `includeTotal=false` بفرستید تا COUNT اجرا نشود.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_FOUND',
