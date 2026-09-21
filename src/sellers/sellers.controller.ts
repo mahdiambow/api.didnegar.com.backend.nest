@@ -27,7 +27,7 @@ import { PERMISSIONS } from '../roles/permissions.js';
 import { SellersService } from './sellers.service.js';
 import { CreateSellerDto } from './dto/create-seller.dto.js';
 import { UpdateSellerDto } from './dto/update-seller.dto.js';
-import { SellerResponseDto } from './dto/seller-response.dto.js';
+import { SellerListItemDto, SellerResponseDto } from './dto/seller-response.dto.js';
 import { ListSellersQueryDto } from './dto/list-sellers-query.dto.js';
 
 const SellerApiResponseDto = createSuccessResponseDto(SellerResponseDto, {
@@ -37,7 +37,7 @@ const SellerApiResponseDto = createSuccessResponseDto(SellerResponseDto, {
 });
 
 const SellersPaginatedApiResponseDto = createPaginatedResponseDto(
-  SellerResponseDto,
+  SellerListItemDto,
   {
     code: 'SELLERS_FOUND',
     message: 'Sellers retrieved successfully',
@@ -58,7 +58,11 @@ export class SellersController {
     code: 'SELLERS_FOUND',
     message: 'Sellers retrieved successfully',
   })
-  @ApiOperation({ summary: 'List sellers', description: 'لیست فروشندگان' })
+  @ApiOperation({
+    summary: 'List sellers',
+    description:
+      'لیست فروشندگان — خلاصه (بدون آدرس/کدملی/قرارداد/ادمین‌ها؛ جزئیات در GET تکی)',
+  })
   @ApiOkResponse({ type: SellersPaginatedApiResponseDto })
   findAll(@Req() req: { user: AuthUser }, @Query() query: ListSellersQueryDto) {
     return this.sellersService.findAll(req.user, query);

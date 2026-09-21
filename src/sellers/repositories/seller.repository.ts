@@ -32,6 +32,18 @@ export class SellerRepository {
   ) {
     const qb = this.repo
       .createQueryBuilder('seller')
+      .select([
+        'seller.id',
+        'seller.name',
+        'seller.slug',
+        'seller.businessName',
+        'seller.businessType',
+        'seller.email',
+        'seller.phone',
+        'seller.city',
+        'seller.status',
+        'seller.createdAt',
+      ])
       .orderBy('seller.createdAt', 'DESC')
       .skip(offset)
       .take(limit);

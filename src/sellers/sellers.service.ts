@@ -19,7 +19,10 @@ import { SellerRepository } from './repositories/seller.repository.js';
 import { SellerContractRepository } from './repositories/seller-contract.repository.js';
 import { CreateSellerDto } from './dto/create-seller.dto.js';
 import { UpdateSellerDto } from './dto/update-seller.dto.js';
-import { toSellerResponse } from './dto/seller-response.dto.js';
+import {
+  toSellerListResponse,
+  toSellerResponse,
+} from './dto/seller-response.dto.js';
 import { toSellerContractResponse } from './dto/seller-contract-response.dto.js';
 
 @Injectable()
@@ -46,11 +49,12 @@ export class SellersService {
       },
     );
 
-    const data = await Promise.all(
-      items.map((seller) => this.buildSellerResponse(seller, 'list')),
+    return paginatedList(
+      items.map((seller) => toSellerListResponse(seller)),
+      page,
+      limit,
+      total,
     );
-
-    return paginatedList(data, page, limit, total);
   }
 
   async findOne(scope: TenantScope, id: string) {
@@ -64,7 +68,7 @@ export class SellersService {
     }
 
     this.assertSellerAccessible(scope, seller.id);
-    return this.buildSellerResponse(seller, 'detail');
+    return this.buildSellerResponse(seller);
   }
 
   async create(scope: TenantScope, dto: CreateSellerDto) {
@@ -237,7 +241,6 @@ export class SellersService {
 
   private async buildSellerResponse(
     seller: Awaited<ReturnType<SellerRepository['findById']>>,
-    mode: 'list' | 'detail' = 'detail',
   ) {
     if (!seller) {
       throw new ApiException(
@@ -245,19 +248,6 @@ export class SellersService {
         'فروشنده یافت نشد',
         HttpStatus.NOT_FOUND,
       );
-    }
-
-    if (mode === 'list') {
-      const [contract, adminIds] = await Promise.all([
-        this.contractRepository.findLatestBySellerId(seller.id),
-        this.userRepository.findAdminIdsBySellerId(seller.id),
-      ]);
-      return toSellerResponse(seller, {
-        contractId: contract?.id ?? null,
-        adminIds,
-        admins: [],
-        contract: null,
-      });
     }
 
     const [contract, users] = await Promise.all([

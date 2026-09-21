@@ -17,6 +17,7 @@ import {
   CreateSellerOffersDto,
   UpdateSellerOfferDto,
   SellerOfferResponseDto,
+  SellerOfferListItemDto,
   ListSellerOffersDto,
   ReviewSellerOfferDto,
 } from './dto/seller-offer.dto.js';
@@ -31,7 +32,7 @@ const OfferApiResponseDto = createSuccessResponseDto(SellerOfferResponseDto, {
 });
 
 const OffersApiResponseDto = createPaginatedResponseDto(
-  SellerOfferResponseDto,
+  SellerOfferListItemDto,
   {
     code: 'OFFERS_FOUND',
     message: 'Offers retrieved successfully',
@@ -47,7 +48,8 @@ export class OffersController {
   @Get()
   @ApiOperation({
     summary: 'List approved seller offers',
-    description: 'لیست پیشنهادهای فروش تأییدشده\n\nفقط آفرهای با approvalStatus=approved برمی‌گردند.',
+    description:
+      'لیست پیشنهادهای فروش تأییدشده (خلاصه)\n\nفقط آفرهای approved؛ بدون tax/rejectionReason/description — جزئیات در GET تکی.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_FOUND',

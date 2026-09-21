@@ -100,3 +100,51 @@ export function toSellerResponse(
     contract: relations.contract ?? null,
   };
 }
+
+/** پاسخ لیست فروشنده — بدون PII سنگین، قرارداد و ادمین‌ها */
+export class SellerListItemDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  slug: string;
+
+  @ApiProperty()
+  businessName: string;
+
+  @ApiProperty({ enum: BusinessType })
+  businessType: BusinessType;
+
+  @ApiProperty()
+  email: string;
+
+  @ApiProperty()
+  phone: string;
+
+  @ApiPropertyOptional()
+  city: string | null;
+
+  @ApiProperty({ enum: SellerStatus })
+  status: SellerStatus;
+
+  @ApiProperty()
+  createdAt: Date;
+}
+
+export function toSellerListResponse(seller: Seller): SellerListItemDto {
+  return {
+    id: seller.id,
+    name: seller.name,
+    slug: seller.slug,
+    businessName: seller.businessName,
+    businessType: seller.businessType,
+    email: seller.email,
+    phone: seller.phone,
+    city: seller.city ?? null,
+    status: seller.status,
+    createdAt: seller.createdAt,
+  };
+}
