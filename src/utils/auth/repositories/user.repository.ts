@@ -40,6 +40,8 @@ export class UserRepository {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.role', 'role')
       .leftJoinAndSelect('user.seller', 'seller')
+      .leftJoinAndSelect('user.profile', 'profile')
+      .leftJoinAndSelect('user.addresses', 'addresses')
       .orderBy('user.createdAt', 'DESC')
       .skip(offset)
       .take(limit);

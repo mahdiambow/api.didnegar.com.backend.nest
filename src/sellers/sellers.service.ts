@@ -248,15 +248,17 @@ export class SellersService {
     }
 
     if (mode === 'list') {
-      const [contract, adminIds] = await Promise.all([
+      const [contract, users] = await Promise.all([
         this.contractRepository.findLatestBySellerId(seller.id),
-        this.userRepository.findAdminIdsBySellerId(seller.id),
+        this.userRepository.findUsersBySellerId(seller.id),
       ]);
+      // لیست: ادمین‌ها و قرارداد واقعی — بدون N+1 برای extraRoles
+      const admins = users.map((user) => toUserResponse(user, []));
       return toSellerResponse(seller, {
         contractId: contract?.id ?? null,
-        adminIds,
-        admins: [],
-        contract: null,
+        adminIds: admins.map((admin) => admin.id),
+        admins,
+        contract: contract ? toSellerContractResponse(contract) : null,
       });
     }
 

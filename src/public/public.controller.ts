@@ -19,6 +19,7 @@ import { BannerResponseDto } from '../settings/dto/banner.dto.js';
 import { AboutUsResponseDto } from '../settings/dto/about-us.dto.js';
 import { ContactSettingsResponseDto } from '../settings/dto/contact-settings.dto.js';
 import {
+  ProductListItemDto,
   ProductPriceResponseDto,
   ProductResponseDto,
 } from '../products/dto/product-response.dto.js';
@@ -61,7 +62,7 @@ const PublicContactUsApiResponseDto = createSuccessResponseDto(
 );
 
 const PublicProductsPaginatedApiResponseDto = createPaginatedResponseDto(
-  ProductResponseDto,
+  ProductListItemDto,
   {
     code: 'PUBLIC_PRODUCTS_FOUND',
     message: 'Products retrieved successfully',
@@ -88,6 +89,7 @@ const PublicCategoriesApiResponseDto = createSuccessResponseDto(
 @ApiTags('Public')
 @ApiExtraModels(
   ProductResponseDto,
+  ProductListItemDto,
   ProductPriceResponseDto,
   AttributeValueResponseDto,
 )

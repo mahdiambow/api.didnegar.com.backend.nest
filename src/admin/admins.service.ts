@@ -171,10 +171,11 @@ export class AdminsService {
     mode: 'list' | 'detail' = 'detail',
   ) {
     if (mode === 'list') {
-      const userIds = await this.userRepository.findUserIdsByAdminId(admin.id);
+      const users = await this.userRepository.findUsersByAdminId(admin.id);
+      const mapped = users.map((user) => toUserResponse(user, []));
       return toAdminResponse(admin, {
-        userIds,
-        users: undefined,
+        userIds: mapped.map((user) => user.id),
+        users: mapped,
       });
     }
 

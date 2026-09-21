@@ -65,7 +65,25 @@ export class ProductCategoryRepository {
       .skip(offset)
       .take(limit);
 
-    if (mode === 'detail') {
+    if (mode === 'list') {
+      // لیست: دسته با نام — بدون درخت parent
+      qb.leftJoin('pc.category', 'category')
+        .addSelect([
+          'category.id',
+          'category.name',
+          'category.slug',
+          'category.nameEn',
+          'category.parentCategoryId',
+        ])
+        .leftJoin('pc.subCategory', 'subCategory')
+        .addSelect([
+          'subCategory.id',
+          'subCategory.name',
+          'subCategory.slug',
+          'subCategory.nameEn',
+          'subCategory.categoryId',
+        ]);
+    } else {
       qb.leftJoinAndSelect('pc.category', 'category')
         .leftJoinAndSelect('category.parentCategory', 'parentCategory')
         .leftJoinAndSelect('pc.subCategory', 'subCategory')

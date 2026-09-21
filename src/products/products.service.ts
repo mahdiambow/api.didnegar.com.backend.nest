@@ -19,8 +19,10 @@ import {
   toAttributeResponse,
   toAttributeValueResponse,
   toBrandResponse,
+  toProductListResponse,
   toProductResponse,
   toSellerResponse,
+  type ProductListItemDto,
   type ProductResponseDto,
 } from './dto/product-response.dto.js';
 import { BrandRepository } from '../brands/repositories/brand.repository.js';
@@ -148,16 +150,131 @@ export class ProductsService {
     return response;
   }
 
-  async findByIds(ids: string[], mode: 'list' | 'detail' = 'detail') {
+  async findByIds(
+    ids: string[],
+    mode: 'list' | 'detail' = 'detail',
+  ): Promise<ProductResponseDto[] | ProductListItemDto[]> {
     const uniqueIds = [...new Set(ids.filter(Boolean))];
-    if (uniqueIds.length === 0) return [] as ProductResponseDto[];
-    const products = await this.productRepository.findByIds(
-      uniqueIds,
-      mode,
-    );
-    return this.toEnrichedProductResponses(products, mode);
+    if (uniqueIds.length === 0) return [];
+    const products = await this.productRepository.findByIds(uniqueIds, mode);
+    if (mode === 'list') {
+      return this.toEnrichedProductResponses(products, 'list');
+    }
+    return this.toEnrichedProductResponses(products, 'detail');
   }
 
+  private async toEnrichedProductResponses(
+    products: Product[],
+    mode: 'list',
+  ): Promise<ProductListItemDto[]>;
+  private async toEnrichedProductResponses(
+    products: Product[],
+    mode?: 'detail',
+  ): Promise<ProductResponseDto[]>;
+  private async toEnrichedProductResponses(
+    products: Product[],
+    mode: 'list' | 'detail' = 'detail',
+  ): Promise<ProductResponseDto[] | ProductListItemDto[]> {
+    if (mode === 'list') {
+      return products.map(toProductListResponse);
+    }
+
+    const priceValueIds = [
+      ...new Set(
+        products.flatMap((product) => {
+          const prices = Array.isArray(product.price)
+            ? product.price
+            : product.price
+              ? [product.price]
+              : [];
+          return prices.flatMap((item) => getPriceValueAttributeIds(item));
+        }),
+      ),
+    ];
+    const sellerIds = [
+      ...new Set(
+        products.flatMap((product) =>
+          product.createdBySellerId ? [product.createdBySellerId] : [],
+        ),
+      ),
+    ];
+    const shippingMethodIds = [
+      ...new Set(
+        products.flatMap((product) =>
+          product.shippingMethodId ? [product.shippingMethodId] : [],
+        ),
+      ),
+    ];
+
+    const priceValues =
+      await this.attributeValueRepository.findByIds(priceValueIds);
+    const attributeIds = [
+      ...new Set(priceValues.map((value) => value.attributeId).filter(Boolean)),
+    ];
+
+    const [attributes, sellers, shippingMethods] = await Promise.all([
+      this.attributeRepository.findByIdsWithValues(attributeIds),
+      this.sellerRepository.findByIds(sellerIds),
+      shippingMethodIds.length
+        ? this.shippingMethodRepository.findByIds(shippingMethodIds)
+        : Promise.resolve([]),
+    ]);
+
+    const attributeMap = new Map(
+      attributes.map((attribute) => [
+        attribute.id,
+        toAttributeResponse(attribute, true),
+      ]),
+    );
+    const attributeValueById = new Map(
+      [
+        ...attributes.flatMap((attribute) => attribute.values ?? []),
+        ...priceValues,
+      ].map((value) => [value.id, toAttributeValueResponse(value)]),
+    );
+    const sellerMap = new Map(
+      sellers.map((seller) => [seller.id, toSellerResponse(seller)]),
+    );
+    const shippingMethodMap = new Map(
+      shippingMethods.map((method) => [
+        method.id,
+        toShippingMethodResponse(method),
+      ]),
+    );
+
+    return products.map((product) => {
+      const prices = Array.isArray(product.price)
+        ? product.price
+        : product.price
+          ? [product.price]
+          : [];
+      const productValueIds = [
+        ...new Set(prices.flatMap((item) => getPriceValueAttributeIds(item))),
+      ];
+      const productAttributeIds = [
+        ...new Set(
+          productValueIds
+            .map((id) => attributeValueById.get(id)?.attributeId)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
+      return toProductResponse(product, true, {
+        attributes: productAttributeIds
+          .map((id) => attributeMap.get(id))
+          .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+        valueAttributes: productValueIds
+          .map((id) => attributeValueById.get(id))
+          .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+        attributeValueById,
+        createdBySeller: product.createdBySellerId
+          ? (sellerMap.get(product.createdBySellerId) ?? null)
+          : null,
+        shippingMethod: product.shippingMethodId
+          ? (shippingMethodMap.get(product.shippingMethodId) ?? null)
+          : null,
+      });
+    });
+  }
   async create(dto: CreateProductDto) {
     const { categoryIds, sellerIds, ...productData } = dto;
 
@@ -367,120 +484,6 @@ export class ProductsService {
     return this.brandRepository
       .findAllActive()
       .then((brands) => brands.map(toBrandResponse));
-  }
-
-  private async toEnrichedProductResponses(
-    products: Product[],
-    mode: 'list' | 'detail' = 'detail',
-  ): Promise<ProductResponseDto[]> {
-    const priceValueIds = [
-      ...new Set(
-        products.flatMap((product) => {
-          const prices = Array.isArray(product.price)
-            ? product.price
-            : product.price
-              ? [product.price]
-              : [];
-          return prices.flatMap((item) => getPriceValueAttributeIds(item));
-        }),
-      ),
-    ];
-    const sellerIds = [
-      ...new Set(
-        products.flatMap((product) =>
-          product.createdBySellerId ? [product.createdBySellerId] : [],
-        ),
-      ),
-    ];
-    const shippingMethodIds =
-      mode === 'detail'
-        ? [
-            ...new Set(
-              products.flatMap((product) =>
-                product.shippingMethodId ? [product.shippingMethodId] : [],
-              ),
-            ),
-          ]
-        : [];
-
-    const priceValues =
-      await this.attributeValueRepository.findByIds(priceValueIds);
-    const attributeIds = [
-      ...new Set(priceValues.map((value) => value.attributeId).filter(Boolean)),
-    ];
-
-    const [attributes, sellers, shippingMethods] = await Promise.all([
-      mode === 'list'
-        ? this.attributeRepository.findByIds(attributeIds)
-        : this.attributeRepository.findByIdsWithValues(attributeIds),
-      this.sellerRepository.findByIds(sellerIds),
-      shippingMethodIds.length
-        ? this.shippingMethodRepository.findByIds(shippingMethodIds)
-        : Promise.resolve([]),
-    ]);
-
-    const includeAttributeValues = mode === 'detail';
-    const attributeMap = new Map(
-      attributes.map((attribute) => [
-        attribute.id,
-        toAttributeResponse(attribute, includeAttributeValues),
-      ]),
-    );
-    const attributeValueById = new Map(
-      [
-        ...(includeAttributeValues
-          ? attributes.flatMap((attribute) => attribute.values ?? [])
-          : []),
-        ...priceValues,
-      ].map((value) => [value.id, toAttributeValueResponse(value)]),
-    );
-    const sellerMap = new Map(
-      sellers.map((seller) => [seller.id, toSellerResponse(seller)]),
-    );
-    const shippingMethodMap = new Map(
-      shippingMethods.map((method) => [
-        method.id,
-        toShippingMethodResponse(method),
-      ]),
-    );
-
-    return products.map((product) => {
-      const prices = Array.isArray(product.price)
-        ? product.price
-        : product.price
-          ? [product.price]
-          : [];
-      const productValueIds = [
-        ...new Set(prices.flatMap((item) => getPriceValueAttributeIds(item))),
-      ];
-      const productAttributeIds = [
-        ...new Set(
-          productValueIds
-            .map((id) => attributeValueById.get(id)?.attributeId)
-            .filter((id): id is string => Boolean(id)),
-        ),
-      ];
-      const response = toProductResponse(product, true, {
-        attributes: productAttributeIds
-          .map((id) => attributeMap.get(id))
-          .filter((item): item is NonNullable<typeof item> => Boolean(item)),
-        valueAttributes: productValueIds
-          .map((id) => attributeValueById.get(id))
-          .filter((item): item is NonNullable<typeof item> => Boolean(item)),
-        attributeValueById,
-        createdBySeller: product.createdBySellerId
-          ? (sellerMap.get(product.createdBySellerId) ?? null)
-          : null,
-        shippingMethod: product.shippingMethodId
-          ? (shippingMethodMap.get(product.shippingMethodId) ?? null)
-          : null,
-      });
-      if (mode === 'list') {
-        // payload سبک‌تر برای لیست — جزئیات کامل در GET تک‌محصول
-        response.description = null;
-      }
-      return response;
-    });
   }
 
   private async assertSlugAvailable(slug: string, excludeId?: string) {
