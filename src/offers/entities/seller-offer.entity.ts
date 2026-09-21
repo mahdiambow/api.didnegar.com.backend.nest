@@ -16,6 +16,7 @@ import type { Product } from '../../products/entities/product.entity.js';
 @Index(['productId'])
 @Index(['sellerId'])
 @Index(['legacyTable', 'legacyId'], { unique: true })
+@Index('IDX_seller_offers_approval_price_id', ['approvalStatus', 'price', 'id'])
 @Check('CHK_offer_price', '`price` >= 0')
 @Check('CHK_offer_stock', '`stock` >= 0')
 export class SellerOffer {

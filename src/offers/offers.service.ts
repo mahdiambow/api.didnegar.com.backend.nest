@@ -1,6 +1,6 @@
 import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Repository } from 'typeorm';
+import { EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import type { AuthUser } from '../utils/auth/types/auth-user.type.js';
 import { userHasRole } from '../utils/auth/types/auth-user.type.js';
@@ -101,6 +101,11 @@ export const toOfferListResponse = (
 
 @Injectable()
 export class OffersService {
+  /** کش COUNT لیست بدون فیلتر — از اجرای COUNT روی کل جدول در هر request جلوگیری می‌کند */
+  private static readonly APPROVED_COUNT_TTL_MS = 30_000;
+  private approvedCountCache: { value: number; expiresAt: number } | null =
+    null;
+
   constructor(
     @InjectRepository(SellerOffer)
     private readonly offers: Repository<SellerOffer>,
@@ -113,31 +118,81 @@ export class OffersService {
     private readonly productStockRepository: ProductStockRepository,
   ) {}
 
-
   async findAll(query: ListSellerOffersDto) {
     const { page, limit, offset } = getPaginationParams(query);
+    const includeTotal = query.includeTotal !== false;
     const needsCategoryFilter = Boolean(
       query.categoryId || query.subCategoryId,
     );
-    const qb = this.offers
-      .createQueryBuilder('offer')
-      .select([
-        'offer.id',
-        'offer.sellerId',
-        'offer.productId',
-        'offer.sku',
-        'offer.price',
-        'offer.stock',
-        'offer.stockStatus',
-        'offer.isOnSale',
-        'offer.isActive',
-        'offer.createdAt',
-      ])
-      .andWhere('offer.approvalStatus = :approved', { approved: 'approved' });
 
-    for (const field of ['sellerId', 'productId', 'isActive'] as const)
-      if (query[field] !== undefined)
+    const itemsQb = this.applyListFilters(
+      this.offers
+        .createQueryBuilder('offer')
+        .select([
+          'offer.id',
+          'offer.sellerId',
+          'offer.productId',
+          'offer.sku',
+          'offer.price',
+          'offer.stock',
+          'offer.stockStatus',
+          'offer.isOnSale',
+          'offer.isActive',
+          'offer.createdAt',
+        ]),
+      query,
+      needsCategoryFilter,
+    )
+      .orderBy('offer.price', 'ASC')
+      .addOrderBy('offer.id', 'ASC')
+      .skip(offset)
+      .take(limit);
+
+    const [items, total] = await Promise.all([
+      itemsQb.getMany(),
+      includeTotal
+        ? this.resolveListTotal(query, needsCategoryFilter)
+        : Promise.resolve(null),
+    ]);
+
+    // لیست: محصول سبک (بدون description / درخت دسته / همه attribute values)
+    const products = await this.productsService.findByIds(
+      items.map((offer) => offer.productId),
+      'list',
+    );
+    const productById = new Map(
+      products.map((product) => [product.id, product]),
+    );
+
+    const resolvedTotal =
+      total ??
+      // بدون COUNT: total تقریبی فقط برای hasNext/hasPrevious
+      (items.length === limit
+        ? offset + items.length + 1
+        : offset + items.length);
+
+    return paginatedList(
+      items.map((offer) =>
+        toOfferListResponse(offer, productById.get(offer.productId)),
+      ),
+      page,
+      limit,
+      resolvedTotal,
+    );
+  }
+
+  private applyListFilters(
+    qb: SelectQueryBuilder<SellerOffer>,
+    query: ListSellerOffersDto,
+    needsCategoryFilter: boolean,
+  ) {
+    qb.andWhere('offer.approvalStatus = :approved', { approved: 'approved' });
+
+    for (const field of ['sellerId', 'productId', 'isActive'] as const) {
+      if (query[field] !== undefined) {
         qb.andWhere(`offer.${field} = :${field}`, { [field]: query[field] });
+      }
+    }
 
     if (needsCategoryFilter) {
       qb.innerJoin('offer.product', 'filterProduct').innerJoin(
@@ -157,28 +212,54 @@ export class OffersService {
       qb.distinct(true);
     }
 
-    const [items, total] = await qb
-      .orderBy('offer.price', 'ASC')
-      .addOrderBy('offer.id', 'ASC')
-      .skip(offset)
-      .take(limit)
-      .getManyAndCount();
+    return qb;
+  }
 
-    // لیست: محصول سبک (بدون description / درخت دسته / همه attribute values)
-    const products = await this.productsService.findByIds(
-      items.map((offer) => offer.productId),
-      'list',
+  private isUnfilteredApprovedList(query: ListSellerOffersDto): boolean {
+    return (
+      query.sellerId === undefined &&
+      query.productId === undefined &&
+      query.isActive === undefined &&
+      !query.categoryId &&
+      !query.subCategoryId
     );
-    const productById = new Map(products.map((product) => [product.id, product]));
+  }
 
-    return paginatedList(
-      items.map((offer) =>
-        toOfferListResponse(offer, productById.get(offer.productId)),
-      ),
-      page,
-      limit,
-      total,
-    );
+  private async resolveListTotal(
+    query: ListSellerOffersDto,
+    needsCategoryFilter: boolean,
+  ): Promise<number> {
+    if (this.isUnfilteredApprovedList(query)) {
+      return this.getCachedApprovedCount();
+    }
+
+    return this.applyListFilters(
+      this.offers.createQueryBuilder('offer').select('offer.id'),
+      query,
+      needsCategoryFilter,
+    ).getCount();
+  }
+
+  private async getCachedApprovedCount(): Promise<number> {
+    const now = Date.now();
+    if (this.approvedCountCache && this.approvedCountCache.expiresAt > now) {
+      return this.approvedCountCache.value;
+    }
+
+    const value = await this.offers
+      .createQueryBuilder('offer')
+      .where('offer.approvalStatus = :approved', { approved: 'approved' })
+      .getCount();
+
+    this.approvedCountCache = {
+      value,
+      expiresAt: now + OffersService.APPROVED_COUNT_TTL_MS,
+    };
+    return value;
+  }
+
+  private invalidateApprovedCountCache() {
+    this.approvedCountCache = null;
   }
 
   async getEntity(id: string) {
@@ -436,6 +517,7 @@ export class OffersService {
     assertOfferAccess(user, offer.sellerId);
     try {
       await this.offers.delete(id);
+      this.invalidateApprovedCountCache();
     } catch (error) {
       if ((error as { code?: string }).code === '23503')
         throw new ApiException(
@@ -451,6 +533,7 @@ export class OffersService {
   private async save(offer: SellerOffer, includeProduct = false) {
     try {
       const saved = await this.offers.save(offer);
+      this.invalidateApprovedCountCache();
       if (!includeProduct) return toOfferResponse(saved);
       const product = await this.productsService.findOne(saved.productId);
       return toOfferResponse(saved, product);

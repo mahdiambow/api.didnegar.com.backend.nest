@@ -130,6 +130,22 @@ export class ListSellerOffersDto extends PaginationQueryDto {
   @IsOptional()
   @IsULID()
   subCategoryId?: string;
+
+  @ApiPropertyOptional({
+    default: true,
+    description:
+      'اگر false باشد COUNT سنگین اجرا نمی‌شود؛ hasNext از روی تعداد آیتم‌ها تخمین زده می‌شود',
+  })
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === 'false' || value === false
+      ? false
+      : value === 'true' || value === true
+        ? true
+        : value,
+  )
+  @IsBoolean()
+  includeTotal?: boolean = true;
 }
 
 export class SellerOfferResponseDto extends OmitType(SellerOfferItemDto, [
