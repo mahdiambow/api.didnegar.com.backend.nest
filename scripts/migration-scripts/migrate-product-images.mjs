@@ -22,7 +22,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: node scripts/migration-scripts/migrate-product-images.mjs
 
 Maps legacy product_variant_images/media URLs into products.image.
-Run after db:migrate:catalog. Invalid source links are recorded in ${reportPath}.`);
+Run after db:migrate:catalog and db:migrate:media. Invalid source links are recorded in ${reportPath}.`);
   process.exit(0);
 }
 
@@ -98,6 +98,11 @@ async function loadTargetProducts(target) {
   };
 }
 
+async function loadMigratedMedia(target) {
+  const [rows] = await target.execute('SELECT id, url FROM media');
+  return new Map(rows.map((row) => [row.id, row.url]));
+}
+
 async function main() {
   const source = await openLegacyConnection();
   const target = await openTargetConnection();
@@ -108,7 +113,7 @@ async function main() {
     await assertTables(
       source,
       legacyDatabase,
-      ['products', 'product_variants', 'product_variant_images', 'media'],
+      ['products', 'product_variants', 'product_variant_images'],
       'Legacy',
     );
     await assertColumns(
@@ -132,12 +137,13 @@ async function main() {
       ['id', 'productVariantId', 'mediaId', 'sortOrder', 'isPrimary'],
       'Legacy',
     );
+    await assertTables(target, targetDatabase, ['media'], 'Target');
     await assertColumns(
-      source,
-      legacyDatabase,
+      target,
+      targetDatabase,
       'media',
       ['id', 'url'],
-      'Legacy',
+      'Target',
     );
     await assertTables(target, targetDatabase, ['products'], 'Target');
     await assertColumns(
@@ -154,6 +160,7 @@ async function main() {
       'utf8',
     );
     const targetProducts = await loadTargetProducts(target);
+    const migratedMedia = await loadMigratedMedia(target);
     const initialized = new Set();
     const totals = {
       read: 0,
@@ -172,12 +179,10 @@ async function main() {
          pvi.mediaId,
          pvi.sortOrder,
          pvi.isPrimary,
-         p.legacyId AS productLegacyId,
-         media.url AS mediaUrl
+         p.legacyId AS productLegacyId
        FROM product_variant_images pvi
        INNER JOIN product_variants pv ON pv.id = pvi.productVariantId
        INNER JOIN products p ON p.id = pv.productId
-       LEFT JOIN media ON media.id = pvi.mediaId
        ORDER BY p.legacyId, pvi.isPrimary DESC, pvi.sortOrder ASC, pvi.id ASC`,
       async (rows, offset, batch) => {
         const count = {
@@ -206,11 +211,11 @@ async function main() {
             continue;
           }
 
-          const url =
-            typeof row.mediaUrl === 'string' ? row.mediaUrl.trim() : '';
+          const mediaUrl = migratedMedia.get(row.mediaId);
+          const url = typeof mediaUrl === 'string' ? mediaUrl.trim() : '';
           if (!url) {
             await writeReport({
-              type: 'missing-media-url',
+              type: 'missing-migrated-media-url',
               variantImageId: row.variantImageId,
               productVariantId: row.productVariantId,
               mediaId: row.mediaId,
