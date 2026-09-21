@@ -29,8 +29,8 @@ export class UserAddress {
   @Column({ type: 'text' })
   addressDetail: string;
 
-  @Column({ type: 'varchar', length: 10 })
-  postalCode: string;
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  postalCode: string | null;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   plaque: string | null;

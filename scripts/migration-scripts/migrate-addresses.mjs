@@ -18,9 +18,9 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: npm run db:migrate:addresses
 
 Imports legacy addresses after users and locations. It only imports rows whose user,
-province, city, address detail, recipient name, and 10-digit postal code can be
-resolved. recipientPhone is copied from the legacy username when it fits the target
-field and is otherwise NULL. Skipped rows are written to ${reportPath}.`);
+province, city, address detail, and recipient name can be resolved. recipientPhone
+and postalCode are copied from legacy data without format validation. Skipped rows
+are written to ${reportPath}.`);
   process.exit(0);
 }
 
@@ -38,23 +38,12 @@ function text(value, maxLength) {
   return result || null;
 }
 
-function normalizeDigits(value) {
-  return String(value ?? '')
-    .replace(/[۰-۹]/g, (digit) => '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)])
-    .replace(/[٠-٩]/g, (digit) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(digit)]);
-}
-
 function recipientPhone(value) {
   if (value === null || value === undefined) return null;
   const result = String(value).trim();
   // Do not truncate a legacy value into a different phone/username. The target
   // column is VARCHAR(20), and recipientPhone is intentionally nullable.
   return result && result.length <= 20 ? result : null;
-}
-
-function normalizePostalCode(value) {
-  const digits = normalizeDigits(value).replace(/\D/g, '');
-  return /^\d{10}$/.test(digits) ? digits : null;
 }
 
 function recipientName(row) {
@@ -124,7 +113,6 @@ async function main() {
     missingProvinces: 0,
     missingAddressDetails: 0,
     missingRecipientNames: 0,
-    invalidPostalCodes: 0,
   };
 
   try {
@@ -261,7 +249,6 @@ async function main() {
           missingProvinces: 0,
           missingAddressDetails: 0,
           missingRecipientNames: 0,
-          invalidPostalCodes: 0,
         };
         await target.beginTransaction();
         try {
@@ -279,7 +266,7 @@ async function main() {
             const province = text(row.stateName || row.cityStateName, 100);
             const fullName = recipientName(row);
             const phone = recipientPhone(row.username);
-            const postalCode = normalizePostalCode(row.postalCode);
+            const postalCode = text(row.postalCode, 20);
             const base = reportRow(row);
             const invalid = [
               ['missing-imported-user', !userId, 'missingUsers'],
@@ -287,13 +274,11 @@ async function main() {
               ['missing-province', !province, 'missingProvinces'],
               ['missing-address-detail', !details, 'missingAddressDetails'],
               ['missing-recipient-name', !fullName, 'missingRecipientNames'],
-              ['invalid-postal-code', !postalCode, 'invalidPostalCodes'],
             ].find(([, condition]) => condition);
             if (invalid) {
               const [type, , counter] = invalid;
               await writeReport({
                 type,
-                postalCode: !postalCode ? row.postalCode : undefined,
                 ...base,
               });
               count[counter] += 1;

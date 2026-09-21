@@ -70,7 +70,7 @@ export class UserAddressResponseDto {
   addressDetail: string;
 
   @ApiProperty({ example: '1234567890' })
-  postalCode: string;
+  postalCode: string | null;
 
   @ApiPropertyOptional({ nullable: true })
   plaque: string | null;

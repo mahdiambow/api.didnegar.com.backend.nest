@@ -50,9 +50,9 @@ npm run db:migrate:addresses
 Run after users and locations. The legacy address ID becomes the target
 `user_addresses.id`, so rerunning safely updates imported rows. The importer only
 uses an exact imported legacy-user identity and requires a city, province, address
-detail, recipient name, and a ten-digit postal code. `recipientPhone` is copied from
-the legacy username without mobile-number validation when it fits the target field;
-otherwise it is NULL. Every skipped row and its reason is written to
+detail, and recipient name. `recipientPhone` and `postalCode` are copied without
+format validation; values that cannot fit their target columns become NULL. Every
+skipped row and its reason is written to
 `migration-addresses-report.jsonl` (or the path configured by
 `MIGRATION_ADDRESSES_REPORT_PATH`).
 
