@@ -14,6 +14,17 @@ export interface ProductFilters {
   subCategoryId?: string;
 }
 
+/** none = بدون join | list = برند+موجودی | detail = درخت کامل */
+export type ProductRelationMode = 'none' | 'list' | 'detail';
+
+function toRelationMode(
+  includeRelations: boolean | ProductRelationMode,
+): ProductRelationMode {
+  if (includeRelations === true) return 'detail';
+  if (includeRelations === false) return 'none';
+  return includeRelations;
+}
+
 @Injectable()
 export class ProductRepository {
   constructor(
@@ -166,15 +177,24 @@ export class ProductRepository {
     offset: number,
     limit: number,
     filters: ProductFilters = {},
-    includeRelations = false,
+    includeRelations: boolean | ProductRelationMode = false,
   ) {
+    const mode = toRelationMode(includeRelations);
+    const needsCategoryFilter = Boolean(
+      filters.categoryId || filters.subCategoryId,
+    );
     const qb = this.repo
       .createQueryBuilder('product')
       .orderBy('product.createdAt', 'DESC')
       .skip(offset)
       .take(limit);
 
-    if (includeRelations) {
+    if (mode === 'list') {
+      qb.leftJoinAndSelect('product.brand', 'brand').leftJoinAndSelect(
+        'product.productStock',
+        'productStock',
+      );
+    } else if (mode === 'detail') {
       qb.leftJoinAndSelect('product.brand', 'brand')
         .leftJoinAndSelect('product.shippingMethod', 'shippingMethod')
         .leftJoinAndSelect('product.productStock', 'productStock')
@@ -189,7 +209,7 @@ export class ProductRepository {
         );
     }
 
-    if (filters.categoryId || filters.subCategoryId) {
+    if (needsCategoryFilter) {
       qb.innerJoin('product.productCategories', 'pcFilter');
       if (filters.categoryId) {
         qb.andWhere('pcFilter.categoryId = :categoryId', {
@@ -229,8 +249,7 @@ export class ProductRepository {
         `(product.name LIKE :search
           OR product.subtitle LIKE :search
           OR product.slug LIKE :search
-          OR product.sku LIKE :search
-          OR product.shortDescription LIKE :search)`,
+          OR product.sku LIKE :search)`,
         { search },
       );
     }
@@ -239,7 +258,12 @@ export class ProductRepository {
       qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
-    return qb.distinct(true).getManyAndCount();
+    // distinct فقط وقتی join فیلتر دسته باعث تکرار ردیف می‌شود
+    if (needsCategoryFilter || mode === 'detail') {
+      qb.distinct(true);
+    }
+
+    return qb.getManyAndCount();
   }
 
   getNextLegacyId() {
