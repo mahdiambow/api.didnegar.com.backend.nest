@@ -1,6 +1,6 @@
 /**
  * Builds each legacy product's display specifications from its variant
- * attributes. Price selections remain in products.price[].valueAttributeIds.
+ * attributes and removes those migrated selections from products.price[].
  */
 import { appendFile, writeFile } from 'node:fs/promises';
 import {
@@ -21,7 +21,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: node scripts/migration-scripts/migrate-product-table-info.mjs
 
 Builds products.tableInfo from legacy product variant attributes and values.
-Run after db:migrate:attributes and db:migrate:catalog. Problems are recorded in ${reportPath}.`);
+Run after db:migrate:offer-attributes. Problems are recorded in ${reportPath}.`);
   process.exit(0);
 }
 
@@ -31,6 +31,17 @@ function add(total, count) {
 
 function legacyIdKey(value) {
   return value === null || value === undefined ? null : String(value);
+}
+
+function parseJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value === null || value === undefined) return [];
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 async function writeReport(event) {
@@ -55,7 +66,7 @@ async function readBatches(source, sql, onBatch) {
 
 async function loadTargetMaps(target) {
   const [products] = await target.execute(
-    "SELECT id, legacyId FROM products WHERE legacyTable = 'products' AND legacyId IS NOT NULL",
+    "SELECT id, legacyId, price FROM products WHERE legacyTable = 'products' AND legacyId IS NOT NULL",
   );
   const [attributes] = await target.execute(
     "SELECT id, legacyId, name, label FROM attributes WHERE legacyTable = 'attributes' AND legacyId IS NOT NULL",
@@ -67,9 +78,16 @@ async function loadTargetMaps(target) {
      WHERE value_row.legacyTable = 'attribute_values'
        AND value_row.legacyId IS NOT NULL`,
   );
+  const targetProducts = new Map(
+    products.map((row) => [legacyIdKey(row.legacyId), row]),
+  );
   return {
-    products: new Map(
-      products.map((row) => [legacyIdKey(row.legacyId), String(row.id)]),
+    products: targetProducts,
+    productsById: new Map(
+      [...targetProducts.values()].map((product) => [
+        String(product.id),
+        product,
+      ]),
     ),
     attributes: new Map(
       attributes.map((row) => [legacyIdKey(row.legacyId), row]),
@@ -88,6 +106,34 @@ function tableInfoFor(product) {
   return items.length ? [{ name: TABLE_INFO_NAME, items }] : [];
 }
 
+function migratedValueIdsFor(product) {
+  return new Set(
+    [...product.attributes.values()].flatMap((attribute) => [
+      ...attribute.valueIds,
+    ]),
+  );
+}
+
+function removeMigratedValueIdsFromPrices(price, migratedValueIds) {
+  let changed = false;
+  const prices = parseJsonArray(price).map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+    const next = { ...item };
+    for (const field of ['valueAttributeIds', 'attributeIds']) {
+      if (!Array.isArray(next[field])) continue;
+      const filtered = next[field].filter(
+        (id) => !migratedValueIds.has(String(id)),
+      );
+      if (filtered.length !== next[field].length) {
+        next[field] = filtered;
+        changed = true;
+      }
+    }
+    return next;
+  });
+  return { prices, changed };
+}
+
 async function main() {
   const source = await openLegacyConnection();
   const target = await openTargetConnection();
@@ -99,6 +145,7 @@ async function main() {
     missingProducts: 0,
     missingAttributes: 0,
     missingAttributeValues: 0,
+    priceRowsAdjusted: 0,
   };
 
   try {
@@ -161,7 +208,7 @@ async function main() {
       target,
       targetDatabase,
       'products',
-      ['id', 'legacyId', 'legacyTable', 'tableInfo'],
+      ['id', 'legacyId', 'legacyTable', 'tableInfo', 'price'],
       'Target',
     );
     await assertColumns(
@@ -207,17 +254,21 @@ async function main() {
           missingProducts: 0,
           missingAttributes: 0,
           missingAttributeValues: 0,
+          priceRowsAdjusted: 0,
         };
         const changedProducts = new Set();
 
         for (const row of rows) {
-          const productId = maps.products.get(legacyIdKey(row.productLegacyId));
-          if (!productId) {
+          const targetProduct = maps.products.get(
+            legacyIdKey(row.productLegacyId),
+          );
+          if (!targetProduct) {
             await writeReport({ type: 'missing-product', ...row });
             count.missingProducts += 1;
             count.skipped += 1;
             continue;
           }
+          const productId = String(targetProduct.id);
           const attribute = maps.attributes.get(
             legacyIdKey(row.attributeLegacyId),
           );
@@ -257,22 +308,35 @@ async function main() {
               name: attribute.name,
               label: attribute.label,
               values: new Set(),
+              valueIds: new Set(),
             };
             product.attributes.set(attribute.id, item);
           }
           item.values.add(String(value.label || value.value));
+          item.valueIds.add(String(value.id));
           changedProducts.add(productId);
         }
 
         await target.beginTransaction();
         try {
           for (const productId of changedProducts) {
-            const tableInfo = tableInfoFor(productCache.get(productId));
+            const product = productCache.get(productId);
+            const tableInfo = tableInfoFor(product);
+            const targetProduct = maps.productsById.get(productId);
+            const price = removeMigratedValueIdsFromPrices(
+              targetProduct.price,
+              migratedValueIdsFor(product),
+            );
             await target.execute(
-              'UPDATE products SET tableInfo = CAST(? AS JSON) WHERE id = ?',
-              [JSON.stringify(tableInfo), productId],
+              'UPDATE products SET tableInfo = CAST(? AS JSON), price = CAST(? AS JSON) WHERE id = ?',
+              [
+                JSON.stringify(tableInfo),
+                JSON.stringify(price.prices),
+                productId,
+              ],
             );
             count.productsUpdated += 1;
+            if (price.changed) count.priceRowsAdjusted += 1;
           }
           await target.commit();
         } catch (error) {

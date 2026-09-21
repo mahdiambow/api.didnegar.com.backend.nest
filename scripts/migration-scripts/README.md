@@ -89,10 +89,11 @@ not populated. Invalid links are recorded in
 npm run db:migrate:product-table-info
 ```
 
-Run after attributes and catalog. It gathers all distinct legacy variant attribute
+Run after `db:migrate:offer-attributes`. It gathers all distinct legacy variant attribute
 values for each product and writes them as `products.tableInfo` under `مشخصات فنی`.
 Each item has the imported attribute label as `key` and its distinct imported values
-as `val`. Price combinations remain in `products.price[].valueAttributeIds`.
+as `val`. The migrated value IDs are removed from that product's
+`products.price[].valueAttributeIds` (and the deprecated `attributeIds` alias).
 
 ## Product images
 
