@@ -41,6 +41,20 @@ states match by ID or their resolved `(countryId, code)` pair; cities match only
 ID. Missing relations or a city whose country conflicts with its state's country stop
 and roll back the affected batch.
 
+## Addresses
+
+```sh
+npm run db:migrate:addresses
+```
+
+Run after users and locations. The legacy address ID becomes the target
+`user_addresses.id`, so rerunning safely updates imported rows. The importer only
+uses an exact imported legacy-user identity and requires a city, province, address
+detail, recipient name, Iranian mobile number derived from the legacy username, and
+a ten-digit postal code. It does not invent placeholder data. Every skipped row and
+its reason is written to `migration-addresses-report.jsonl` (or the path configured
+by `MIGRATION_ADDRESSES_REPORT_PATH`).
+
 ## Categories
 
 ```sh
