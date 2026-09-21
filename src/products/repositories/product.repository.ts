@@ -89,6 +89,12 @@ export class ProductRepository {
           'subCategory.slug',
           'subCategory.categoryId',
         ])
+        .leftJoin('subCategory.category', 'subCategoryCategory')
+        .addSelect([
+          'subCategoryCategory.id',
+          'subCategoryCategory.name',
+          'subCategoryCategory.slug',
+        ])
         .where('product.id IN (:...ids)', { ids: [...new Set(ids)] })
         .getMany();
     }
@@ -273,6 +279,12 @@ export class ProductRepository {
           'subCategory.name',
           'subCategory.slug',
           'subCategory.categoryId',
+        ])
+        .leftJoin('subCategory.category', 'subCategoryCategory')
+        .addSelect([
+          'subCategoryCategory.id',
+          'subCategoryCategory.name',
+          'subCategoryCategory.slug',
         ]);
     } else if (mode === 'detail') {
       qb.leftJoinAndSelect('product.brand', 'brand')
