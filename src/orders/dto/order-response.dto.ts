@@ -73,15 +73,34 @@ export class OrderResponseDto {
   updatedAt: Date;
 
   @ApiPropertyOptional({
-    description: 'لینک پرداخت درگاه (پس از ساخت سفارش با iBank)',
+    description: 'لینک پرداخت درگاه (پس از ساخت سفارش با iBank / partial-bank)',
   })
   paymentUrl?: string;
+
+  @ApiPropertyOptional({
+    enum: ['credit', 'iBank', 'loan', 'partial-bank'],
+    description: 'روش پرداخت استفاده‌شده هنگام ساخت سفارش',
+  })
+  paymentGateway?: string;
+
+  @ApiPropertyOptional({
+    description: 'سهم کیف پول در پرداخت ترکیبی',
+  })
+  creditApplied?: number;
+
+  @ApiPropertyOptional({
+    description: 'مبلغ درگاه بانکی در پرداخت ترکیبی / کامل',
+  })
+  bankAmount?: number;
 }
 
 export function toOrderResponse(
   order: Order,
   payment?: {
     paymentUrl?: string;
+    paymentGateway?: string;
+    creditApplied?: number;
+    bankAmount?: number;
   },
 ): OrderResponseDto {
   const subtotal = Number(order.subtotal);
@@ -116,6 +135,15 @@ export function toOrderResponse(
     updatedAt: order.updatedAt,
     ...(payment?.paymentUrl !== undefined
       ? { paymentUrl: payment.paymentUrl }
+      : {}),
+    ...(payment?.paymentGateway !== undefined
+      ? { paymentGateway: payment.paymentGateway }
+      : {}),
+    ...(payment?.creditApplied !== undefined
+      ? { creditApplied: payment.creditApplied }
+      : {}),
+    ...(payment?.bankAmount !== undefined
+      ? { bankAmount: payment.bankAmount }
       : {}),
   };
 }

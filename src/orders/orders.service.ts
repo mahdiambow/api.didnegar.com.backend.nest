@@ -76,10 +76,13 @@ export class OrdersService {
     const payment = await this.depositsService.requestPayment(
       userId,
       orderId,
-      'iBank',
+      dto.paymentMethod ?? 'iBank',
     );
     return toOrderResponse(saved!, {
       paymentUrl: payment.paymentUrl,
+      paymentGateway: payment.gateway,
+      creditApplied: payment.creditApplied,
+      bankAmount: payment.bankAmount,
     });
   }
 

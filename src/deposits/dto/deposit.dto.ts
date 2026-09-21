@@ -1,5 +1,24 @@
+import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsIn } from 'class-validator';
 import { ShippingMethodResponseDto } from '../../shipping/dto/shipping.dto.js';
+
+export class RequestDepositDto {
+  @ApiProperty({
+    example: '01JEX000000000000000000010',
+    description: 'شناسه سفارش برای پرداخت',
+  })
+  @IsULID()
+  orderId: string;
+
+  @ApiProperty({
+    enum: ['credit', 'iBank', 'loan', 'partial-bank'],
+    description:
+      'credit = کیف پول کامل | iBank = فقط درگاه | loan = وام | partial-bank = کیف پول (ناقص) + مابقی بانک',
+  })
+  @IsIn(['credit', 'iBank', 'loan', 'partial-bank'])
+  method: 'credit' | 'iBank' | 'loan' | 'partial-bank';
+}
 
 export class DepositResponseDto {
   @ApiPropertyOptional({ nullable: true })
@@ -13,7 +32,7 @@ export class DepositResponseDto {
   @ApiPropertyOptional({ description: 'شناسه transaction ثبت‌شده برای این عملیات' })
   transactionId?: string;
 
-  @ApiProperty({ enum: ['iBank', 'loan', 'credit'] })
+  @ApiProperty({ enum: ['iBank', 'loan', 'credit', 'partial-bank'] })
   gateway: string;
 
   @ApiProperty({ description: 'trackId (درگاه / وام / credit token)' })
@@ -24,8 +43,18 @@ export class DepositResponseDto {
   })
   paymentUrl: string;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'مبلغ کل سفارش / عملیات' })
   amount: number;
+
+  @ApiPropertyOptional({
+    description: 'سهم کیف پول در پرداخت ترکیبی (partial-bank)',
+  })
+  creditApplied?: number;
+
+  @ApiPropertyOptional({
+    description: 'مبلغی که از درگاه بانکی گرفته می‌شود',
+  })
+  bankAmount?: number;
 
   @ApiPropertyOptional()
   subtotal?: number;

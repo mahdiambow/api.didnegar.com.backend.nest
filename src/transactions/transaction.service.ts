@@ -95,6 +95,19 @@ export class TransactionService {
     });
   }
 
+  findPendingBySource(
+    sourceId: string,
+    sourceType: TransactionSourceType,
+    manager?: EntityManager,
+  ) {
+    const repo = manager
+      ? manager.getRepository(Transaction)
+      : this.transactions;
+    return repo.findOne({
+      where: { sourceId, sourceType, state: 'pending' },
+    });
+  }
+
   findPaginated(
     offset: number,
     limit: number,
