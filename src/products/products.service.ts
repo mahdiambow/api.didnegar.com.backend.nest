@@ -1,4 +1,5 @@
 import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import {
   getPaginationParams,
@@ -44,6 +45,7 @@ export class ProductsService {
     @Inject(forwardRef(() => CategoriesService))
     private readonly categoriesService: CategoriesService,
     private readonly shippingMethodRepository: ShippingMethodRepository,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   async findAll(query: {
@@ -175,8 +177,12 @@ export class ProductsService {
     return this.toEnrichedProductResponses(products, 'detail');
   }
 
-  async create(dto: CreateProductDto) {
+  async create(
+    dto: CreateProductDto,
+    options: { createSellerOffer?: boolean } = {},
+  ) {
     const { categoryIds, sellerIds, ...productData } = dto;
+    const createSellerOffer = options.createSellerOffer !== false;
 
     await this.assertSlugAvailable(productData.slug);
     await this.assertSkuAvailable(productData.sku);
@@ -221,6 +227,14 @@ export class ProductsService {
       product.id,
       categoryIds ?? [],
     );
+
+    if (createSellerOffer && product.createdBySellerId) {
+      // Dynamic import avoids ESM circular init with OffersService.
+      const { OffersService } = await import('../offers/offers.service.js');
+      await this.moduleRef
+        .get(OffersService, { strict: false })
+        .ensureDefaultOfferForProduct(product, product.createdBySellerId);
+    }
 
     const loaded = await this.productRepository.findById(product.id, true);
     const [response] = await this.toEnrichedProductResponses([loaded!]);
@@ -361,6 +375,19 @@ export class ProductsService {
     }
 
     await this.productRepository.save(product);
+
+    if (product.createdBySellerId) {
+      const { OffersService } = await import('../offers/offers.service.js');
+      await this.moduleRef
+        .get(OffersService, { strict: false })
+        .syncOfferApprovalForSellerProduct(
+          product.id,
+          product.createdBySellerId,
+          product.approvalStatus,
+          product.rejectionReason,
+        );
+    }
+
     const loaded = await this.productRepository.findById(id, true);
     const [response] = await this.toEnrichedProductResponses([loaded!]);
     return response;

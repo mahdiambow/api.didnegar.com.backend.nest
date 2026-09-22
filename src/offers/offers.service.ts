@@ -17,6 +17,7 @@ import { SellerOffer } from './entities/seller-offer.entity.js';
 
 import {
   CreateSellerOffersDto,
+  ListMySellerOffersDto,
   ListSellerOffersDto,
   OFFER_IMMEDIATE_FIELDS,
   ReviewSellerOfferDto,
@@ -95,6 +96,7 @@ export const toOfferListResponse = (
   stockStatus: offer.stockStatus,
   isOnSale: offer.isOnSale,
   isActive: offer.isActive,
+  approvalStatus: offer.approvalStatus ?? 'approved',
   ...(product ? { product } : {}),
   createdAt: offer.createdAt,
 });
@@ -118,12 +120,13 @@ export class OffersService {
     private readonly productStockRepository: ProductStockRepository,
   ) {}
 
-  async findAll(query: ListSellerOffersDto) {
+  async findAll(query: ListSellerOffersDto, viewer?: AuthUser | null) {
     const { page, limit, offset } = getPaginationParams(query);
     const includeTotal = query.includeTotal !== false;
     const needsCategoryFilter = Boolean(
       query.categoryId || query.subCategoryId,
     );
+    const viewerSellerId = viewer?.sellerId ?? null;
 
     const itemsQb = this.applyListFilters(
       this.offers
@@ -138,10 +141,12 @@ export class OffersService {
           'offer.stockStatus',
           'offer.isOnSale',
           'offer.isActive',
+          'offer.approvalStatus',
           'offer.createdAt',
         ]),
       query,
       needsCategoryFilter,
+      viewerSellerId,
     )
       .orderBy('offer.price', 'ASC')
       .addOrderBy('offer.id', 'ASC')
@@ -151,7 +156,7 @@ export class OffersService {
     const [items, total] = await Promise.all([
       itemsQb.getMany(),
       includeTotal
-        ? this.resolveListTotal(query, needsCategoryFilter)
+        ? this.resolveListTotal(query, needsCategoryFilter, viewerSellerId)
         : Promise.resolve(null),
     ]);
 
@@ -181,12 +186,194 @@ export class OffersService {
     );
   }
 
+  /**
+   * لیست آفرهای خود فروشنده — sellerId از JWT.
+   * پیش‌فرض همه وضعیت‌ها؛ pending فروشنده‌های دیگر دیده نمی‌شود.
+   */
+  async findMine(user: AuthUser, query: ListMySellerOffersDto) {
+    const sellerId = user.sellerId;
+    if (!sellerId) {
+      throw new ApiException(
+        'SELLER_REQUIRED',
+        'فروشنده در توکن احراز هویت مشخص نشده است',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    const { page, limit, offset } = getPaginationParams(query);
+    const includeTotal = query.includeTotal !== false;
+    const needsCategoryFilter = Boolean(
+      query.categoryId || query.subCategoryId,
+    );
+
+    const qb = this.offers
+      .createQueryBuilder('offer')
+      .select([
+        'offer.id',
+        'offer.sellerId',
+        'offer.productId',
+        'offer.sku',
+        'offer.price',
+        'offer.stock',
+        'offer.stockStatus',
+        'offer.isOnSale',
+        'offer.isActive',
+        'offer.approvalStatus',
+        'offer.createdAt',
+      ])
+      .where('offer.sellerId = :sellerId', { sellerId });
+
+    if (query.approvalStatus) {
+      qb.andWhere('offer.approvalStatus = :approvalStatus', {
+        approvalStatus: query.approvalStatus,
+      });
+    }
+
+    if (query.productId) {
+      qb.andWhere('offer.productId = :productId', {
+        productId: query.productId,
+      });
+    }
+
+    if (query.isActive !== undefined) {
+      qb.andWhere('offer.isActive = :isActive', { isActive: query.isActive });
+    }
+
+    if (needsCategoryFilter) {
+      qb.innerJoin('offer.product', 'filterProduct').innerJoin(
+        'filterProduct.productCategories',
+        'pcFilter',
+      );
+      if (query.categoryId) {
+        qb.andWhere('pcFilter.categoryId = :categoryId', {
+          categoryId: query.categoryId,
+        });
+      }
+      if (query.subCategoryId) {
+        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
+          subCategoryId: query.subCategoryId,
+        });
+      }
+      qb.distinct(true);
+    }
+
+    qb.orderBy('offer.createdAt', 'DESC')
+      .addOrderBy('offer.id', 'ASC')
+      .skip(offset)
+      .take(limit);
+
+    const [items, total] = await Promise.all([
+      qb.getMany(),
+      includeTotal
+        ? this.countMine(sellerId, query, needsCategoryFilter)
+        : Promise.resolve(null),
+    ]);
+
+    const products = await this.productsService.findByIds(
+      items.map((offer) => offer.productId),
+      'list',
+    );
+    const productById = new Map(
+      products.map((product) => [product.id, product]),
+    );
+
+    const resolvedTotal =
+      total ??
+      (items.length === limit
+        ? offset + items.length + 1
+        : offset + items.length);
+
+    return paginatedList(
+      items.map((offer) =>
+        toOfferListResponse(offer, productById.get(offer.productId)),
+      ),
+      page,
+      limit,
+      resolvedTotal,
+    );
+  }
+
+  private async countMine(
+    sellerId: string,
+    query: ListMySellerOffersDto,
+    needsCategoryFilter: boolean,
+  ): Promise<number> {
+    const qb = this.offers
+      .createQueryBuilder('offer')
+      .select('offer.id')
+      .where('offer.sellerId = :sellerId', { sellerId });
+
+    if (query.approvalStatus) {
+      qb.andWhere('offer.approvalStatus = :approvalStatus', {
+        approvalStatus: query.approvalStatus,
+      });
+    }
+    if (query.productId) {
+      qb.andWhere('offer.productId = :productId', {
+        productId: query.productId,
+      });
+    }
+    if (query.isActive !== undefined) {
+      qb.andWhere('offer.isActive = :isActive', { isActive: query.isActive });
+    }
+    if (needsCategoryFilter) {
+      qb.innerJoin('offer.product', 'filterProduct').innerJoin(
+        'filterProduct.productCategories',
+        'pcFilter',
+      );
+      if (query.categoryId) {
+        qb.andWhere('pcFilter.categoryId = :categoryId', {
+          categoryId: query.categoryId,
+        });
+      }
+      if (query.subCategoryId) {
+        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
+          subCategoryId: query.subCategoryId,
+        });
+      }
+      qb.distinct(true);
+    }
+
+    return qb.getCount();
+  }
+
   private applyListFilters(
     qb: SelectQueryBuilder<SellerOffer>,
     query: ListSellerOffersDto,
     needsCategoryFilter: boolean,
+    viewerSellerId?: string | null,
   ) {
-    qb.andWhere('offer.approvalStatus = :approved', { approved: 'approved' });
+    // عمومی: فقط approved
+    // فروشنده لاگین‌شده: approved همه + pending/rejected خودش
+    if (viewerSellerId) {
+      qb.andWhere(
+        `(offer.approvalStatus = :approved
+          OR (offer.sellerId = :viewerSellerId AND offer.approvalStatus IN (:...ownStatuses)))`,
+        {
+          approved: 'approved',
+          viewerSellerId,
+          ownStatuses: ['pending', 'rejected'],
+        },
+      );
+      if (query.approvalStatus) {
+        if (query.approvalStatus === 'approved') {
+          qb.andWhere('offer.approvalStatus = :filterApproved', {
+            filterApproved: 'approved',
+          });
+        } else {
+          // pending/rejected فقط برای آفرهای خود فروشنده
+          qb.andWhere(
+            'offer.sellerId = :viewerSellerId AND offer.approvalStatus = :ownStatus',
+            {
+              viewerSellerId,
+              ownStatus: query.approvalStatus,
+            },
+          );
+        }
+      }
+    } else {
+      qb.andWhere('offer.approvalStatus = :approved', { approved: 'approved' });
+    }
 
     for (const field of ['sellerId', 'productId', 'isActive'] as const) {
       if (query[field] !== undefined) {
@@ -215,11 +402,16 @@ export class OffersService {
     return qb;
   }
 
-  private isUnfilteredApprovedList(query: ListSellerOffersDto): boolean {
+  private isUnfilteredApprovedList(
+    query: ListSellerOffersDto,
+    viewerSellerId?: string | null,
+  ): boolean {
     return (
+      !viewerSellerId &&
       query.sellerId === undefined &&
       query.productId === undefined &&
       query.isActive === undefined &&
+      query.approvalStatus === undefined &&
       !query.categoryId &&
       !query.subCategoryId
     );
@@ -228,8 +420,9 @@ export class OffersService {
   private async resolveListTotal(
     query: ListSellerOffersDto,
     needsCategoryFilter: boolean,
+    viewerSellerId?: string | null,
   ): Promise<number> {
-    if (this.isUnfilteredApprovedList(query)) {
+    if (this.isUnfilteredApprovedList(query, viewerSellerId)) {
       return this.getCachedApprovedCount();
     }
 
@@ -237,6 +430,7 @@ export class OffersService {
       this.offers.createQueryBuilder('offer').select('offer.id'),
       query,
       needsCategoryFilter,
+      viewerSellerId,
     ).getCount();
   }
 
@@ -377,26 +571,29 @@ export class OffersService {
     const slug = patch.slug?.trim() || this.slugifySku(item.sku);
     const sku = patch.sku?.trim() || item.sku;
 
-    const created = await this.productsService.create({
-      ...patch,
-      name,
-      slug,
-      sku,
-      stock: patch.stock ?? item.stock,
-      taxStatus: patch.taxStatus ?? item.taxStatus ?? undefined,
-      taxClass: patch.taxClass ?? item.taxClass ?? undefined,
-      price:
-        patch.price ??
-        ([
-          {
-            price: item.price,
-            finalPrice: item.price,
-          },
-        ] as CreateProductDto['price']),
-      sellerIds: [...new Set([...(patch.sellerIds ?? []), sellerId])],
-      approvalStatus: 'pending',
-      status: patch.status ?? 'draft',
-    });
+    const created = await this.productsService.create(
+      {
+        ...patch,
+        name,
+        slug,
+        sku,
+        stock: patch.stock ?? item.stock,
+        taxStatus: patch.taxStatus ?? item.taxStatus ?? undefined,
+        taxClass: patch.taxClass ?? item.taxClass ?? undefined,
+        price:
+          patch.price ??
+          ([
+            {
+              price: item.price,
+              finalPrice: item.price,
+            },
+          ] as CreateProductDto['price']),
+        sellerIds: [...new Set([...(patch.sellerIds ?? []), sellerId])],
+        approvalStatus: 'pending',
+        status: patch.status ?? 'draft',
+      },
+      { createSellerOffer: false },
+    );
 
     const entity = await this.products.findOneBy({ id: created.id });
     if (!entity) {
@@ -440,6 +637,91 @@ export class OffersService {
         rejectionReason: null,
       }),
     );
+  }
+
+  /**
+   * اگر برای (seller, product) هنوز آفر نباشد، یک آفر pending می‌سازد.
+   * برای وقتی محصول از POST /products ساخته شده و باید در seller-offers/me دیده شود.
+   */
+  async ensureDefaultOfferForProduct(
+    product: Product,
+    sellerId: string,
+  ): Promise<SellerOffer | null> {
+    const existing = await this.offers.findOne({
+      where: { productId: product.id, sellerId },
+    });
+    if (existing) return existing;
+
+    const prices = Array.isArray(product.price)
+      ? product.price
+      : product.price
+        ? [product.price]
+        : [];
+    const unitPrice = Number(prices[0]?.finalPrice ?? prices[0]?.price ?? 0);
+    const stockRow = await this.productStockRepository.findByProductId(
+      product.id,
+    );
+    const stock = Number(stockRow?.stock ?? 0);
+
+    try {
+      const saved = await this.offers.save(
+        this.offers.create({
+          sellerId,
+          productId: product.id,
+          sku: product.sku,
+          price: Number.isFinite(unitPrice) ? unitPrice : 0,
+          stock,
+          stockStatus: stock > 0 ? 'instock' : 'outofstock',
+          attributes: {},
+          isOnSale: false,
+          isActive: true,
+          taxStatus: product.taxStatus ?? null,
+          taxClass: product.taxClass ?? null,
+          approvalStatus:
+            product.approvalStatus === 'approved' ? 'approved' : 'pending',
+          rejectionReason: null,
+        }),
+      );
+      this.invalidateApprovedCountCache();
+      return saved;
+    } catch (error) {
+      const err = error as { code?: string | number; errno?: number };
+      if (
+        err.code === '23505' ||
+        err.code === 'ER_DUP_ENTRY' ||
+        err.errno === 1062 ||
+        String(err.code) === '1062'
+      ) {
+        return (
+          (await this.offers.findOne({
+            where: { productId: product.id, sellerId },
+          })) ?? null
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * وقتی محصول سازنده از PATCH /products/:id/approval تأیید/رد می‌شود،
+   * آفر همان فروشنده روی آن محصول هم هم‌وضعیت می‌شود.
+   */
+  async syncOfferApprovalForSellerProduct(
+    productId: string,
+    sellerId: string,
+    approvalStatus: 'pending' | 'approved' | 'rejected',
+    rejectionReason: string | null,
+  ): Promise<void> {
+    const offer = await this.offers.findOne({
+      where: { productId, sellerId },
+    });
+    if (!offer) return;
+
+    offer.approvalStatus = approvalStatus;
+    offer.rejectionReason =
+      approvalStatus === 'rejected' ? rejectionReason : null;
+    await this.offers.save(offer);
+    this.invalidateApprovedCountCache();
   }
 
   async update(user: AuthUser, id: string, dto: UpdateSellerOfferDto) {

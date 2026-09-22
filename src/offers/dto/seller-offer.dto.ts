@@ -132,6 +132,76 @@ export class ListSellerOffersDto extends PaginationQueryDto {
   subCategoryId?: string;
 
   @ApiPropertyOptional({
+    enum: ['pending', 'approved', 'rejected'],
+    description:
+      'فقط وقتی لاگین فروشنده باشید برای آفرهای خودتان اعمال می‌شود؛ بدون توکن همیشه فقط approved',
+  })
+  @IsOptional()
+  @IsIn(['pending', 'approved', 'rejected'])
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+
+  @ApiPropertyOptional({
+    default: true,
+    description:
+      'اگر false باشد COUNT سنگین اجرا نمی‌شود؛ hasNext از روی تعداد آیتم‌ها تخمین زده می‌شود',
+  })
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === 'false' || value === false
+      ? false
+      : value === 'true' || value === true
+        ? true
+        : value,
+  )
+  @IsBoolean()
+  includeTotal?: boolean = true;
+}
+
+/** لیست آفرهای خود فروشنده — sellerId از JWT؛ پیش‌فرض همه وضعیت‌ها */
+export class ListMySellerOffersDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    example: '01JEX000000000000000000010',
+    description: 'فیلتر یک محصول',
+  })
+  @IsOptional()
+  @IsULID()
+  productId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(({ value }) =>
+    value === 'true' ? true : value === 'false' ? false : value,
+  )
+  @IsBoolean()
+  isActive?: boolean;
+
+  @ApiPropertyOptional({
+    enum: ['pending', 'approved', 'rejected'],
+    description:
+      'فیلتر وضعیت تأیید — اگر نفرستید همه pending/approved/rejected خودتان می‌آید',
+    example: 'pending',
+  })
+  @IsOptional()
+  @IsIn(['pending', 'approved', 'rejected'])
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.categoryId,
+    description: 'فیلتر دسته اصلی محصول',
+  })
+  @IsOptional()
+  @IsULID()
+  categoryId?: string;
+
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.subCategoryId,
+    description: 'فیلتر زیردسته محصول',
+  })
+  @IsOptional()
+  @IsULID()
+  subCategoryId?: string;
+
+  @ApiPropertyOptional({
     default: true,
     description:
       'اگر false باشد COUNT سنگین اجرا نمی‌شود؛ hasNext از روی تعداد آیتم‌ها تخمین زده می‌شود',
@@ -199,6 +269,9 @@ export class SellerOfferListItemDto {
 
   @ApiProperty()
   isActive: boolean;
+
+  @ApiProperty({ enum: ['pending', 'approved', 'rejected'] })
+  approvalStatus: 'pending' | 'approved' | 'rejected';
 
   @ApiPropertyOptional({ type: ProductListItemDto })
   product?: ProductListItemDto;
