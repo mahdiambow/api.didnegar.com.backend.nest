@@ -59,8 +59,16 @@ export type ProductPopulatedRelations = {
 
 export class ProductPriceResponseDto {
   @ApiProperty({
+    type: [String],
+    example: ['01JEX000000000000000000080'],
+    description:
+      'شناسه‌های AttributeValue — از valueAttributeIds یا attributeIds قدیمی',
+  })
+  valueAttributeIds: string[];
+
+  @ApiProperty({
     type: [AttributeValueResponseDto],
-    description: 'مقادیر ویژگی مرتبط با این قیمت (به‌جای attributeIds)',
+    description: 'مقادیر ویژگی مرتبط با این قیمت (populate شده از valueAttributeIds)',
   })
   valueAttributes: AttributeValueResponseDto[];
 
@@ -174,6 +182,7 @@ export class ProductResponseDto {
     nullable: true,
     example: [
       {
+        valueAttributeIds: ['01JEX000000000000000000080'],
         valueAttributes: [
           {
             id: '01JEX000000000000000000080',
@@ -345,18 +354,22 @@ function toPriceResponses(
   price: Product['price'] | ProductPriceData | null | undefined,
   attributeValueById?: Map<string, AttributeValueResponseDto>,
 ): ProductPriceResponseDto[] {
-  return normalizePriceResponse(price).map((item) => ({
-    valueAttributes: getPriceValueAttributeIds(item)
-      .map((id) => attributeValueById?.get(id))
-      .filter((value): value is AttributeValueResponseDto => Boolean(value)),
-    price: item.price ?? null,
-    discountPercentage: item.discountPercentage ?? null,
-    discountAmount: item.discountAmount ?? null,
-    expireDate: item.expireDate ?? null,
-    maxQuantity: item.maxQuantity ?? null,
-    minQuantity: item.minQuantity ?? null,
-    finalPrice: item.finalPrice ?? null,
-  }));
+  return normalizePriceResponse(price).map((item) => {
+    const valueAttributeIds = getPriceValueAttributeIds(item);
+    return {
+      valueAttributeIds,
+      valueAttributes: valueAttributeIds
+        .map((id) => attributeValueById?.get(id))
+        .filter((value): value is AttributeValueResponseDto => Boolean(value)),
+      price: item.price ?? null,
+      discountPercentage: item.discountPercentage ?? null,
+      discountAmount: item.discountAmount ?? null,
+      expireDate: item.expireDate ?? null,
+      maxQuantity: item.maxQuantity ?? null,
+      minQuantity: item.minQuantity ?? null,
+      finalPrice: item.finalPrice ?? null,
+    };
+  });
 }
 
 export function toProductResponse(
@@ -466,8 +479,16 @@ export class ProductListImageDto {
   featuredImg: string | null;
 }
 
-/** قیمت کارت لیست — بدون valueAttributes و فیلدهای فرم */
+/** قیمت کارت لیست — شناسه‌های ویژگی + فیلدهای قیمت (بدون آبجکت populate) */
 export class ProductListPriceDto {
+  @ApiProperty({
+    type: [String],
+    example: ['01JEX000000000000000000080'],
+    description:
+      'شناسه‌های AttributeValue — از valueAttributeIds یا attributeIds قدیمی',
+  })
+  valueAttributeIds: string[];
+
   @ApiPropertyOptional({ example: 68000000, nullable: true })
   price: number | null;
 
@@ -512,6 +533,7 @@ function toListPriceResponses(
   price: Product['price'] | ProductPriceData | null | undefined,
 ): ProductListPriceDto[] {
   return normalizePriceResponse(price).map((item) => ({
+    valueAttributeIds: getPriceValueAttributeIds(item),
     price: item.price ?? null,
     discountPercentage: item.discountPercentage ?? null,
     discountAmount: item.discountAmount ?? null,
