@@ -271,6 +271,16 @@ async function main() {
               await report({
                 type: 'missing-order-or-product',
                 legacyOrderItemId: r.id,
+                legacyOrderId: r.orderId,
+                legacyOrderLegacyId: r.orderLegacyId,
+                legacyProductId: r.productId,
+                productLegacyId: r.productLegacyId,
+                productLegacyTable: r.productLegacyTable,
+                productVariantId: r.productVariantId,
+                itemType: r.type,
+                itemName: r.name,
+                missingOrder: !orderId,
+                missingProduct: !productId,
               });
               total.itemsSkipped++;
               continue;
