@@ -444,27 +444,29 @@ export class OffersService {
     this.approvedCountCache = null;
   }
 
-  /** تعداد فروشندهٔ فعال/تأییدشده به ازای هر productId */
-  async countApprovedSellersByProductIds(
+  /** sellerIdهای فعال/تأییدشده به ازای هر productId */
+  async findApprovedSellerIdsByProductIds(
     productIds: string[],
-  ): Promise<Map<string, number>> {
-    const counts = new Map<string, number>();
-    if (productIds.length === 0) return counts;
+  ): Promise<Map<string, string[]>> {
+    const byProduct = new Map<string, string[]>();
+    if (productIds.length === 0) return byProduct;
 
     const rows = await this.offers
       .createQueryBuilder('offer')
       .select('offer.productId', 'productId')
-      .addSelect('COUNT(DISTINCT offer.sellerId)', 'sellersCount')
+      .addSelect('offer.sellerId', 'sellerId')
       .where('offer.productId IN (:...productIds)', { productIds })
       .andWhere('offer.isActive = true')
       .andWhere("offer.approvalStatus = 'approved'")
-      .groupBy('offer.productId')
-      .getRawMany<{ productId: string; sellersCount: string }>();
+      .distinct(true)
+      .getRawMany<{ productId: string; sellerId: string }>();
 
     for (const row of rows) {
-      counts.set(row.productId, Number(row.sellersCount) || 0);
+      const list = byProduct.get(row.productId) ?? [];
+      list.push(row.sellerId);
+      byProduct.set(row.productId, list);
     }
-    return counts;
+    return byProduct;
   }
 
   async getEntity(id: string) {

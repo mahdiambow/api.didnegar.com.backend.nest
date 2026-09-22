@@ -172,7 +172,7 @@ export class PublicController {
   @ApiOperation({
     summary: 'List visible products (public)',
     description:
-      'لیست محصولات پابلیک (publish+approved+active)\n\nهر آیتم sellersCount دارد. فیلتر دسته: بدون پارامتر=همه، parentCategoryId / categoryId / subCategoryId برای هر شاخه درخت.',
+      'لیست محصولات پابلیک (publish+approved+active)\n\nفیلتر دسته: بدون پارامتر=همه، یا parentCategoryId / categoryId / subCategoryId برای هر شاخه درخت.',
   })
   @ApiResponseMeta({
     code: 'PUBLIC_PRODUCTS_FOUND',

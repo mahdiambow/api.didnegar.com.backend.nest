@@ -438,16 +438,7 @@ export class ProductsService {
     mode: 'list' | 'detail' = 'detail',
   ): Promise<ProductResponseDto[] | ProductListItemDto[]> {
     if (mode === 'list') {
-      const { OffersService } = await import('../offers/offers.service.js');
-      const sellersCountByProduct = await this.moduleRef
-        .get(OffersService, { strict: false })
-        .countApprovedSellersByProductIds(products.map((p) => p.id));
-      return products.map((product) =>
-        toProductListResponse(
-          product,
-          sellersCountByProduct.get(product.id) ?? 0,
-        ),
-      );
+      return products.map(toProductListResponse);
     }
 
     const priceValueIds = [
@@ -483,9 +474,21 @@ export class ProductsService {
       ...new Set(priceValues.map((value) => value.attributeId).filter(Boolean)),
     ];
 
+    const { OffersService } = await import('../offers/offers.service.js');
+    const offersService = this.moduleRef.get(OffersService, { strict: false });
+
+    const sellerIdsByProduct =
+      await offersService.findApprovedSellerIdsByProductIds(
+        products.map((product) => product.id),
+      );
+    const offerSellerIds = [
+      ...new Set([...sellerIdsByProduct.values()].flat()),
+    ];
+    const allSellerIds = [...new Set([...sellerIds, ...offerSellerIds])];
+
     const [attributes, sellers, shippingMethods] = await Promise.all([
       this.attributeRepository.findByIdsWithValues(attributeIds),
-      this.sellerRepository.findByIds(sellerIds),
+      this.sellerRepository.findByIds(allSellerIds),
       shippingMethodIds.length
         ? this.shippingMethodRepository.findByIds(shippingMethodIds)
         : Promise.resolve([]),
@@ -543,6 +546,9 @@ export class ProductsService {
         shippingMethod: product.shippingMethodId
           ? (shippingMethodMap.get(product.shippingMethodId) ?? null)
           : null,
+        sellers: (sellerIdsByProduct.get(product.id) ?? [])
+          .map((id) => sellerMap.get(id))
+          .filter((item): item is NonNullable<typeof item> => Boolean(item)),
       });
     });
   }
