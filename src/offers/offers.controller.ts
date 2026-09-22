@@ -58,20 +58,8 @@ export class OffersController {
   )
   @ApiOperation({
     summary: 'List my seller offers',
-    description: [
-      'لیست آفرهای **خود فروشنده** — `sellerId` از JWT خوانده می‌شود.',
-      '',
-      '- پیش‌فرض: همه وضعیت‌ها (`pending` / `approved` / `rejected`)',
-      '- فیلتر: `approvalStatus` / `productId` / `isActive` / دسته',
-      '- pending فروشنده‌های دیگر هرگز دیده نمی‌شود',
-      '',
-      '### نمونه',
-      '```',
-      'GET /seller-offers/me?page=1&limit=20',
-      'GET /seller-offers/me?approvalStatus=pending',
-      'GET /seller-offers/me?approvalStatus=approved&productId=01JEX...',
-      '```',
-    ].join('\n'),
+    description:
+      'لیست پیشنهادهای فروش خودم\n\nsellerId از JWT؛ همه وضعیت‌ها (pending/approved/rejected). فیلتر با approvalStatus.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_FOUND',
@@ -90,13 +78,8 @@ export class OffersController {
   @UseGuards(OptionalJwtAuthGuard)
   @ApiOperation({
     summary: 'List seller offers',
-    description: [
-      'لیست پیشنهادهای فروش (کاتالوگ عمومی)',
-      '',
-      '- بدون توکن: فقط `approved`',
-      '- با توکن فروشنده: `approved` همه + `pending`/`rejected` مربوط به همان فروشنده',
-      '- برای فقط آفرهای خودتان از `GET /seller-offers/me` استفاده کنید',
-    ].join('\n'),
+    description:
+      'لیست پیشنهادهای فروش\n\nبدون توکن فقط approved؛ با JWT فروشنده، pending/rejected خودش هم دیده می‌شود. برای لیست خودتان از GET /seller-offers/me استفاده کنید.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_FOUND',
@@ -153,19 +136,8 @@ export class OffersController {
   )
   @ApiOperation({
     summary: 'Create one or more seller offers',
-    description: [
-      'ایجاد پیشنهاد فروش — `sellerId` از JWT.',
-      '',
-      '### سناریوها',
-      '1. **محصول موجود در کاتالوگ:** `productId` بفرست → فقط آفر ساخته می‌شود',
-      '2. **محصول جدید (نیست در products):** `productId` نفرست و فیلد `product` (+ sku/price/stock) بفرست →',
-      '   محصول با `approvalStatus=pending` به کاتالوگ اضافه می‌شود و آفر pending ساخته می‌شود',
-      '',
-      '### بعد از ساخت',
-      '- کاتالوگ عمومی: `GET /products?approvalStatus=approved&status=publish`',
-      '- لیست خود فروشنده: `GET /seller-offers/me` (همه وضعیت‌ها؛ فیلتر `approvalStatus`)',
-      '- تأیید ادمین: `PATCH /seller-offers/{id}/approval` → آفر + محصول `approved`/`publish`',
-    ].join('\n'),
+    description:
+      'ایجاد یک یا چند پیشنهاد فروش\n\nsellerId از JWT خوانده می‌شود. اگر productId نباشد یا محصول در کاتالوگ نباشد، از روی فیلد product (و sku/قیمت/موجودی آفر) محصول جدید ساخته می‌شود.',
   })
   @ApiResponseMeta({
     code: 'OFFERS_CREATED',

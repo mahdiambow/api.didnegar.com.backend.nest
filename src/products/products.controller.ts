@@ -79,16 +79,7 @@ export class ProductsController {
   })
   @ApiOperation({
     summary: 'List products with pagination and filters',
-    description: [
-      'لیست کاتالوگ محصولات (برای مرور/انتخاب محصول موجود).',
-      '',
-      'فروشنده برای **محصولات خودش** از `GET /seller-offers/me` استفاده کند.',
-      '',
-      'نمونه کاتالوگ تأییدشده:',
-      '```',
-      'GET /products?page=1&limit=20&approvalStatus=approved&status=publish',
-      '```',
-    ].join('\n'),
+    description: 'لیست محصولات با pagination و فیلتر',
   })
   @ApiOkResponse({ type: ProductsPaginatedApiResponseDto })
   findAll(@Query() query: ListProductsQueryDto) {
@@ -113,14 +104,8 @@ export class ProductsController {
   })
   @ApiOperation({
     summary: 'Create new product',
-    description: [
-      'ایجاد محصول جدید با `approvalStatus=pending`.',
-      '',
-      'اگر `sellerIds` ست شود، برای فروشندهٔ اول (`createdBySellerId`) یک **seller-offer pending** هم ساخته می‌شود',
-      'تا در `GET /seller-offers/me` دیده شود.',
-      '',
-      'مسیر پیشنهادی فروشنده برای محصول جدید: `POST /seller-offers` با فیلد `product` (بدون productId).',
-    ].join('\n'),
+    description:
+      'ایجاد محصول جدید\n\nمحصول با approvalStatus=pending ساخته می‌شود تا ادمین تأیید کند',
   })
   @ApiOkResponse({ type: ProductApiResponseDto })
   create(@Body() dto: CreateProductDto) {
