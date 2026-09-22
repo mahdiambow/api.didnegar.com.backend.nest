@@ -36,7 +36,7 @@ export class ListPublicProductsQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({
     example: CATEGORY_EXAMPLES.categoryId,
-    description: 'فیلتر دسته اصلی (category)',
+    description: 'فیلتر دسته (سطح ۲)',
   })
   @IsOptional()
   @IsULID()
@@ -44,11 +44,19 @@ export class ListPublicProductsQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({
     example: CATEGORY_EXAMPLES.subCategoryId,
-    description: 'فیلتر زیردسته (subCategory)',
+    description: 'فیلتر زیردسته (سطح ۳) — اگر id دسته باشد هم مچ می‌شود',
   })
   @IsOptional()
   @IsULID()
   subCategoryId?: string;
+
+  @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.parentCategoryId,
+    description: 'فیلتر شاخه والد (سطح ۱) — همه محصولات زیر آن',
+  })
+  @IsOptional()
+  @IsULID()
+  parentCategoryId?: string;
 
   @ApiPropertyOptional({
     example: 1_000_000,

@@ -57,10 +57,17 @@ export class ProductsService {
     brandId?: string;
     search?: string;
     name?: string;
+    parentCategoryId?: string;
     categoryId?: string;
     subCategoryId?: string;
   }) {
     const { page, limit, offset } = getPaginationParams(query);
+    const categoryFilter =
+      await this.categoriesService.resolveProductCategoryFilter({
+        parentCategoryId: query.parentCategoryId,
+        categoryId: query.categoryId,
+        subCategoryId: query.subCategoryId,
+      });
     const [items, total] = await this.productRepository.findPaginated(
       offset,
       limit,
@@ -71,8 +78,7 @@ export class ProductsService {
         brandId: query.brandId,
         search: query.search,
         name: query.name,
-        categoryId: query.categoryId,
-        subCategoryId: query.subCategoryId,
+        ...categoryFilter,
       },
       'list',
     );
@@ -92,12 +98,19 @@ export class ProductsService {
     brandId?: string;
     search?: string;
     name?: string;
+    parentCategoryId?: string;
     categoryId?: string;
     subCategoryId?: string;
     minPrice?: number;
     maxPrice?: number;
   } = {}) {
     const { page, limit, offset } = getPaginationParams(query);
+    const categoryFilter =
+      await this.categoriesService.resolveProductCategoryFilter({
+        parentCategoryId: query.parentCategoryId,
+        categoryId: query.categoryId,
+        subCategoryId: query.subCategoryId,
+      });
     const [items, total] = await this.productRepository.findPaginated(
       offset,
       limit,
@@ -108,8 +121,7 @@ export class ProductsService {
         brandId: query.brandId,
         search: query.search,
         name: query.name,
-        categoryId: query.categoryId,
-        subCategoryId: query.subCategoryId,
+        ...categoryFilter,
         minPrice: query.minPrice,
         maxPrice: query.maxPrice,
       },
@@ -426,7 +438,16 @@ export class ProductsService {
     mode: 'list' | 'detail' = 'detail',
   ): Promise<ProductResponseDto[] | ProductListItemDto[]> {
     if (mode === 'list') {
-      return products.map(toProductListResponse);
+      const { OffersService } = await import('../offers/offers.service.js');
+      const sellersCountByProduct = await this.moduleRef
+        .get(OffersService, { strict: false })
+        .countApprovedSellersByProductIds(products.map((p) => p.id));
+      return products.map((product) =>
+        toProductListResponse(
+          product,
+          sellersCountByProduct.get(product.id) ?? 0,
+        ),
+      );
     }
 
     const priceValueIds = [

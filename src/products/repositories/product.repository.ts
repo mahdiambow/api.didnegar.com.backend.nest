@@ -11,6 +11,7 @@ export interface ProductFilters {
   brandId?: string;
   search?: string;
   name?: string;
+  parentCategoryId?: string;
   categoryId?: string;
   subCategoryId?: string;
   /** فیلتر رنج قیمت روی seller_offers.price (پیشنهاد فعال/تأییدشده) */
@@ -146,7 +147,7 @@ export class ProductRepository {
 
   findByFilters(filters: ProductFilters = {}, includeRelations = false) {
     const needsCategoryFilter = Boolean(
-      filters.categoryId || filters.subCategoryId,
+      filters.parentCategoryId || filters.categoryId || filters.subCategoryId,
     );
     const qb = this.repo
       .createQueryBuilder('product')
@@ -204,17 +205,7 @@ export class ProductRepository {
     }
 
     if (needsCategoryFilter) {
-      qb.innerJoin('product.productCategories', 'pcFilter');
-      if (filters.categoryId) {
-        qb.andWhere('pcFilter.categoryId = :categoryId', {
-          categoryId: filters.categoryId,
-        });
-      }
-      if (filters.subCategoryId) {
-        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
-          subCategoryId: filters.subCategoryId,
-        });
-      }
+      this.applyCategoryLinkFilter(qb, filters);
     }
 
     this.applyPriceRangeFilter(qb, filters);
@@ -244,7 +235,7 @@ export class ProductRepository {
   ) {
     const mode = toRelationMode(includeRelations);
     const needsCategoryFilter = Boolean(
-      filters.categoryId || filters.subCategoryId,
+      filters.parentCategoryId || filters.categoryId || filters.subCategoryId,
     );
     const qb = this.repo
       .createQueryBuilder('product')
@@ -309,17 +300,7 @@ export class ProductRepository {
     }
 
     if (needsCategoryFilter) {
-      qb.innerJoin('product.productCategories', 'pcFilter');
-      if (filters.categoryId) {
-        qb.andWhere('pcFilter.categoryId = :categoryId', {
-          categoryId: filters.categoryId,
-        });
-      }
-      if (filters.subCategoryId) {
-        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
-          subCategoryId: filters.subCategoryId,
-        });
-      }
+      this.applyCategoryLinkFilter(qb, filters);
     }
 
     if (filters.status) {
@@ -366,6 +347,55 @@ export class ProductRepository {
     }
 
     return qb.getManyAndCount();
+  }
+
+  /**
+   * فیلتر دسته روی product_categories برای هر سطح درخت:
+   * parentCategory → category → subCategory
+   * (فرانت گاهی id سطح ۲ را به‌عنوان subCategoryId می‌فرستد)
+   */
+  private applyCategoryLinkFilter(
+    qb: SelectQueryBuilder<Product>,
+    filters: Pick<
+      ProductFilters,
+      'parentCategoryId' | 'categoryId' | 'subCategoryId'
+    >,
+  ) {
+    qb.innerJoin('product.productCategories', 'pcFilter');
+
+    if (filters.parentCategoryId) {
+      qb.andWhere(
+        `(pcFilter.categoryId IN (
+            SELECT c_parent.id FROM categories c_parent
+            WHERE c_parent.parentCategoryId = :parentCategoryId
+          )
+          OR pcFilter.subCategoryId IN (
+            SELECT sc_parent.id FROM sub_categories sc_parent
+            INNER JOIN categories c_parent2 ON c_parent2.id = sc_parent.categoryId
+            WHERE c_parent2.parentCategoryId = :parentCategoryId
+          ))`,
+        { parentCategoryId: filters.parentCategoryId },
+      );
+    }
+
+    if (filters.categoryId) {
+      qb.andWhere(
+        `(pcFilter.categoryId = :categoryId
+          OR pcFilter.subCategoryId IN (
+            SELECT sc_filter.id FROM sub_categories sc_filter
+            WHERE sc_filter.categoryId = :categoryId
+          ))`,
+        { categoryId: filters.categoryId },
+      );
+    }
+
+    if (filters.subCategoryId) {
+      qb.andWhere(
+        `(pcFilter.subCategoryId = :subCategoryId
+          OR pcFilter.categoryId = :subCategoryId)`,
+        { subCategoryId: filters.subCategoryId },
+      );
+    }
   }
 
   /** محصولاتی که حداقل یک پیشنهاد فعال/تأییدشده در بازه قیمت دارند */

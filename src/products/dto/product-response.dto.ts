@@ -527,6 +527,12 @@ export class ProductListItemDto {
 
   @ApiProperty({ type: [ProductListCategoryDto] })
   categories: ProductListCategoryDto[];
+
+  @ApiProperty({
+    example: 3,
+    description: 'تعداد فروشنده‌های فعال با پیشنهاد تأییدشده روی این محصول',
+  })
+  sellersCount: number;
 }
 
 function toListPriceResponses(
@@ -541,7 +547,10 @@ function toListPriceResponses(
   }));
 }
 
-export function toProductListResponse(product: Product): ProductListItemDto {
+export function toProductListResponse(
+  product: Product,
+  sellersCount = 0,
+): ProductListItemDto {
   return {
     id: product.id,
     name: product.name,
@@ -563,5 +572,6 @@ export function toProductListResponse(product: Product): ProductListItemDto {
       subCategoryId: link.subCategoryId,
       subCategoryName: link.subCategory?.name ?? null,
     })),
+    sellersCount,
   };
 }

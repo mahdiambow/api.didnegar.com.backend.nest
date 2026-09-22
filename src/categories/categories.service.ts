@@ -64,6 +64,62 @@ export class CategoriesService {
     return this.buildMenuTree(parents, categories, subCategories);
   }
 
+  /**
+   * id هر سطح درخت را به فیلتر درست محصول نگاشت می‌کند
+   * (فرانت ممکن است id سطح ۲ را به‌عنوان subCategoryId بفرستد).
+   */
+  async resolveProductCategoryFilter(input: {
+    parentCategoryId?: string;
+    categoryId?: string;
+    subCategoryId?: string;
+  }): Promise<{
+    parentCategoryId?: string;
+    categoryId?: string;
+    subCategoryId?: string;
+  }> {
+    let parentCategoryId = input.parentCategoryId;
+    let categoryId = input.categoryId;
+    let subCategoryId = input.subCategoryId;
+
+    const classify = async (id: string) => {
+      if (await this.subCategoryRepository.findById(id)) {
+        return { kind: 'sub' as const, id };
+      }
+      if (await this.categoryRepository.findById(id)) {
+        return { kind: 'cat' as const, id };
+      }
+      if (await this.parentCategoryRepository.findById(id)) {
+        return { kind: 'parent' as const, id };
+      }
+      return null;
+    };
+
+    const apply = (
+      classified: { kind: 'sub' | 'cat' | 'parent'; id: string } | null,
+      clear: 'sub' | 'cat' | 'parent',
+    ) => {
+      if (!classified) return;
+      if (classified.kind === clear) return;
+      if (clear === 'sub') subCategoryId = undefined;
+      if (clear === 'cat') categoryId = undefined;
+      if (clear === 'parent') parentCategoryId = undefined;
+      if (classified.kind === 'sub') subCategoryId = subCategoryId ?? classified.id;
+      if (classified.kind === 'cat') categoryId = categoryId ?? classified.id;
+      if (classified.kind === 'parent')
+        parentCategoryId = parentCategoryId ?? classified.id;
+    };
+
+    if (subCategoryId) apply(await classify(subCategoryId), 'sub');
+    if (categoryId) apply(await classify(categoryId), 'cat');
+    if (parentCategoryId) apply(await classify(parentCategoryId), 'parent');
+
+    return {
+      ...(parentCategoryId ? { parentCategoryId } : {}),
+      ...(categoryId ? { categoryId } : {}),
+      ...(subCategoryId ? { subCategoryId } : {}),
+    };
+  }
+
   /** منوی ادمین با pagination روی parent categories */
   async getMenuPaginated(query: { page?: string | number; limit?: string | number }) {
     const { page, limit, offset } = getPaginationParams(query);
