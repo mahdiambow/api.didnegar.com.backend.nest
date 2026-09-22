@@ -40,7 +40,12 @@ async function main() {
     await assertTables(
       s,
       requiredEnv('LEGACY_MIGRATED_DB_DATABASE'),
-      ['shopping_carts', 'shopping_cart_items', 'users'],
+      [
+        'shopping_carts',
+        'shopping_cart_items',
+        'seller_variant_listings',
+        'users',
+      ],
       'Legacy',
     );
     await assertTables(
@@ -103,13 +108,21 @@ async function main() {
     );
     await each(
       s,
-      'SELECT * FROM shopping_cart_items ORDER BY id',
+      `SELECT item.*, listing.id AS legacyListingId
+       FROM shopping_cart_items item
+       LEFT JOIN (
+         SELECT productVariantId, MIN(id) AS id
+         FROM seller_variant_listings
+         WHERE isActive = 1
+         GROUP BY productVariantId
+       ) listing ON listing.productVariantId = item.productVariantId
+       ORDER BY item.id`,
       async (rows) => {
         for (const r of rows) {
           const cartId = carts.get(String(r.cartId));
           if (!cartId) continue;
-          const offerId = r.productVariantId
-            ? offerMap.get(String(r.productVariantId))
+          const offerId = r.legacyListingId
+            ? offerMap.get(String(r.legacyListingId))
             : null;
           if (!offerId) {
             totals.missingOffers++;
@@ -117,6 +130,7 @@ async function main() {
               type: 'missing-offer',
               legacyCartItemId: r.id,
               legacyVariantId: r.productVariantId,
+              legacyListingId: r.legacyListingId,
             });
             continue;
           }
