@@ -26,6 +26,7 @@ import {
 import { ListPublicProductsQueryDto } from '../products/dto/list-public-products-query.dto.js';
 import { AttributeValueResponseDto } from '../attributes/dto/attribute-value.dto.js';
 import { MenuParentCategoryDto } from '../categories/dto/menu-response.dto.js';
+import { MENU_PARENT_CATEGORY_EXAMPLE } from '../categories/dto/category.examples.js';
 
 const PublicFooterApiResponseDto = createSuccessResponseDto(FooterResponseDto, {
   code: 'PUBLIC_FOOTER_FOUND',
@@ -83,6 +84,7 @@ const PublicCategoriesApiResponseDto = createSuccessResponseDto(
     message: 'Categories retrieved successfully',
     name: 'PublicCategories',
     isArray: true,
+    example: [MENU_PARENT_CATEGORY_EXAMPLE],
   },
 );
 
@@ -169,8 +171,32 @@ export class PublicController {
   @Get('products')
   @ApiOperation({
     summary: 'List visible products (public)',
-    description:
-      'لیست محصولات قابل‌نمایش (پابلیک)\n\npagination + فیلتر search / name / brandId / categoryId / subCategoryId / minPrice / maxPrice — فقط publish + approved + active با فیلدهای کامل',
+    description: [
+      'لیست محصولات قابل‌نمایش (پابلیک)',
+      '',
+      'فقط `publish` + `approved` + `active` — پاسخ لیست slim (نام/دسته/قیمت/برند/عکس).',
+      '',
+      '### فیلترها (query)',
+      '| پارامتر | مثال | توضیح |',
+      '|---|---|---|',
+      '| `page` | `1` | شماره صفحه |',
+      '| `limit` | `24` | تعداد در صفحه (حداکثر ۳۰۰) |',
+      '| `search` | `canon` | جستجو در name / subtitle / slug / sku / shortDescription |',
+      '| `name` | `گوشی` | فیلتر نام (LIKE) |',
+      '| `brandId` | `01JBRND0000000000000000001` | برند |',
+      '| `categoryId` | `01JEX000000000000000000100` | دسته اصلی |',
+      '| `subCategoryId` | `01JEX000000000000000000080` | زیردسته |',
+      '| `minPrice` | `1000000` | حداقل قیمت پیشنهاد فروش (ریال) |',
+      '| `maxPrice` | `50000000` | حداکثر قیمت پیشنهاد فروش (ریال) |',
+      '',
+      '### نمونه درخواست',
+      '```',
+      'GET /public/products?page=1&limit=24',
+      'GET /public/products?page=1&limit=24&subCategoryId=01JEX000000000000000000080',
+      'GET /public/products?search=canon&brandId=01JBRND0000000000000000001',
+      'GET /public/products?categoryId=01JEX000000000000000000100&minPrice=1000000&maxPrice=50000000',
+      '```',
+    ].join('\n'),
   })
   @ApiResponseMeta({
     code: 'PUBLIC_PRODUCTS_FOUND',
@@ -199,7 +225,49 @@ export class PublicController {
   @Get('categories')
   @ApiOperation({
     summary: 'Full category tree (public)',
-    description: 'درخت کامل دسته‌بندی‌ها (پابلیک)\n\n۳ سطح: parentCategories → categories → subCategories',
+    description: [
+      'درخت کامل دسته‌بندی‌ها (پابلیک) — بدون فیلتر/pagination.',
+      '',
+      '### ساختار ۳ سطحی',
+      '| سطح | فیلد | توضیح |',
+      '|---|---|---|',
+      '| ۱ | `data[]` | parentCategories |',
+      '| ۲ | `data[].categories[]` | categories |',
+      '| ۳ | `data[].categories[].subCategories[]` | subCategories |',
+      '',
+      '### نمونه درخواست',
+      '```',
+      'GET /public/categories',
+      '```',
+      '',
+      '### نمونه پاسخ (خلاصه)',
+      '```json',
+      '{',
+      '  "code": "PUBLIC_CATEGORIES_FOUND",',
+      '  "data": [{',
+      '    "id": "01JEX000000000000000000090",',
+      '    "name": "کالای دیجیتال",',
+      '    "slug": "digital",',
+      '    "categories": [{',
+      '      "id": "01JEX000000000000000000100",',
+      '      "name": "موبایل",',
+      '      "slug": "mobile",',
+      '      "subCategories": [{',
+      '        "id": "01JEX000000000000000000080",',
+      '        "name": "گوشی",',
+      '        "slug": "phones"',
+      '      }]',
+      '    }]',
+      '  }]',
+      '}',
+      '```',
+      '',
+      '### استفاده با محصولات',
+      '```',
+      'GET /public/products?categoryId=01JEX000000000000000000100',
+      'GET /public/products?subCategoryId=01JEX000000000000000000080',
+      '```',
+    ].join('\n'),
   })
   @ApiResponseMeta({
     code: 'PUBLIC_CATEGORIES_FOUND',

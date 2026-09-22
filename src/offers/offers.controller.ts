@@ -8,6 +8,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
+import { OptionalJwtAuthGuard } from '../utils/auth/guards/optional-jwt-auth.guard.js';
 import { RoleGuard } from '../utils/auth/guards/role.guard.js';
 import { RequireRole } from '../utils/auth/decorators/require-role.decorator.js';
 import { DEFAULT_ROLE_SLUGS } from '../roles/permissions.js';
@@ -19,6 +20,7 @@ import {
   SellerOfferResponseDto,
   SellerOfferListItemDto,
   ListSellerOffersDto,
+  ListMySellerOffersDto,
   ReviewSellerOfferDto,
 } from './dto/seller-offer.dto.js';
 import type { AuthUser } from '../utils/auth/types/auth-user.type.js';
@@ -45,19 +47,67 @@ const OffersApiResponseDto = createPaginatedResponseDto(
 export class OffersController {
   constructor(private readonly offersService: OffersService) {}
 
-  @Get()
+  @Get('me')
+  @ApiBearerAuth('access-token')
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @RequireRole(
+    DEFAULT_ROLE_SLUGS.SELLER,
+    DEFAULT_ROLE_SLUGS.SUPER_SELLER,
+    DEFAULT_ROLE_SLUGS.ADMIN,
+    DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
+  )
   @ApiOperation({
-    summary: 'List approved seller offers',
-    description:
-      'لیست پیشنهادهای فروش تأییدشده (خلاصه)\n\nفقط آفرهای approved؛ بدون tax/rejectionReason/description — جزئیات در GET تکی.\n\nبرای سرعت بیشتر می‌توانید `includeTotal=false` بفرستید تا COUNT اجرا نشود.',
+    summary: 'List my seller offers',
+    description: [
+      'لیست آفرهای **خود فروشنده** — `sellerId` از JWT خوانده می‌شود.',
+      '',
+      '- پیش‌فرض: همه وضعیت‌ها (`pending` / `approved` / `rejected`)',
+      '- فیلتر: `approvalStatus` / `productId` / `isActive` / دسته',
+      '- pending فروشنده‌های دیگر هرگز دیده نمی‌شود',
+      '',
+      '### نمونه',
+      '```',
+      'GET /seller-offers/me?page=1&limit=20',
+      'GET /seller-offers/me?approvalStatus=pending',
+      'GET /seller-offers/me?approvalStatus=approved&productId=01JEX...',
+      '```',
+    ].join('\n'),
   })
   @ApiResponseMeta({
     code: 'OFFERS_FOUND',
     message: 'Offers retrieved successfully',
   })
   @ApiOkResponse({ type: OffersApiResponseDto })
-  findAll(@Query() query: ListSellerOffersDto) {
-    return this.offersService.findAll(query);
+  findMine(
+    @Req() req: { user: AuthUser },
+    @Query() query: ListMySellerOffersDto,
+  ) {
+    return this.offersService.findMine(req.user, query);
+  }
+
+  @Get()
+  @ApiBearerAuth('access-token')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({
+    summary: 'List seller offers',
+    description: [
+      'لیست پیشنهادهای فروش (کاتالوگ عمومی)',
+      '',
+      '- بدون توکن: فقط `approved`',
+      '- با توکن فروشنده: `approved` همه + `pending`/`rejected` مربوط به همان فروشنده',
+      '- برای فقط آفرهای خودتان از `GET /seller-offers/me` استفاده کنید',
+    ].join('\n'),
+  })
+  @ApiResponseMeta({
+    code: 'OFFERS_FOUND',
+    message: 'Offers retrieved successfully',
+  })
+  @ApiOkResponse({ type: OffersApiResponseDto })
+  findAll(
+    @Query() query: ListSellerOffersDto,
+    @Req() req: { user?: AuthUser | null },
+  ) {
+    return this.offersService.findAll(query, req.user ?? null);
   }
 
   @Get(':id/approval')
@@ -103,7 +153,19 @@ export class OffersController {
   )
   @ApiOperation({
     summary: 'Create one or more seller offers',
-    description: 'ایجاد یک یا چند پیشنهاد فروش\n\nsellerId از JWT خوانده می‌شود. اگر productId نباشد یا محصول در کاتالوگ نباشد، از روی فیلد product (و sku/قیمت/موجودی آفر) محصول جدید ساخته می‌شود.',
+    description: [
+      'ایجاد پیشنهاد فروش — `sellerId` از JWT.',
+      '',
+      '### سناریوها',
+      '1. **محصول موجود در کاتالوگ:** `productId` بفرست → فقط آفر ساخته می‌شود',
+      '2. **محصول جدید (نیست در products):** `productId` نفرست و فیلد `product` (+ sku/price/stock) بفرست →',
+      '   محصول با `approvalStatus=pending` به کاتالوگ اضافه می‌شود و آفر pending ساخته می‌شود',
+      '',
+      '### بعد از ساخت',
+      '- کاتالوگ عمومی: `GET /products?approvalStatus=approved&status=publish`',
+      '- لیست خود فروشنده: `GET /seller-offers/me` (همه وضعیت‌ها؛ فیلتر `approvalStatus`)',
+      '- تأیید ادمین: `PATCH /seller-offers/{id}/approval` → آفر + محصول `approved`/`publish`',
+    ].join('\n'),
   })
   @ApiResponseMeta({
     code: 'OFFERS_CREATED',

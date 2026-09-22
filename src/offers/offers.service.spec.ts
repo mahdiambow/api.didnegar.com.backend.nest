@@ -83,6 +83,7 @@ function setup(patch = {}) {
   const productStockRepository = {
     tryDecrement: vi.fn(async () => true),
     tryIncrement: vi.fn(async () => true),
+    findByProductId: vi.fn(async () => ({ stock: 10 })),
   };
   const service = new OffersService(
     repo as unknown as Repository<SellerOffer>,
@@ -226,6 +227,7 @@ describe('seller offers', () => {
         sellerIds: [sellerId],
         approvalStatus: 'pending',
       }),
+      { createSellerOffer: false },
     );
   });
 

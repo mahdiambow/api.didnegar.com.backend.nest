@@ -9,6 +9,8 @@ export function createSuccessResponseDto<T>(
     name: string;
     /** وقتی data آرایه است (مثل لیست پابلیک) */
     isArray?: boolean;
+    /** نمونه data برای Swagger */
+    example?: unknown;
   },
 ) {
   class SuccessResponseDto {
@@ -20,8 +22,19 @@ export function createSuccessResponseDto<T>(
 
     @ApiProperty(
       options.isArray
-        ? { type: dataDto, isArray: true }
-        : { type: dataDto },
+        ? {
+            type: dataDto,
+            isArray: true,
+            ...(options.example !== undefined
+              ? { example: options.example }
+              : {}),
+          }
+        : {
+            type: dataDto,
+            ...(options.example !== undefined
+              ? { example: options.example }
+              : {}),
+          },
     )
     data: T | T[];
   }
