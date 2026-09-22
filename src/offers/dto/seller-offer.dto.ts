@@ -15,6 +15,14 @@ import {
 } from '../../products/dto/product-response.dto.js';
 import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
 
+export const OFFER_APPROVAL_STATUSES = [
+  'pending',
+  'approved',
+  'rejected',
+] as const;
+
+export type OfferApprovalStatus = (typeof OFFER_APPROVAL_STATUSES)[number];
+
 /** آپدیت فیلدهای کاتالوگ محصول هنگام ثبت/ویرایش آفر (بدون approval) */
 export class SellerOfferProductPatchDto extends PartialType(
   OmitType(CreateProductDto, ['approvalStatus', 'rejectionReason'] as const),
@@ -102,7 +110,29 @@ export class CreateSellerOffersDto {
 export class UpdateSellerOfferDto extends PartialType(
   OmitType(SellerOfferItemDto, ['productId'] as const),
   { skipNullProperties: false },
-) {}
+) {
+  @ApiPropertyOptional({
+    enum: OFFER_APPROVAL_STATUSES,
+    example: 'approved',
+    description:
+      'وضعیت تأیید همین آفر (مثل PATCH .../approval) — روی محصول لینک‌شده اثر ندارد',
+  })
+  @IsOptional()
+  @IsIn(OFFER_APPROVAL_STATUSES)
+  approvalStatus?: OfferApprovalStatus;
+
+  @ApiPropertyOptional({
+    example: 'قیمت نامعتبر است',
+    description: 'دلیل رد — وقتی approvalStatus=rejected الزامی است',
+    nullable: true,
+  })
+  @ValidateIf(
+    (dto: UpdateSellerOfferDto) => dto.approvalStatus === 'rejected',
+  )
+  @IsString()
+  @MaxLength(1000)
+  rejectionReason?: string | null;
+}
 
 export class ListSellerOffersDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsULID() sellerId?: string;
@@ -288,14 +318,6 @@ export const OFFER_IMMEDIATE_FIELDS = new Set([
   'isOnSale',
   'isActive',
 ]);
-
-export const OFFER_APPROVAL_STATUSES = [
-  'pending',
-  'approved',
-  'rejected',
-] as const;
-
-export type OfferApprovalStatus = (typeof OFFER_APPROVAL_STATUSES)[number];
 
 export class ReviewSellerOfferDto {
   @ApiProperty({

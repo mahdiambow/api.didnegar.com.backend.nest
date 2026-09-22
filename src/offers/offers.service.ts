@@ -568,9 +568,7 @@ export class OffersService {
       if (existing) {
         productMap.set(existing.id, existing);
         if (item.product && Object.keys(item.product).length > 0) {
-          await this.productsService.update(existing.id, item.product, {
-            preserveApprovalStatus: true,
-          });
+          await this.productsService.update(existing.id, item.product);
           const refreshed = await this.products.findOneBy({ id: existing.id });
           if (refreshed) {
             productMap.set(refreshed.id, refreshed);
@@ -743,13 +741,10 @@ export class OffersService {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
 
-    const { product: productPatch, ...offerFields } = dto;
-    if (productPatch && Object.keys(productPatch).length > 0) {
-      // ادیت از آفر نباید approval محصول را pending کند — فقط فیلدهای کاتالوگ
-      await this.productsService.update(offer.productId, productPatch, {
-        preserveApprovalStatus: true,
-      });
-    }
+    // ویرایش فقط روی seller-offer — nested product روی کاتالوگ اعمال نمی‌شود
+    const { product: _, approvalStatus, rejectionReason, ...offerFields } =
+      dto;
+    void _;
 
     if (
       offerFields.sku !== undefined &&
@@ -764,30 +759,23 @@ export class OffersService {
     }
 
     Object.assign(offer, offerFields);
-    offer.approvalStatus = 'approved';
-    offer.rejectionReason = null;
+
+    if (approvalStatus !== undefined) {
+      this.applyOfferApprovalStatus(offer, {
+        approvalStatus,
+        rejectionReason,
+      });
+    }
 
     return this.save(offer, true);
   }
 
   async review(id: string, dto: ReviewSellerOfferDto) {
     const offer = await this.getEntity(id);
+    this.applyOfferApprovalStatus(offer, dto);
 
-    if (dto.approvalStatus === 'rejected') {
-      const reason = dto.rejectionReason?.trim();
-      if (!reason) {
-        throw new ApiException(
-          'REJECTION_REASON_REQUIRED',
-          'برای رد پیشنهاد باید دلیل وارد شود',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-      offer.approvalStatus = 'rejected';
-      offer.rejectionReason = reason;
-    } else if (dto.approvalStatus === 'approved') {
-      offer.approvalStatus = 'approved';
-      offer.rejectionReason = null;
-      // تأیید آفر → محصول لینک‌شده هم تأیید و publish می‌شود
+    // تأیید از مسیر approval → محصول لینک‌شده هم تأیید/publish می‌شود
+    if (dto.approvalStatus === 'approved') {
       const product =
         offer.product ??
         (await this.products.findOneBy({ id: offer.productId }));
@@ -804,12 +792,41 @@ export class OffersService {
         product.status = 'publish';
       }
       await this.products.save(product);
-    } else {
-      offer.approvalStatus = 'pending';
-      offer.rejectionReason = null;
     }
 
     return this.save(offer, true);
+  }
+
+  /** فقط وضعیت تأیید خود آفر — بدون تغییر محصول */
+  private applyOfferApprovalStatus(
+    offer: SellerOffer,
+    dto: {
+      approvalStatus: 'pending' | 'approved' | 'rejected';
+      rejectionReason?: string | null;
+    },
+  ) {
+    if (dto.approvalStatus === 'rejected') {
+      const reason = dto.rejectionReason?.trim();
+      if (!reason) {
+        throw new ApiException(
+          'REJECTION_REASON_REQUIRED',
+          'برای رد پیشنهاد باید دلیل وارد شود',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      offer.approvalStatus = 'rejected';
+      offer.rejectionReason = reason;
+      return;
+    }
+
+    if (dto.approvalStatus === 'approved') {
+      offer.approvalStatus = 'approved';
+      offer.rejectionReason = null;
+      return;
+    }
+
+    offer.approvalStatus = 'pending';
+    offer.rejectionReason = null;
   }
 
   async remove(user: AuthUser, id: string) {
