@@ -121,7 +121,10 @@ async function main() {
       'SELECT id, legacyId, legacyTable FROM products WHERE legacyId IS NOT NULL',
     );
     const products = new Map(
-      productRows.map((r) => [key(r.legacyTable, r.legacyId), String(r.id)]),
+      // migrate-catalog normalizes target legacyTable to "products", while the
+      // legacy product row keeps its original source label (usually wp_posts).
+      // product legacyId is therefore the stable cross-database identity here.
+      productRows.map((r) => [String(r.legacyId), String(r.id)]),
     );
     const [offerRows] = await target.execute(
       'SELECT id, legacySourceId, sellerId FROM seller_offers WHERE legacySourceId IS NOT NULL',
@@ -263,7 +266,7 @@ async function main() {
             const productId =
               r.productLegacyId === null
                 ? null
-                : products.get(key(r.productLegacyTable, r.productLegacyId));
+                : products.get(String(r.productLegacyId));
             if (!orderId || !productId) {
               await report({
                 type: 'missing-order-or-product',
