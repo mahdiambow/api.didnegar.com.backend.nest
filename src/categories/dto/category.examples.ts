@@ -74,3 +74,44 @@ export const PRODUCT_CATEGORY_RESPONSE_EXAMPLE = {
   category: CATEGORY_RESPONSE_EXAMPLE,
   subCategory: SUB_CATEGORY_RESPONSE_EXAMPLE,
 };
+
+/** نمونه درخت منو پابلیک — parent → category → subCategory */
+export const MENU_SUB_CATEGORY_EXAMPLE = {
+  id: CATEGORY_EXAMPLES.subCategoryId,
+  name: 'گوشی',
+  nameEn: 'Phones',
+  slug: 'phones',
+  icon: 'https://cdn.example.com/categories/phones-icon.svg',
+  image: 'https://cdn.example.com/categories/phones.jpg',
+  sort: 0,
+} as const;
+
+export const MENU_CATEGORY_EXAMPLE = {
+  id: CATEGORY_EXAMPLES.categoryId,
+  parentCategoryId: CATEGORY_EXAMPLES.parentCategoryId,
+  name: 'موبایل',
+  nameEn: 'Mobile',
+  slug: 'mobile',
+  icon: 'https://cdn.example.com/categories/mobile-icon.svg',
+  image: 'https://cdn.example.com/categories/mobile.jpg',
+  sort: 0,
+  subCategories: [MENU_SUB_CATEGORY_EXAMPLE],
+} as const;
+
+export const MENU_PARENT_CATEGORY_EXAMPLE = {
+  id: CATEGORY_EXAMPLES.parentCategoryId,
+  name: 'کالای دیجیتال',
+  nameEn: 'Digital',
+  slug: 'digital',
+  icon: 'https://cdn.example.com/categories/digital-icon.svg',
+  image: 'https://cdn.example.com/categories/digital.jpg',
+  sort: 0,
+  categories: [MENU_CATEGORY_EXAMPLE],
+} as const;
+
+/** پاسخ کامل GET /public/categories */
+export const PUBLIC_CATEGORIES_RESPONSE_EXAMPLE = {
+  code: 'PUBLIC_CATEGORIES_FOUND',
+  message: 'Categories retrieved successfully',
+  data: [MENU_PARENT_CATEGORY_EXAMPLE],
+} as const;

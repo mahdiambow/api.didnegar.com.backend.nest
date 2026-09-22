@@ -4,31 +4,39 @@ import { Type } from 'class-transformer';
 import { IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { CATEGORY_EXAMPLES } from '../../categories/dto/category.examples.js';
+import { BRAND_EXAMPLES } from '../../brands/dto/brand.examples.js';
 
 /** فیلترهای کاتالوگ پابلیک — فقط محصولات publish + approved + active */
 export class ListPublicProductsQueryDto extends PaginationQueryDto {
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    example: BRAND_EXAMPLES.brandId,
+    description: 'فیلتر برند — فقط محصولات این برند',
+  })
   @IsOptional()
   @IsULID()
   brandId?: string;
 
   @ApiPropertyOptional({
     example: 'canon',
-    description: 'جستجو در name / subtitle / slug / sku / shortDescription',
+    description:
+      'جستجوی آزاد در name / subtitle / slug / sku / shortDescription',
   })
   @IsOptional()
   @IsString()
   @MaxLength(200)
   search?: string;
 
-  @ApiPropertyOptional({ example: 'گوشی' })
+  @ApiPropertyOptional({
+    example: 'گوشی',
+    description: 'فیلتر نام محصول (LIKE)',
+  })
   @IsOptional()
   @IsString()
   name?: string;
 
   @ApiPropertyOptional({
     example: CATEGORY_EXAMPLES.categoryId,
-    description: 'فیلتر بر اساس دسته اصلی',
+    description: 'فیلتر دسته اصلی (category)',
   })
   @IsOptional()
   @IsULID()
@@ -36,7 +44,7 @@ export class ListPublicProductsQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({
     example: CATEGORY_EXAMPLES.subCategoryId,
-    description: 'فیلتر بر اساس زیردسته',
+    description: 'فیلتر زیردسته (subCategory)',
   })
   @IsOptional()
   @IsULID()
@@ -44,7 +52,7 @@ export class ListPublicProductsQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({
     example: 1_000_000,
-    description: 'حداقل قیمت پیشنهاد فروش (ریال) — برای رنج فرانت',
+    description: 'حداقل قیمت پیشنهاد فروش فعال/تأییدشده (ریال)',
   })
   @IsOptional()
   @Type(() => Number)
@@ -54,7 +62,7 @@ export class ListPublicProductsQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({
     example: 50_000_000,
-    description: 'حداکثر قیمت پیشنهاد فروش (ریال) — برای رنج فرانت',
+    description: 'حداکثر قیمت پیشنهاد فروش فعال/تأییدشده (ریال)',
   })
   @IsOptional()
   @Type(() => Number)
