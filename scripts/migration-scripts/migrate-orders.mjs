@@ -60,6 +60,7 @@ async function main() {
     addresses: 0,
     items: 0,
     itemsSkipped: 0,
+    adjustments: 0,
     options: 0,
   };
   try {
@@ -90,6 +91,7 @@ async function main() {
         'users',
         'products',
         'seller_offers',
+        'order_adjustments',
       ],
       'Target',
     );
@@ -267,6 +269,29 @@ async function main() {
               r.productLegacyId === null
                 ? null
                 : products.get(String(r.productLegacyId));
+            const isAdjustment = ['shipping', 'coupon', 'fee', 'tax'].includes(
+              String(r.type || '').toLowerCase(),
+            );
+            if (orderId && !productId && isAdjustment) {
+              await target.execute(
+                'INSERT INTO order_adjustments (id,legacyId,legacyTable,orderId,type,name,subtotal,subtotalTax,total,totalTax,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE orderId=VALUES(orderId),type=VALUES(type),name=VALUES(name),subtotal=VALUES(subtotal),subtotalTax=VALUES(subtotalTax),total=VALUES(total),totalTax=VALUES(totalTax),createdAt=VALUES(createdAt)',
+                [
+                  r.id,
+                  r.legacyId,
+                  r.legacyTable,
+                  orderId,
+                  r.type,
+                  r.name,
+                  r.subtotal,
+                  r.subtotalTax,
+                  r.total,
+                  r.totalTax,
+                  r.createdAt,
+                ],
+              );
+              total.adjustments++;
+              continue;
+            }
             if (!orderId || !productId) {
               await report({
                 type: 'missing-order-or-product',
