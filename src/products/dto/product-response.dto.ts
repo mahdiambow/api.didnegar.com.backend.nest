@@ -55,6 +55,8 @@ export type ProductPopulatedRelations = {
   shippingMethod?: ShippingMethodResponseDto | null;
   /** valueId → AttributeValue — برای populate کردن price.valueAttributes */
   attributeValueById?: Map<string, AttributeValueResponseDto>;
+  /** فروشنده‌های فعال با پیشنهاد تأییدشده — فقط در get by id */
+  sellers?: SellerResponseDto[];
 };
 
 export class ProductPriceResponseDto {
@@ -332,6 +334,13 @@ export class ProductResponseDto {
     description: 'دسته‌های populate‌شده — شامل subCategory و category',
   })
   categories?: ProductCategoryResponseDto[];
+
+  @ApiProperty({
+    type: [SellerResponseDto],
+    description:
+      'فروشنده‌های فعال با پیشنهاد تأییدشده روی این محصول (فقط get by id)',
+  })
+  sellers: SellerResponseDto[];
 }
 
 function normalizeImage(image: Product['image']): ProductImageData {
@@ -440,6 +449,7 @@ export function toProductResponse(
             (item) => item.subCategoryId ?? item.categoryId!,
           )
         : undefined,
+    sellers: populated.sellers ?? [],
   };
 }
 

@@ -240,20 +240,7 @@ export class OffersService {
     }
 
     if (needsCategoryFilter) {
-      qb.innerJoin('offer.product', 'filterProduct').innerJoin(
-        'filterProduct.productCategories',
-        'pcFilter',
-      );
-      if (query.categoryId) {
-        qb.andWhere('pcFilter.categoryId = :categoryId', {
-          categoryId: query.categoryId,
-        });
-      }
-      if (query.subCategoryId) {
-        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
-          subCategoryId: query.subCategoryId,
-        });
-      }
+      this.applyProductCategoryFilter(qb, query);
       qb.distinct(true);
     }
 
@@ -317,20 +304,7 @@ export class OffersService {
       qb.andWhere('offer.isActive = :isActive', { isActive: query.isActive });
     }
     if (needsCategoryFilter) {
-      qb.innerJoin('offer.product', 'filterProduct').innerJoin(
-        'filterProduct.productCategories',
-        'pcFilter',
-      );
-      if (query.categoryId) {
-        qb.andWhere('pcFilter.categoryId = :categoryId', {
-          categoryId: query.categoryId,
-        });
-      }
-      if (query.subCategoryId) {
-        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
-          subCategoryId: query.subCategoryId,
-        });
-      }
+      this.applyProductCategoryFilter(qb, query);
       qb.distinct(true);
     }
 
@@ -382,24 +356,38 @@ export class OffersService {
     }
 
     if (needsCategoryFilter) {
-      qb.innerJoin('offer.product', 'filterProduct').innerJoin(
-        'filterProduct.productCategories',
-        'pcFilter',
-      );
-      if (query.categoryId) {
-        qb.andWhere('pcFilter.categoryId = :categoryId', {
-          categoryId: query.categoryId,
-        });
-      }
-      if (query.subCategoryId) {
-        qb.andWhere('pcFilter.subCategoryId = :subCategoryId', {
-          subCategoryId: query.subCategoryId,
-        });
-      }
+      this.applyProductCategoryFilter(qb, query);
       qb.distinct(true);
     }
 
     return qb;
+  }
+
+  private applyProductCategoryFilter(
+    qb: SelectQueryBuilder<SellerOffer>,
+    query: { categoryId?: string; subCategoryId?: string },
+  ) {
+    qb.innerJoin('offer.product', 'filterProduct').innerJoin(
+      'filterProduct.productCategories',
+      'pcFilter',
+    );
+    if (query.categoryId) {
+      qb.andWhere(
+        `(pcFilter.categoryId = :categoryId
+          OR pcFilter.subCategoryId IN (
+            SELECT sc_filter.id FROM sub_categories sc_filter
+            WHERE sc_filter.categoryId = :categoryId
+          ))`,
+        { categoryId: query.categoryId },
+      );
+    }
+    if (query.subCategoryId) {
+      qb.andWhere(
+        `(pcFilter.subCategoryId = :subCategoryId
+          OR pcFilter.categoryId = :subCategoryId)`,
+        { subCategoryId: query.subCategoryId },
+      );
+    }
   }
 
   private isUnfilteredApprovedList(
@@ -454,6 +442,31 @@ export class OffersService {
 
   private invalidateApprovedCountCache() {
     this.approvedCountCache = null;
+  }
+
+  /** sellerIdهای فعال/تأییدشده به ازای هر productId */
+  async findApprovedSellerIdsByProductIds(
+    productIds: string[],
+  ): Promise<Map<string, string[]>> {
+    const byProduct = new Map<string, string[]>();
+    if (productIds.length === 0) return byProduct;
+
+    const rows = await this.offers
+      .createQueryBuilder('offer')
+      .select('offer.productId', 'productId')
+      .addSelect('offer.sellerId', 'sellerId')
+      .where('offer.productId IN (:...productIds)', { productIds })
+      .andWhere('offer.isActive = true')
+      .andWhere("offer.approvalStatus = 'approved'")
+      .distinct(true)
+      .getRawMany<{ productId: string; sellerId: string }>();
+
+    for (const row of rows) {
+      const list = byProduct.get(row.productId) ?? [];
+      list.push(row.sellerId);
+      byProduct.set(row.productId, list);
+    }
+    return byProduct;
   }
 
   async getEntity(id: string) {

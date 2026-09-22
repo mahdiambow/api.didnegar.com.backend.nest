@@ -57,10 +57,17 @@ export class ProductsService {
     brandId?: string;
     search?: string;
     name?: string;
+    parentCategoryId?: string;
     categoryId?: string;
     subCategoryId?: string;
   }) {
     const { page, limit, offset } = getPaginationParams(query);
+    const categoryFilter =
+      await this.categoriesService.resolveProductCategoryFilter({
+        parentCategoryId: query.parentCategoryId,
+        categoryId: query.categoryId,
+        subCategoryId: query.subCategoryId,
+      });
     const [items, total] = await this.productRepository.findPaginated(
       offset,
       limit,
@@ -71,8 +78,7 @@ export class ProductsService {
         brandId: query.brandId,
         search: query.search,
         name: query.name,
-        categoryId: query.categoryId,
-        subCategoryId: query.subCategoryId,
+        ...categoryFilter,
       },
       'list',
     );
@@ -92,12 +98,19 @@ export class ProductsService {
     brandId?: string;
     search?: string;
     name?: string;
+    parentCategoryId?: string;
     categoryId?: string;
     subCategoryId?: string;
     minPrice?: number;
     maxPrice?: number;
   } = {}) {
     const { page, limit, offset } = getPaginationParams(query);
+    const categoryFilter =
+      await this.categoriesService.resolveProductCategoryFilter({
+        parentCategoryId: query.parentCategoryId,
+        categoryId: query.categoryId,
+        subCategoryId: query.subCategoryId,
+      });
     const [items, total] = await this.productRepository.findPaginated(
       offset,
       limit,
@@ -108,8 +121,7 @@ export class ProductsService {
         brandId: query.brandId,
         search: query.search,
         name: query.name,
-        categoryId: query.categoryId,
-        subCategoryId: query.subCategoryId,
+        ...categoryFilter,
         minPrice: query.minPrice,
         maxPrice: query.maxPrice,
       },
@@ -462,9 +474,21 @@ export class ProductsService {
       ...new Set(priceValues.map((value) => value.attributeId).filter(Boolean)),
     ];
 
+    const { OffersService } = await import('../offers/offers.service.js');
+    const offersService = this.moduleRef.get(OffersService, { strict: false });
+
+    const sellerIdsByProduct =
+      await offersService.findApprovedSellerIdsByProductIds(
+        products.map((product) => product.id),
+      );
+    const offerSellerIds = [
+      ...new Set([...sellerIdsByProduct.values()].flat()),
+    ];
+    const allSellerIds = [...new Set([...sellerIds, ...offerSellerIds])];
+
     const [attributes, sellers, shippingMethods] = await Promise.all([
       this.attributeRepository.findByIdsWithValues(attributeIds),
-      this.sellerRepository.findByIds(sellerIds),
+      this.sellerRepository.findByIds(allSellerIds),
       shippingMethodIds.length
         ? this.shippingMethodRepository.findByIds(shippingMethodIds)
         : Promise.resolve([]),
@@ -522,6 +546,9 @@ export class ProductsService {
         shippingMethod: product.shippingMethodId
           ? (shippingMethodMap.get(product.shippingMethodId) ?? null)
           : null,
+        sellers: (sellerIdsByProduct.get(product.id) ?? [])
+          .map((id) => sellerMap.get(id))
+          .filter((item): item is NonNullable<typeof item> => Boolean(item)),
       });
     });
   }

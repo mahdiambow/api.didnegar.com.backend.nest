@@ -48,6 +48,14 @@ export class ListProductsQueryDto extends PaginationQueryDto {
   name?: string;
 
   @ApiPropertyOptional({
+    example: CATEGORY_EXAMPLES.parentCategoryId,
+    description: 'فیلتر شاخه والد (سطح ۱)',
+  })
+  @IsOptional()
+  @IsULID()
+  parentCategoryId?: string;
+
+  @ApiPropertyOptional({
     example: CATEGORY_EXAMPLES.categoryId,
     description: 'فیلتر بر اساس دسته اصلی',
   })
