@@ -741,10 +741,10 @@ export class OffersService {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
 
-    // ویرایش فقط روی seller-offer — nested product روی کاتالوگ اعمال نمی‌شود
-    const { product: _, approvalStatus, rejectionReason, ...offerFields } =
-      dto;
-    void _;
+    const { product: productPatch, ...offerFields } = dto;
+    if (productPatch && Object.keys(productPatch).length > 0) {
+      await this.productsService.update(offer.productId, productPatch);
+    }
 
     if (
       offerFields.sku !== undefined &&
@@ -759,23 +759,30 @@ export class OffersService {
     }
 
     Object.assign(offer, offerFields);
-
-    if (approvalStatus !== undefined) {
-      this.applyOfferApprovalStatus(offer, {
-        approvalStatus,
-        rejectionReason,
-      });
-    }
+    offer.approvalStatus = 'approved';
+    offer.rejectionReason = null;
 
     return this.save(offer, true);
   }
 
   async review(id: string, dto: ReviewSellerOfferDto) {
     const offer = await this.getEntity(id);
-    this.applyOfferApprovalStatus(offer, dto);
 
-    // تأیید از مسیر approval → محصول لینک‌شده هم تأیید/publish می‌شود
-    if (dto.approvalStatus === 'approved') {
+    if (dto.approvalStatus === 'rejected') {
+      const reason = dto.rejectionReason?.trim();
+      if (!reason) {
+        throw new ApiException(
+          'REJECTION_REASON_REQUIRED',
+          'برای رد پیشنهاد باید دلیل وارد شود',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      offer.approvalStatus = 'rejected';
+      offer.rejectionReason = reason;
+    } else if (dto.approvalStatus === 'approved') {
+      offer.approvalStatus = 'approved';
+      offer.rejectionReason = null;
+      // تأیید آفر → محصول لینک‌شده هم تأیید و publish می‌شود
       const product =
         offer.product ??
         (await this.products.findOneBy({ id: offer.productId }));
@@ -792,41 +799,12 @@ export class OffersService {
         product.status = 'publish';
       }
       await this.products.save(product);
+    } else {
+      offer.approvalStatus = 'pending';
+      offer.rejectionReason = null;
     }
 
     return this.save(offer, true);
-  }
-
-  /** فقط وضعیت تأیید خود آفر — بدون تغییر محصول */
-  private applyOfferApprovalStatus(
-    offer: SellerOffer,
-    dto: {
-      approvalStatus: 'pending' | 'approved' | 'rejected';
-      rejectionReason?: string | null;
-    },
-  ) {
-    if (dto.approvalStatus === 'rejected') {
-      const reason = dto.rejectionReason?.trim();
-      if (!reason) {
-        throw new ApiException(
-          'REJECTION_REASON_REQUIRED',
-          'برای رد پیشنهاد باید دلیل وارد شود',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-      offer.approvalStatus = 'rejected';
-      offer.rejectionReason = reason;
-      return;
-    }
-
-    if (dto.approvalStatus === 'approved') {
-      offer.approvalStatus = 'approved';
-      offer.rejectionReason = null;
-      return;
-    }
-
-    offer.approvalStatus = 'pending';
-    offer.rejectionReason = null;
   }
 
   async remove(user: AuthUser, id: string) {
