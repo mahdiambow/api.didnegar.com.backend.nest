@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
+import { SellerOffer } from '../../offers/entities/seller-offer.entity.js';
 import { Product } from '../entities/product.entity.js';
 
 export interface ProductFilters {
@@ -12,6 +13,9 @@ export interface ProductFilters {
   name?: string;
   categoryId?: string;
   subCategoryId?: string;
+  /** فیلتر رنج قیمت روی seller_offers.price (پیشنهاد فعال/تأییدشده) */
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 /** none = بدون join | list = برند+دسته خلاصه | detail = درخت کامل */
@@ -213,6 +217,8 @@ export class ProductRepository {
       }
     }
 
+    this.applyPriceRangeFilter(qb, filters);
+
     if (needsCategoryFilter || includeRelations) {
       qb.distinct(true);
     }
@@ -350,12 +356,45 @@ export class ProductRepository {
       qb.andWhere('product.name LIKE :name', { name: `%${filters.name}%` });
     }
 
+    this.applyPriceRangeFilter(qb, filters);
+
     // list همیشه join دسته دارد → ممکن است ردیف تکراری شود
     if (needsCategoryFilter || mode === 'detail' || mode === 'list') {
       qb.distinct(true);
     }
 
     return qb.getManyAndCount();
+  }
+
+  /** محصولاتی که حداقل یک پیشنهاد فعال/تأییدشده در بازه قیمت دارند */
+  private applyPriceRangeFilter(
+    qb: SelectQueryBuilder<Product>,
+    filters: ProductFilters,
+  ) {
+    if (filters.minPrice == null && filters.maxPrice == null) return;
+
+    const exists = qb
+      .subQuery()
+      .select('1')
+      .from(SellerOffer, 'priceOffer')
+      .where('priceOffer.productId = product.id')
+      .andWhere('priceOffer.isActive = true')
+      .andWhere("priceOffer.approvalStatus = 'approved'");
+
+    if (filters.minPrice != null) {
+      exists.andWhere('priceOffer.price >= :minPrice', {
+        minPrice: filters.minPrice,
+      });
+    }
+    if (filters.maxPrice != null) {
+      exists.andWhere('priceOffer.price <= :maxPrice', {
+        maxPrice: filters.maxPrice,
+      });
+    }
+
+    qb.andWhere(`EXISTS ${exists.getQuery()}`).setParameters(
+      exists.getParameters(),
+    );
   }
 
   getNextLegacyId() {
