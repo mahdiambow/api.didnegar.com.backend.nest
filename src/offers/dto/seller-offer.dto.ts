@@ -114,7 +114,8 @@ export class UpdateSellerOfferDto extends PartialType(
   @ApiPropertyOptional({
     enum: OFFER_APPROVAL_STATUSES,
     example: 'approved',
-    description: 'اختیاری — تأیید/رد/pending همین‌جا؛ در غیر این صورت از PATCH .../approval استفاده کنید',
+    description:
+      'وضعیت تأیید همین آفر (مثل PATCH .../approval) — روی محصول لینک‌شده اثر ندارد',
   })
   @IsOptional()
   @IsIn(OFFER_APPROVAL_STATUSES)

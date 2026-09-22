@@ -63,6 +63,7 @@ function setup(patch = {}) {
       status: 'publish',
       approvalStatus: 'approved',
     })),
+    save: vi.fn(async (data) => data),
   };
   const productsService = {
     update: vi.fn(async () => ({ id: productId })),
@@ -157,15 +158,11 @@ describe('seller offers', () => {
         },
       ],
     });
-    expect(productsService.update).toHaveBeenCalledWith(
-      productId,
-      {
-        name: 'گوشی جدید',
-        subtitle: 'آپدیت از آفر',
-        description: 'توضیح کامل',
-      },
-      { preserveApprovalStatus: true },
-    );
+    expect(productsService.update).toHaveBeenCalledWith(productId, {
+      name: 'گوشی جدید',
+      subtitle: 'آپدیت از آفر',
+      description: 'توضیح کامل',
+    });
   });
 
   it('creates catalog product when productId is missing', async () => {
@@ -247,12 +244,30 @@ describe('seller offers', () => {
     });
   });
 
-  it('applies price updates immediately', async () => {
+  it('applies price updates immediately without touching catalog product', async () => {
     expect(isImmediateOfferUpdate({ price: 70000000 })).toBe(true);
-    const { service } = setup();
+    const { service, productsService } = setup();
     const result = await service.update(user, 'offer', { price: 70000000 });
     expect(result.approvalStatus).toBe('approved');
     expect(result.price).toBe(70000000);
+    expect(productsService.update).not.toHaveBeenCalled();
+  });
+
+  it('updates approvalStatus on offer only when provided', async () => {
+    const { service, productsService, products } = setup();
+    products.findOneBy.mockResolvedValue({
+      id: productId,
+      status: 'draft',
+      approvalStatus: 'pending',
+    });
+    const result = await service.update(user, 'offer', {
+      price: 1,
+      approvalStatus: 'approved',
+      product: { name: 'should-not-update-catalog' },
+    });
+    expect(result.approvalStatus).toBe('approved');
+    expect(productsService.update).not.toHaveBeenCalled();
+    expect(products.save).not.toHaveBeenCalled();
   });
 
   it('maps duplicate seller/SKU to conflict', async () => {

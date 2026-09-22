@@ -444,6 +444,31 @@ export class OffersService {
     this.approvedCountCache = null;
   }
 
+  /** sellerIdهای فعال/تأییدشده به ازای هر productId */
+  async findApprovedSellerIdsByProductIds(
+    productIds: string[],
+  ): Promise<Map<string, string[]>> {
+    const byProduct = new Map<string, string[]>();
+    if (productIds.length === 0) return byProduct;
+
+    const rows = await this.offers
+      .createQueryBuilder('offer')
+      .select('offer.productId', 'productId')
+      .addSelect('offer.sellerId', 'sellerId')
+      .where('offer.productId IN (:...productIds)', { productIds })
+      .andWhere('offer.isActive = true')
+      .andWhere("offer.approvalStatus = 'approved'")
+      .distinct(true)
+      .getRawMany<{ productId: string; sellerId: string }>();
+
+    for (const row of rows) {
+      const list = byProduct.get(row.productId) ?? [];
+      list.push(row.sellerId);
+      byProduct.set(row.productId, list);
+    }
+    return byProduct;
+  }
+
   async getEntity(id: string) {
     const offer = await this.offers.findOne({
       where: { id },
@@ -543,9 +568,7 @@ export class OffersService {
       if (existing) {
         productMap.set(existing.id, existing);
         if (item.product && Object.keys(item.product).length > 0) {
-          await this.productsService.update(existing.id, item.product, {
-            preserveApprovalStatus: true,
-          });
+          await this.productsService.update(existing.id, item.product);
           const refreshed = await this.products.findOneBy({ id: existing.id });
           if (refreshed) {
             productMap.set(refreshed.id, refreshed);
@@ -629,22 +652,99 @@ export class OffersService {
     );
   }
 
+  /**
+   * اگر برای (seller, product) هنوز آفر نباشد، یک آفر pending می‌سازد.
+   * برای وقتی محصول از POST /products ساخته شده و باید در seller-offers/me دیده شود.
+   */
+  async ensureDefaultOfferForProduct(
+    product: Product,
+    sellerId: string,
+  ): Promise<SellerOffer | null> {
+    const existing = await this.offers.findOne({
+      where: { productId: product.id, sellerId },
+    });
+    if (existing) return existing;
+
+    const prices = Array.isArray(product.price)
+      ? product.price
+      : product.price
+        ? [product.price]
+        : [];
+    const unitPrice = Number(prices[0]?.finalPrice ?? prices[0]?.price ?? 0);
+    const stockRow = await this.productStockRepository.findByProductId(
+      product.id,
+    );
+    const stock = Number(stockRow?.stock ?? 0);
+
+    try {
+      const saved = await this.offers.save(
+        this.offers.create({
+          sellerId,
+          productId: product.id,
+          sku: product.sku,
+          price: Number.isFinite(unitPrice) ? unitPrice : 0,
+          stock,
+          stockStatus: stock > 0 ? 'instock' : 'outofstock',
+          attributes: {},
+          isOnSale: false,
+          isActive: true,
+          taxStatus: product.taxStatus ?? null,
+          taxClass: product.taxClass ?? null,
+          approvalStatus:
+            product.approvalStatus === 'approved' ? 'approved' : 'pending',
+          rejectionReason: null,
+        }),
+      );
+      this.invalidateApprovedCountCache();
+      return saved;
+    } catch (error) {
+      const err = error as { code?: string | number; errno?: number };
+      if (
+        err.code === '23505' ||
+        err.code === 'ER_DUP_ENTRY' ||
+        err.errno === 1062 ||
+        String(err.code) === '1062'
+      ) {
+        return (
+          (await this.offers.findOne({
+            where: { productId: product.id, sellerId },
+          })) ?? null
+        );
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * وقتی محصول سازنده از PATCH /products/:id/approval تأیید/رد می‌شود،
+   * آفر همان فروشنده روی آن محصول هم هم‌وضعیت می‌شود.
+   */
+  async syncOfferApprovalForSellerProduct(
+    productId: string,
+    sellerId: string,
+    approvalStatus: 'pending' | 'approved' | 'rejected',
+    rejectionReason: string | null,
+  ): Promise<void> {
+    const offer = await this.offers.findOne({
+      where: { productId, sellerId },
+    });
+    if (!offer) return;
+
+    offer.approvalStatus = approvalStatus;
+    offer.rejectionReason =
+      approvalStatus === 'rejected' ? rejectionReason : null;
+    await this.offers.save(offer);
+    this.invalidateApprovedCountCache();
+  }
+
   async update(user: AuthUser, id: string, dto: UpdateSellerOfferDto) {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
 
-    const {
-      product: productPatch,
-      approvalStatus,
-      rejectionReason,
-      ...offerFields
-    } = dto;
-    if (productPatch && Object.keys(productPatch).length > 0) {
-      // ادیت از آفر نباید approval محصول را pending کند — فقط فیلدهای کاتالوگ
-      await this.productsService.update(offer.productId, productPatch, {
-        preserveApprovalStatus: true,
-      });
-    }
+    // ویرایش فقط روی seller-offer — nested product روی کاتالوگ اعمال نمی‌شود
+    const { product: _, approvalStatus, rejectionReason, ...offerFields } =
+      dto;
+    void _;
 
     if (
       offerFields.sku !== undefined &&
@@ -661,13 +761,10 @@ export class OffersService {
     Object.assign(offer, offerFields);
 
     if (approvalStatus !== undefined) {
-      await this.applyApprovalStatus(offer, {
+      this.applyOfferApprovalStatus(offer, {
         approvalStatus,
         rejectionReason,
       });
-    } else {
-      offer.approvalStatus = 'approved';
-      offer.rejectionReason = null;
     }
 
     return this.save(offer, true);
@@ -675,13 +772,38 @@ export class OffersService {
 
   async review(id: string, dto: ReviewSellerOfferDto) {
     const offer = await this.getEntity(id);
-    await this.applyApprovalStatus(offer, dto);
+    this.applyOfferApprovalStatus(offer, dto);
+
+    // تأیید از مسیر approval → محصول لینک‌شده هم تأیید/publish می‌شود
+    if (dto.approvalStatus === 'approved') {
+      const product =
+        offer.product ??
+        (await this.products.findOneBy({ id: offer.productId }));
+      if (!product) {
+        throw new ApiException(
+          'PRODUCT_NOT_FOUND',
+          'محصول این پیشنهاد یافت نشد',
+          HttpStatus.NOT_FOUND,
+        );
+      }
+      product.approvalStatus = 'approved';
+      product.rejectionReason = null;
+      if (product.status !== 'publish') {
+        product.status = 'publish';
+      }
+      await this.products.save(product);
+    }
+
     return this.save(offer, true);
   }
 
-  private async applyApprovalStatus(
+  /** فقط وضعیت تأیید خود آفر — بدون تغییر محصول */
+  private applyOfferApprovalStatus(
     offer: SellerOffer,
-    dto: { approvalStatus: 'pending' | 'approved' | 'rejected'; rejectionReason?: string | null },
+    dto: {
+      approvalStatus: 'pending' | 'approved' | 'rejected';
+      rejectionReason?: string | null;
+    },
   ) {
     if (dto.approvalStatus === 'rejected') {
       const reason = dto.rejectionReason?.trim();
@@ -700,22 +822,6 @@ export class OffersService {
     if (dto.approvalStatus === 'approved') {
       offer.approvalStatus = 'approved';
       offer.rejectionReason = null;
-      const product =
-        offer.product ??
-        (await this.products.findOneBy({ id: offer.productId }));
-      if (!product) {
-        throw new ApiException(
-          'PRODUCT_NOT_FOUND',
-          'محصول این پیشنهاد یافت نشد',
-          HttpStatus.NOT_FOUND,
-        );
-      }
-      product.approvalStatus = 'approved';
-      product.rejectionReason = null;
-      if (product.status !== 'publish') {
-        product.status = 'publish';
-      }
-      await this.products.save(product);
       return;
     }
 

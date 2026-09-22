@@ -255,11 +255,7 @@ export class ProductsService {
     return response;
   }
 
-  async update(
-    id: string,
-    dto: UpdateProductDto,
-    options: { preserveApprovalStatus?: boolean } = {},
-  ) {
+  async update(id: string, dto: UpdateProductDto) {
     const product = await this.productRepository.findById(id);
     if (!product) {
       throw new ApiException(
@@ -336,12 +332,11 @@ export class ProductsService {
         product.approvalStatus = 'pending';
         product.rejectionReason = null;
       }
-    } else if (!options.preserveApprovalStatus) {
-      // تغییر محتوا از PATCH /products → منتظر تأیید مجدد
+    } else {
+      // تغییر محتوا بدون تعیین صریح وضعیت → منتظر تأیید مجدد
       product.approvalStatus = 'pending';
       product.rejectionReason = null;
     }
-    // از مسیر seller-offer: approval محصول دست نخورده می‌ماند
 
     try {
       await this.productRepository.save(product);

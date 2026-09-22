@@ -184,7 +184,7 @@ export class OffersController {
   @ApiOperation({
     summary: 'Update seller offer',
     description:
-      'ویرایش پیشنهاد فروش\n\nاختیاری: approvalStatus را هم می‌توانید همین‌جا بفرستید (approved محصول را هم تأیید می‌کند)',
+      'ویرایش پیشنهاد فروش (فقط فیلدهای آفر)\n\nاختیاری: approvalStatus مثل PATCH .../approval فقط روی همین آفر. آبجکت product کاتالوگ را تغییر نمی‌دهد.',
   })
   @ApiResponseMeta({
     code: 'OFFER_UPDATED',
