@@ -5,12 +5,24 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import type { Product } from '../../products/entities/product.entity.js';
 import type { User } from '../../users/entities/user.entity.js';
 
+export type ReviewStatus = 'approved' | 'pending' | 'spam';
+
+/**
+ * Product review / comment.
+ *
+ * Nested replies: root reviews have `parentId = null`; replies point at a parent.
+ * Rating rules (enforced in service, not DB):
+ * - If the user has a paid order containing this productId → rating is required (root only).
+ * - Otherwise rating is optional.
+ * - Replies never carry a rating.
+ */
 @Entity('reviews')
 @Index(['legacyTable', 'legacyId'], { unique: true })
 export class Review {
@@ -48,12 +60,19 @@ export class Review {
 
   @Index()
   @Column({ type: 'varchar', length: 20, default: 'pending' })
-  status: 'approved' | 'pending' | 'spam';
+  status: ReviewStatus;
 
+  /** Null = root review; set = nested reply under another review. */
   @Index()
   @Column({ type: 'varchar', length: 26, nullable: true })
   parentId: string | null;
 
+  /**
+   * 1–5 when present. Nullable in DB because:
+   * - non-buyers may omit it
+   * - nested replies never set it
+   * Buyers writing a root review must supply it (service-level).
+   */
   @Column({ type: 'tinyint', unsigned: true, nullable: true })
   rating: number | null;
 
@@ -71,7 +90,10 @@ export class Review {
   @JoinColumn({ name: 'userId' })
   user: User | null;
 
-  @ManyToOne('Review', { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne('Review', 'replies', { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'parentId' })
   parent: Review | null;
+
+  @OneToMany('Review', 'parent')
+  replies: Review[];
 }
