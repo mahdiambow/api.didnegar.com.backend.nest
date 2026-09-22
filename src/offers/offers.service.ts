@@ -741,7 +741,12 @@ export class OffersService {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
 
-    const { product: productPatch, ...offerFields } = dto;
+    const {
+      product: productPatch,
+      approvalStatus,
+      rejectionReason,
+      ...offerFields
+    } = dto;
     if (productPatch && Object.keys(productPatch).length > 0) {
       await this.productsService.update(offer.productId, productPatch);
     }
@@ -759,15 +764,30 @@ export class OffersService {
     }
 
     Object.assign(offer, offerFields);
-    offer.approvalStatus = 'approved';
-    offer.rejectionReason = null;
+
+    if (approvalStatus !== undefined) {
+      await this.applyApprovalStatus(offer, {
+        approvalStatus,
+        rejectionReason,
+      });
+    } else {
+      offer.approvalStatus = 'approved';
+      offer.rejectionReason = null;
+    }
 
     return this.save(offer, true);
   }
 
   async review(id: string, dto: ReviewSellerOfferDto) {
     const offer = await this.getEntity(id);
+    await this.applyApprovalStatus(offer, dto);
+    return this.save(offer, true);
+  }
 
+  private async applyApprovalStatus(
+    offer: SellerOffer,
+    dto: { approvalStatus: 'pending' | 'approved' | 'rejected'; rejectionReason?: string | null },
+  ) {
     if (dto.approvalStatus === 'rejected') {
       const reason = dto.rejectionReason?.trim();
       if (!reason) {
@@ -779,10 +799,12 @@ export class OffersService {
       }
       offer.approvalStatus = 'rejected';
       offer.rejectionReason = reason;
-    } else if (dto.approvalStatus === 'approved') {
+      return;
+    }
+
+    if (dto.approvalStatus === 'approved') {
       offer.approvalStatus = 'approved';
       offer.rejectionReason = null;
-      // تأیید آفر → محصول لینک‌شده هم تأیید و publish می‌شود
       const product =
         offer.product ??
         (await this.products.findOneBy({ id: offer.productId }));
@@ -799,12 +821,11 @@ export class OffersService {
         product.status = 'publish';
       }
       await this.products.save(product);
-    } else {
-      offer.approvalStatus = 'pending';
-      offer.rejectionReason = null;
+      return;
     }
 
-    return this.save(offer, true);
+    offer.approvalStatus = 'pending';
+    offer.rejectionReason = null;
   }
 
   async remove(user: AuthUser, id: string) {
