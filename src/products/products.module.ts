@@ -1,4 +1,3 @@
-import { OffersModule } from '../offers/offers.module.js';
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity.js';
@@ -16,15 +15,20 @@ import { CategoriesModule } from '../categories/categories.module.js';
 import { SellersModule } from '../sellers/sellers.module.js';
 import { ShippingMethod } from '../shipping/entities/shipping-method.entity.js';
 import { ShippingMethodRepository } from '../shipping/repositories/shipping-method.repository.js';
+import { SellerOffer } from '../offers/entities/seller-offer.entity.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, ProductStock, ShippingMethod]),
+    TypeOrmModule.forFeature([
+      Product,
+      ProductStock,
+      ShippingMethod,
+      SellerOffer,
+    ]),
     BrandsModule,
     forwardRef(() => AuthModule),
     forwardRef(() => CategoriesModule),
     AttributesModule,
-    forwardRef(() => OffersModule),
     SellersModule,
   ],
   controllers: [ProductsController, ProductsPricingController],

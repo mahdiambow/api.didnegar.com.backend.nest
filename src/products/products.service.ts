@@ -1,5 +1,6 @@
 import { HttpStatus, Inject, Injectable, forwardRef } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import {
   getPaginationParams,
@@ -32,6 +33,7 @@ import { toShippingMethodResponse } from '../shipping/dto/shipping.dto.js';
 import { Product, getPriceValueAttributeIds } from './entities/product.entity.js';
 import { ProductRepository } from './repositories/product.repository.js';
 import { ProductStockRepository } from './repositories/product-stock.repository.js';
+import { SellerOffer } from '../offers/entities/seller-offer.entity.js';
 
 @Injectable()
 export class ProductsService {
@@ -45,7 +47,8 @@ export class ProductsService {
     @Inject(forwardRef(() => CategoriesService))
     private readonly categoriesService: CategoriesService,
     private readonly shippingMethodRepository: ShippingMethodRepository,
-    private readonly moduleRef: ModuleRef,
+    @InjectRepository(SellerOffer)
+    private readonly sellerOffers: Repository<SellerOffer>,
   ) {}
 
   async findAll(query: {
@@ -241,11 +244,10 @@ export class ProductsService {
     );
 
     if (createSellerOffer && product.createdBySellerId) {
-      // Dynamic import avoids ESM circular init with OffersService.
-      const { OffersService } = await import('../offers/offers.service.js');
-      await this.moduleRef
-        .get(OffersService, { strict: false })
-        .ensureDefaultOfferForProduct(product, product.createdBySellerId);
+      await this.ensureDefaultOfferForProduct(
+        product,
+        product.createdBySellerId,
+      );
     }
 
     const loaded = await this.productRepository.findById(product.id, true);
@@ -389,15 +391,12 @@ export class ProductsService {
     await this.productRepository.save(product);
 
     if (product.createdBySellerId) {
-      const { OffersService } = await import('../offers/offers.service.js');
-      await this.moduleRef
-        .get(OffersService, { strict: false })
-        .syncOfferApprovalForSellerProduct(
-          product.id,
-          product.createdBySellerId,
-          product.approvalStatus,
-          product.rejectionReason,
-        );
+      await this.syncOfferApprovalForSellerProduct(
+        product.id,
+        product.createdBySellerId,
+        product.approvalStatus,
+        product.rejectionReason,
+      );
     }
 
     const loaded = await this.productRepository.findById(id, true);
@@ -474,13 +473,9 @@ export class ProductsService {
       ...new Set(priceValues.map((value) => value.attributeId).filter(Boolean)),
     ];
 
-    const { OffersService } = await import('../offers/offers.service.js');
-    const offersService = this.moduleRef.get(OffersService, { strict: false });
-
-    const sellerIdsByProduct =
-      await offersService.findApprovedSellerIdsByProductIds(
-        products.map((product) => product.id),
-      );
+    const sellerIdsByProduct = await this.findApprovedSellerIdsByProductIds(
+      products.map((product) => product.id),
+    );
     const offerSellerIds = [
       ...new Set([...sellerIdsByProduct.values()].flat()),
     ];
@@ -641,5 +636,104 @@ export class ProductsService {
         );
       }
     }
+  }
+
+  /** اگر برای (seller, product) آفر نباشد، یک آفر پیش‌فرض می‌سازد */
+  private async ensureDefaultOfferForProduct(
+    product: Product,
+    sellerId: string,
+  ): Promise<SellerOffer | null> {
+    const existing = await this.sellerOffers.findOne({
+      where: { productId: product.id, sellerId },
+    });
+    if (existing) return existing;
+
+    const prices = Array.isArray(product.price)
+      ? product.price
+      : product.price
+        ? [product.price]
+        : [];
+    const unitPrice = Number(prices[0]?.finalPrice ?? prices[0]?.price ?? 0);
+    const stockRow = await this.productStockRepository.findByProductId(
+      product.id,
+    );
+    const stock = Number(stockRow?.stock ?? 0);
+
+    try {
+      return await this.sellerOffers.save(
+        this.sellerOffers.create({
+          sellerId,
+          productId: product.id,
+          sku: product.sku,
+          price: Number.isFinite(unitPrice) ? unitPrice : 0,
+          stock,
+          stockStatus: stock > 0 ? 'instock' : 'outofstock',
+          attributes: {},
+          isOnSale: false,
+          isActive: true,
+          taxStatus: product.taxStatus ?? null,
+          taxClass: product.taxClass ?? null,
+          approvalStatus:
+            product.approvalStatus === 'approved' ? 'approved' : 'pending',
+          rejectionReason: null,
+        }),
+      );
+    } catch (error) {
+      const err = error as { code?: string | number; errno?: number };
+      if (
+        err.code === '23505' ||
+        err.code === 'ER_DUP_ENTRY' ||
+        err.errno === 1062 ||
+        String(err.code) === '1062'
+      ) {
+        return (
+          (await this.sellerOffers.findOne({
+            where: { productId: product.id, sellerId },
+          })) ?? null
+        );
+      }
+      throw error;
+    }
+  }
+
+  private async syncOfferApprovalForSellerProduct(
+    productId: string,
+    sellerId: string,
+    approvalStatus: 'pending' | 'approved' | 'rejected',
+    rejectionReason: string | null,
+  ): Promise<void> {
+    const offer = await this.sellerOffers.findOne({
+      where: { productId, sellerId },
+    });
+    if (!offer) return;
+
+    offer.approvalStatus = approvalStatus;
+    offer.rejectionReason =
+      approvalStatus === 'rejected' ? rejectionReason : null;
+    await this.sellerOffers.save(offer);
+  }
+
+  private async findApprovedSellerIdsByProductIds(
+    productIds: string[],
+  ): Promise<Map<string, string[]>> {
+    const byProduct = new Map<string, string[]>();
+    if (productIds.length === 0) return byProduct;
+
+    const rows = await this.sellerOffers
+      .createQueryBuilder('offer')
+      .select('offer.productId', 'productId')
+      .addSelect('offer.sellerId', 'sellerId')
+      .where('offer.productId IN (:...productIds)', { productIds })
+      .andWhere('offer.isActive = true')
+      .andWhere("offer.approvalStatus = 'approved'")
+      .distinct(true)
+      .getRawMany<{ productId: string; sellerId: string }>();
+
+    for (const row of rows) {
+      const list = byProduct.get(row.productId) ?? [];
+      list.push(row.sellerId);
+      byProduct.set(row.productId, list);
+    }
+    return byProduct;
   }
 }
