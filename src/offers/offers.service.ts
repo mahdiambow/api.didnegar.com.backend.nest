@@ -568,7 +568,9 @@ export class OffersService {
       if (existing) {
         productMap.set(existing.id, existing);
         if (item.product && Object.keys(item.product).length > 0) {
-          await this.productsService.update(existing.id, item.product);
+          await this.productsService.update(existing.id, item.product, {
+            preserveApprovalStatus: true,
+          });
           const refreshed = await this.products.findOneBy({ id: existing.id });
           if (refreshed) {
             productMap.set(refreshed.id, refreshed);
@@ -743,7 +745,10 @@ export class OffersService {
 
     const { product: productPatch, ...offerFields } = dto;
     if (productPatch && Object.keys(productPatch).length > 0) {
-      await this.productsService.update(offer.productId, productPatch);
+      // ادیت از آفر نباید approval محصول را pending کند — فقط فیلدهای کاتالوگ
+      await this.productsService.update(offer.productId, productPatch, {
+        preserveApprovalStatus: true,
+      });
     }
 
     if (

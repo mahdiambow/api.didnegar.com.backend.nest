@@ -157,11 +157,15 @@ describe('seller offers', () => {
         },
       ],
     });
-    expect(productsService.update).toHaveBeenCalledWith(productId, {
-      name: 'گوشی جدید',
-      subtitle: 'آپدیت از آفر',
-      description: 'توضیح کامل',
-    });
+    expect(productsService.update).toHaveBeenCalledWith(
+      productId,
+      {
+        name: 'گوشی جدید',
+        subtitle: 'آپدیت از آفر',
+        description: 'توضیح کامل',
+      },
+      { preserveApprovalStatus: true },
+    );
   });
 
   it('creates catalog product when productId is missing', async () => {
