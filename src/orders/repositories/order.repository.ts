@@ -59,6 +59,23 @@ export class OrderRepository {
     return qb.getManyAndCount();
   }
 
+  /** کاربر این محصول را در سفارش paid خریده است؟ */
+  async userHasPaidProduct(
+    userId: string,
+    productId: string,
+  ): Promise<boolean> {
+    const row = await this.repo
+      .createQueryBuilder('ord')
+      .innerJoin('ord.items', 'item')
+      .where('ord.userId = :userId', { userId })
+      .andWhere('ord.status = :status', { status: 'paid' })
+      .andWhere('item.productId = :productId', { productId })
+      .select('1')
+      .limit(1)
+      .getRawOne();
+    return Boolean(row);
+  }
+
   create(data: DeepPartial<Order>) {
     return this.repo.create(data);
   }

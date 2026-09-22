@@ -27,6 +27,7 @@ import { ShoppingCartModule } from './shopping-cart/shopping-cart.module.js';
 import { CreditModule } from './credit/credit.module.js';
 import { TransactionsModule } from './transactions/transactions.module.js';
 import { WithdrawsModule } from './withdraws/withdraws.module.js';
+import { ReviewsModule } from './reviews/reviews.module.js';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { WithdrawsModule } from './withdraws/withdraws.module.js';
     SettingsModule,
     MediaModule,
     NewsletterModule,
+    ReviewsModule,
     PublicModule,
     DatabaseSeedModule,
   ],
