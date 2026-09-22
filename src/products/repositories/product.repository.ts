@@ -260,6 +260,8 @@ export class ProductRepository {
         'product.price',
         'product.image',
         'product.brandId',
+        // لازم برای ORDER BY + DISTINCT (TypeORM distinctAlias)
+        'product.createdAt',
       ])
         .leftJoin('product.brand', 'brand')
         .addSelect([
