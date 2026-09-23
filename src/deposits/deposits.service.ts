@@ -176,7 +176,7 @@ export class DepositsService {
         'executed',
         manager,
       );
-      await orderRepo.update({ id: order.id }, { status: 'paid' });
+      await orderRepo.update({ id: order.id }, { status: 'processing' });
 
       return { transactionId: tx.id, amountAfter: Number(wallet.amount) };
     });

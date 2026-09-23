@@ -69,7 +69,18 @@ export class OrderResponseDto {
   @ApiProperty()
   displayTotal: number;
 
-  @ApiProperty()
+  @ApiProperty({
+    enum: [
+      'pending',
+      'processing',
+      'left_warehouse',
+      'shipped',
+      'failed',
+      'cancelled',
+    ],
+    description:
+      'processing = در حال پردازش | left_warehouse = خروج از انبار | shipped = ارسال شده',
+  })
   status: string;
 
   @ApiPropertyOptional({ type: ShippingMethodResponseDto, nullable: true })

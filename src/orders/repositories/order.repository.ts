@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { type DeepPartial, Repository } from 'typeorm';
-import { Order } from '../entities/order.entity.js';
+import {
+  Order,
+  ORDER_FULFILLMENT_STATUSES,
+} from '../entities/order.entity.js';
 
 @Injectable()
 export class OrderRepository {
@@ -74,7 +77,7 @@ export class OrderRepository {
     return qb.getManyAndCount();
   }
 
-  /** کاربر این محصول را در سفارش paid خریده است؟ */
+  /** کاربر این محصول را در سفارش پرداخت‌شده / در حال fulfillment خریده است؟ */
   async userHasPaidProduct(
     userId: string,
     productId: string,
@@ -83,7 +86,9 @@ export class OrderRepository {
       .createQueryBuilder('ord')
       .innerJoin('ord.items', 'item')
       .where('ord.userId = :userId', { userId })
-      .andWhere('ord.status = :status', { status: 'paid' })
+      .andWhere('ord.status IN (:...statuses)', {
+        statuses: [...ORDER_FULFILLMENT_STATUSES],
+      })
       .andWhere('item.productId = :productId', { productId })
       .select('1')
       .limit(1)

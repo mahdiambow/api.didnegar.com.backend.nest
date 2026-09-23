@@ -15,7 +15,31 @@ import type { OrderItem } from './order-item.entity.js';
 import type { Deposit } from '../../deposits/entities/deposit.entity.js';
 import type { ShippingMethod } from '../../shipping/entities/shipping-method.entity.js';
 
-export type OrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled';
+/**
+ * وضعیت سفارش:
+ * - pending: در انتظار پرداخت
+ * - processing: در حال پردازش
+ * - left_warehouse: خروج از انبار
+ * - shipped: ارسال شده
+ * - failed / cancelled: پرداخت ناموفق / لغو
+ */
+export const ORDER_STATUSES = [
+  'pending',
+  'processing',
+  'left_warehouse',
+  'shipped',
+  'failed',
+  'cancelled',
+] as const;
+
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+/** سفارش‌هایی که پرداخت شده و در جریان fulfillment هستند */
+export const ORDER_FULFILLMENT_STATUSES = [
+  'processing',
+  'left_warehouse',
+  'shipped',
+] as const;
 
 /** user = خرید آنلاین کاربر | customer = سفارش تلفنی سوپرسلر */
 export type OrderType = 'user' | 'customer';

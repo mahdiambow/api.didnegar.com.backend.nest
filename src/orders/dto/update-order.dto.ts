@@ -4,13 +4,16 @@ import { IsIn, IsArray, ArrayMinSize, ArrayUnique, ValidateNested, ValidateIf, I
 
 import { Type } from 'class-transformer';
 import { OrderProductDto } from './create-order.dto.js';
-
-const ORDER_STATUSES = ['pending', 'paid', 'failed', 'cancelled'] as const;
+import { ORDER_STATUSES } from '../entities/order.entity.js';
 
 export class UpdateOrderDto {
-  @ApiPropertyOptional({ enum: ORDER_STATUSES })
+  @ApiPropertyOptional({
+    enum: ORDER_STATUSES,
+    description:
+      'pending | processing (در حال پردازش) | left_warehouse (خروج از انبار) | shipped (ارسال شده) | failed | cancelled',
+  })
   @IsOptional()
-  @IsIn(ORDER_STATUSES)
+  @IsIn([...ORDER_STATUSES])
   status?: (typeof ORDER_STATUSES)[number];
 
   @ApiPropertyOptional({ type: [OrderProductDto], minItems: 1 })

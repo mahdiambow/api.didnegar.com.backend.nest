@@ -310,7 +310,8 @@ export class OrdersService {
         subtotal: data.subtotal,
         shippingAmount: data.shippingAmount,
         amount: data.amount,
-        status: 'pending',
+        // سفارش تلفنی بدون درگاه → مستقیم در حال پردازش
+        status: data.type === 'customer' ? 'processing' : 'pending',
       }),
     );
     return order.id;
