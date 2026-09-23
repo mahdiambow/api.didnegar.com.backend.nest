@@ -333,20 +333,30 @@ export class CategoriesService {
     return {};
   }
 
-  async findAllCategories(query: ListCategoriesQueryDto = {}) {
+  async findAllCategories(query: ListCategoriesQueryDto = {} as ListCategoriesQueryDto) {
     if (query.parentCategoryId) {
       await this.assertParentCategoryExists(query.parentCategoryId);
     }
 
-    const items = await this.categoryRepository.findFiltered({
-      parentCategoryId: query.parentCategoryId,
-      search: query.search,
-      name: query.name,
-      slug: query.slug,
-      isActive: query.isActive,
-    });
+    const { page, limit, offset } = getPaginationParams(query);
+    const [items, total] = await this.categoryRepository.findPaginated(
+      offset,
+      limit,
+      {
+        parentCategoryId: query.parentCategoryId,
+        search: query.search,
+        name: query.name,
+        slug: query.slug,
+        isActive: query.isActive,
+      },
+    );
 
-    return items.map((item) => toCategoryResponse(item, true));
+    return paginatedList(
+      items.map((item) => toCategoryResponse(item, true)),
+      page,
+      limit,
+      total,
+    );
   }
 
   async findCategory(id: string) {

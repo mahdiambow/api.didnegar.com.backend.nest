@@ -26,7 +26,7 @@ export class AttributesService {
     private readonly attributeValueRepository: AttributeValueRepository,
   ) {}
 
-  async findAllAttributes(query: ListAttributesQueryDto = {}) {
+  async findAllAttributes(query: ListAttributesQueryDto = {} as ListAttributesQueryDto) {
     if (query.valueId) {
       const value = await this.attributeValueRepository.findById(query.valueId);
       if (!value) {
@@ -46,14 +46,23 @@ export class AttributesService {
           HttpStatus.NOT_FOUND,
         );
       }
-      return [toAttributeResponse(attribute, true)];
+      return paginatedList([toAttributeResponse(attribute, true)], 1, 1, 1);
     }
 
+    const { page, limit, offset } = getPaginationParams(query);
     const includeValues = query.includeValues === true;
-    const items = includeValues
-      ? await this.attributeRepository.findAllWithValues()
-      : await this.attributeRepository.findAll();
-    return items.map((item) => toAttributeResponse(item, includeValues));
+    const [items, total] = await this.attributeRepository.findPaginated(
+      offset,
+      limit,
+      { includeValues },
+    );
+
+    return paginatedList(
+      items.map((item) => toAttributeResponse(item, includeValues)),
+      page,
+      limit,
+      total,
+    );
   }
 
   async findAttribute(id: string) {

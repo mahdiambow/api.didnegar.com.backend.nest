@@ -69,12 +69,12 @@ const CategoryApiResponseDto = createSuccessResponseDto(CategoryResponseDto, {
   name: 'Category',
 });
 
-const CategoriesListApiResponseDto = createSuccessResponseDto(
+const CategoriesPaginatedApiResponseDto = createPaginatedResponseDto(
   CategoryResponseDto,
   {
     code: 'CATEGORIES_FOUND',
     message: 'Categories retrieved successfully',
-    name: 'CategoriesList',
+    name: 'Categories',
   },
 );
 
@@ -138,7 +138,7 @@ export class ParentCategoriesController {
     message: 'Categories retrieved successfully',
   })
   @ApiOperation({ summary: 'List categories of a parent category', description: 'لیست دسته‌های یک parent category' })
-  @ApiOkResponse({ type: CategoriesListApiResponseDto })
+  @ApiOkResponse({ type: CategoriesPaginatedApiResponseDto })
   findCategories(
     @Param('parentCategoryId') parentCategoryId: string,
     @Query() query: ListCategoriesQueryDto,
@@ -206,10 +206,11 @@ export class CategoriesController {
     message: 'Categories retrieved successfully',
   })
   @ApiOperation({
-    summary: 'List categories (level 2)',
-    description: 'لیست دسته‌بندی‌ها (سطح ۲)\n\nاختیاری: ?parentCategoryId=&search=&isActive=',
+    summary: 'List categories (level 2) with pagination',
+    description:
+      'لیست دسته‌بندی‌ها (سطح ۲) با pagination\n\nاختیاری: ?parentCategoryId=&search=&isActive=&page=&limit=',
   })
-  @ApiOkResponse({ type: CategoriesListApiResponseDto })
+  @ApiOkResponse({ type: CategoriesPaginatedApiResponseDto })
   findAllCategories(@Query() query: ListCategoriesQueryDto) {
     return this.categoriesService.findAllCategories(query);
   }

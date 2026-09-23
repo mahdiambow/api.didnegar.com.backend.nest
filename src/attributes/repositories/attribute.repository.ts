@@ -20,6 +20,27 @@ export class AttributeRepository {
     });
   }
 
+  findPaginated(
+    offset: number,
+    limit: number,
+    options: { includeValues?: boolean } = {},
+  ) {
+    const qb = this.repo
+      .createQueryBuilder('attribute')
+      .orderBy('attribute.name', 'ASC')
+      .skip(offset)
+      .take(limit);
+
+    if (options.includeValues) {
+      qb.leftJoinAndSelect('attribute.values', 'values').addOrderBy(
+        'values.sortOrder',
+        'ASC',
+      );
+    }
+
+    return qb.getManyAndCount();
+  }
+
   findById(id: string) {
     return this.repo.findOne({ where: { id } });
   }

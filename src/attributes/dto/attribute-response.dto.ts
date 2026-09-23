@@ -8,6 +8,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { Attribute } from '../entities/attribute.entity.js';
 import {
   CREATE_ATTRIBUTE_EXAMPLE,
@@ -18,7 +19,7 @@ import {
   toAttributeValueResponse,
 } from './attribute-value.dto.js';
 
-export class ListAttributesQueryDto {
+export class ListAttributesQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     example: '01JEX000000000000000000080',
     description: 'فیلتر ویژگی والد بر اساس valueId',

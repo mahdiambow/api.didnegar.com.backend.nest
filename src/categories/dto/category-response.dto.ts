@@ -81,7 +81,7 @@ export class ListParentCategoriesQueryDto {
   isActive?: boolean;
 }
 
-export class ListCategoriesQueryDto {
+export class ListCategoriesQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     example: CATEGORY_EXAMPLES.parentCategoryId,
     description: 'فیلتر بر اساس parent category',

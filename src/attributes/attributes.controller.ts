@@ -7,6 +7,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
+import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
 import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
 import { PermissionsGuard } from '../utils/auth/guards/permissions.guard.js';
@@ -26,12 +27,12 @@ const AttributeApiResponseDto = createSuccessResponseDto(AttributeResponseDto, {
   name: 'Attribute',
 });
 
-const AttributesListApiResponseDto = createSuccessResponseDto(
+const AttributesPaginatedApiResponseDto = createPaginatedResponseDto(
   AttributeResponseDto,
   {
     code: 'ATTRIBUTES_FOUND',
     message: 'Attributes retrieved successfully',
-    name: 'AttributesList',
+    name: 'Attributes',
   },
 );
 
@@ -49,10 +50,11 @@ export class AttributesController {
     message: 'Attributes retrieved successfully',
   })
   @ApiOperation({
-    summary: 'List attributes with values — optional filter by valueId',
-    description: 'لیست ویژگی‌ها همراه values — فیلتر اختیاری با valueId',
+    summary: 'List attributes with pagination',
+    description:
+      'لیست ویژگی‌ها با pagination — اختیاری: ?includeValues=&valueId=&page=&limit=',
   })
-  @ApiOkResponse({ type: AttributesListApiResponseDto })
+  @ApiOkResponse({ type: AttributesPaginatedApiResponseDto })
   findAll(@Query() query: ListAttributesQueryDto) {
     return this.attributesService.findAllAttributes(query);
   }
