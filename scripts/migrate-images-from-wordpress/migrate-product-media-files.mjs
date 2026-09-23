@@ -161,22 +161,18 @@ function sftpRead(sftp, remotePath) {
   });
 }
 
-function execChannel(client, command) {
+function sftpStat(sftp, remotePath) {
   return new Promise((resolve, reject) => {
-    client.exec(command, (error, stream) => (error ? reject(error) : resolve(stream)));
+    sftp.stat(remotePath, (error, stats) => (error ? reject(error) : resolve(stats)));
   });
 }
 
-function waitForChannel(channel, label) {
-  return new Promise((resolve, reject) => {
-    let stderr = '';
-    channel.stderr.on('data', (chunk) => { stderr += chunk; });
-    channel.once('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${label} failed (${code}): ${stderr}`));
-    });
-    channel.once('error', reject);
-  });
+async function prepareFileServerDirectories(client, stageRoot, files) {
+  const directories = [...new Set(files.map((file) => path.posix.dirname(`${stageRoot}/${file}`)))];
+  for (let index = 0; index < directories.length; index += 100) {
+    const command = `mkdir -p ${directories.slice(index, index + 100).map(shell).join(' ')}`;
+    await exec(client, command);
+  }
 }
 
 async function report(event) {
@@ -266,23 +262,16 @@ async function processYear({ year, files, wordpress, workspace }) {
     });
     fileServerClient = await connect(fileServer);
     await report({ type: 'file-server-connected', year });
+    const fileServerSftp = await openSftp(fileServerClient);
     const remoteStage = `${fileServer.stagingRoot}/${year}`;
     await report({ type: 'file-server-staging-preparing', year, remoteStage });
     await exec(fileServerClient, `mkdir -p ${shell(remoteStage)}`);
-
-    const tarSource = await execChannel(
-      wordpressClient,
-      `cd ${shell(remoteDestination)} && tar --null --verbatim-files-from -T product-media-successful-outputs.list0 -cf -`,
-    );
-    const tarDestination = await execChannel(
-      fileServerClient,
-      `tar -C ${shell(remoteStage)} -xf -`,
-    );
-    tarSource.stderr.on('data', (chunk) => process.stderr.write(`[wordpress:${year}:tar-stderr] ${chunk}`));
-    tarDestination.stderr.on('data', (chunk) => process.stderr.write(`[file-server:${year}:tar-stderr] ${chunk}`));
-    const sourceDone = waitForChannel(tarSource, `WordPress archive for ${year}`);
-    const destinationDone = waitForChannel(tarDestination, `File-server extraction for ${year}`);
-    await report({ type: 'file-transfer-started', year, successfulOutputs: summary.successfulOutputs });
+    const successfulOutputs = (await sftpRead(
+      wordpressSftp,
+      `${remoteDestination}/product-media-successful-outputs.list0`,
+    )).toString('utf8').split('\0').filter(Boolean);
+    await prepareFileServerDirectories(fileServerClient, remoteStage, successfulOutputs);
+    await report({ type: 'file-transfer-started', year, successfulOutputs: successfulOutputs.length });
     let transferredBytes = 0;
     let nextProgressBytes = 10 * 1024 * 1024;
     const heartbeat = setInterval(() => {
@@ -292,20 +281,30 @@ async function processYear({ year, files, wordpress, workspace }) {
         transferredMiB: Math.floor(transferredBytes / 1024 / 1024),
       }));
     }, 15_000);
-    tarSource.on('data', (chunk) => {
-      transferredBytes += chunk.length;
-      if (transferredBytes >= nextProgressBytes) {
-        console.log(JSON.stringify({
-          type: 'file-transfer-progress',
-          year,
-          transferredMiB: Math.floor(transferredBytes / 1024 / 1024),
-        }));
-        nextProgressBytes += 10 * 1024 * 1024;
-      }
-    });
     try {
-      await pipeline(tarSource, tarDestination);
-      await Promise.all([sourceDone, destinationDone]);
+      for (let index = 0; index < successfulOutputs.length; index += 1) {
+        const relativePath = successfulOutputs[index];
+        const sourcePath = `${remoteDestination}/${relativePath}`;
+        const destinationPath = `${remoteStage}/${relativePath}`;
+        const sourceStat = await sftpStat(wordpressSftp, sourcePath);
+        const destinationStat = await sftpStat(fileServerSftp, destinationPath).catch(() => null);
+        if (destinationStat?.size !== sourceStat.size) {
+          const sourceStream = wordpressSftp.createReadStream(sourcePath);
+          const destinationStream = fileServerSftp.createWriteStream(destinationPath);
+          await pipeline(sourceStream, destinationStream);
+          transferredBytes += sourceStat.size;
+        }
+        if (transferredBytes >= nextProgressBytes || index + 1 === successfulOutputs.length) {
+          console.log(JSON.stringify({
+            type: 'file-transfer-progress',
+            year,
+            transferredFiles: index + 1,
+            totalFiles: successfulOutputs.length,
+            transferredMiB: Math.floor(transferredBytes / 1024 / 1024),
+          }));
+          while (transferredBytes >= nextProgressBytes) nextProgressBytes += 10 * 1024 * 1024;
+        }
+      }
     } finally {
       clearInterval(heartbeat);
     }
