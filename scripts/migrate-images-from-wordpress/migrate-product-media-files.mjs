@@ -278,11 +278,20 @@ async function processYear({ year, files, wordpress, workspace }) {
       fileServerClient,
       `tar -C ${shell(remoteStage)} -xf -`,
     );
+    tarSource.stderr.on('data', (chunk) => process.stderr.write(`[wordpress:${year}:tar-stderr] ${chunk}`));
+    tarDestination.stderr.on('data', (chunk) => process.stderr.write(`[file-server:${year}:tar-stderr] ${chunk}`));
     const sourceDone = waitForChannel(tarSource, `WordPress archive for ${year}`);
     const destinationDone = waitForChannel(tarDestination, `File-server extraction for ${year}`);
     await report({ type: 'file-transfer-started', year, successfulOutputs: summary.successfulOutputs });
     let transferredBytes = 0;
-    let nextProgressBytes = 250 * 1024 * 1024;
+    let nextProgressBytes = 10 * 1024 * 1024;
+    const heartbeat = setInterval(() => {
+      console.log(JSON.stringify({
+        type: 'file-transfer-heartbeat',
+        year,
+        transferredMiB: Math.floor(transferredBytes / 1024 / 1024),
+      }));
+    }, 15_000);
     tarSource.on('data', (chunk) => {
       transferredBytes += chunk.length;
       if (transferredBytes >= nextProgressBytes) {
@@ -291,11 +300,15 @@ async function processYear({ year, files, wordpress, workspace }) {
           year,
           transferredMiB: Math.floor(transferredBytes / 1024 / 1024),
         }));
-        nextProgressBytes += 250 * 1024 * 1024;
+        nextProgressBytes += 10 * 1024 * 1024;
       }
     });
-    await pipeline(tarSource, tarDestination);
-    await Promise.all([sourceDone, destinationDone]);
+    try {
+      await pipeline(tarSource, tarDestination);
+      await Promise.all([sourceDone, destinationDone]);
+    } finally {
+      clearInterval(heartbeat);
+    }
     await report({
       type: 'file-transfer-complete',
       year,

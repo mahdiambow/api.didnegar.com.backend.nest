@@ -109,7 +109,6 @@ async function main() {
     const sourceFile = path.join(sourceRoot, relativePath);
     const outputFile = path.join(destinationRoot, outputRelative);
     try {
-      await log({ type: 'file-started', sourceRelativePath: relativePath, outputRelativePath: outputRelative });
       const sourceStat = await fs.stat(sourceFile);
       if (!sourceStat.isFile()) throw new Error('Source is not a regular file');
 
@@ -119,7 +118,6 @@ async function main() {
       if (existing?.size > 0 && previous?.fingerprint === fingerprint) {
         totals.unchanged += 1;
         successfulOutputs.push(outputRelative);
-        await log({ type: 'file-unchanged', sourceRelativePath: relativePath, outputRelativePath: outputRelative, outputBytes: existing.size });
         return;
       }
 
@@ -141,14 +139,6 @@ async function main() {
       await fs.rename(temporary, outputFile);
       state[relativePath] = { fingerprint, outputRelative, updatedAt: new Date().toISOString() };
       successfulOutputs.push(outputRelative);
-      const outputStat = await fs.stat(outputFile);
-      await log({
-        type: convertibleExtensions.has(path.extname(relativePath).toLowerCase()) ? 'file-converted' : 'file-copied',
-        sourceRelativePath: relativePath,
-        outputRelativePath: outputRelative,
-        sourceBytes: sourceStat.size,
-        outputBytes: outputStat.size,
-      });
     } catch (error) {
       if (error.code === 'ENOENT') totals.missing += 1;
       else totals.invalid += 1;
