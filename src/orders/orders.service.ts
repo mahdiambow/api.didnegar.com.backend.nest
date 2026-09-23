@@ -36,7 +36,9 @@ export class OrdersService {
     page?: string | number;
     limit?: string | number;
     status?: string;
+    type?: string;
     userId?: string;
+    customerId?: string;
   }) {
     const { page, limit, offset } = getPaginationParams(query);
     const [items, total] = await this.orderRepository.findPaginated(
@@ -44,7 +46,9 @@ export class OrdersService {
       limit,
       {
         status: query.status,
+        type: query.type,
         userId: query.userId,
+        customerId: query.customerId,
       },
     );
 
@@ -71,7 +75,9 @@ export class OrdersService {
     const orderId = await this.dataSource.transaction(async (manager) => {
       await this.offersService.decrementStockForPurchase(items, manager);
       const id = await this.insertOrder(manager, {
+        type: 'user',
         userId,
+        customerId: null,
         items,
         addressId: address.id,
         shippingMethodIds: [shippingMethod.id],
@@ -95,6 +101,38 @@ export class OrdersService {
       paymentGateway: payment.gateway,
       creditApplied: payment.creditApplied,
       bankAmount: payment.bankAmount,
+    });
+  }
+
+  /**
+   * سفارش تلفنی — بدون User/سبد/درگاه؛ type=customer
+   * داخل تراکنش بیرونی (مثلاً ثبت مشتری) صدا زده می‌شود.
+   */
+  async createCustomerOrderInTransaction(
+    manager: EntityManager,
+    data: {
+      customerId: string;
+      products: OrderProductDto[];
+      shippingMethodId: string;
+    },
+  ) {
+    const items = await this.resolveProducts(data.products);
+    const shippingMethod = await this.shippingService.resolveShippingMethod(
+      data.shippingMethodId,
+    );
+    const amounts = this.calculateAmounts(items, [shippingMethod]);
+    await this.offersService.decrementStockForPurchase(items, manager);
+    return this.insertOrder(manager, {
+      type: 'customer',
+      userId: null,
+      customerId: data.customerId,
+      items,
+      addressId: null,
+      shippingMethodIds: [shippingMethod.id],
+      shippingMethodId: shippingMethod.id,
+      subtotal: amounts.subtotal,
+      shippingAmount: amounts.shippingAmount,
+      amount: amounts.payableAmount,
     });
   }
 
@@ -239,7 +277,9 @@ export class OrdersService {
   private async insertOrder(
     manager: EntityManager,
     data: {
-      userId: string;
+      type: 'user' | 'customer';
+      userId: string | null;
+      customerId: string | null;
       items: Array<{
         offerId: string;
         productId: string;
@@ -260,7 +300,9 @@ export class OrdersService {
     const orderRepo = manager.getRepository(Order);
     const order = await orderRepo.save(
       orderRepo.create({
+        type: data.type,
         userId: data.userId,
+        customerId: data.customerId,
         addressId: data.addressId,
         items: data.items,
         shippingMethodId: data.shippingMethodId,

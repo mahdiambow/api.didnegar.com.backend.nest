@@ -36,7 +36,12 @@ export class OrderRepository {
   findPaginated(
     offset: number,
     limit: number,
-    filters: { status?: string; userId?: string } = {},
+    filters: {
+      status?: string;
+      type?: string;
+      userId?: string;
+      customerId?: string;
+    } = {},
   ) {
     const qb = this.repo
       .createQueryBuilder('order')
@@ -52,8 +57,18 @@ export class OrderRepository {
       qb.andWhere('order.status = :status', { status: filters.status });
     }
 
+    if (filters.type) {
+      qb.andWhere('order.type = :type', { type: filters.type });
+    }
+
     if (filters.userId) {
       qb.andWhere('order.userId = :userId', { userId: filters.userId });
+    }
+
+    if (filters.customerId) {
+      qb.andWhere('order.customerId = :customerId', {
+        customerId: filters.customerId,
+      });
     }
 
     return qb.getManyAndCount();

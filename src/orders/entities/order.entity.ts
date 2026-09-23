@@ -10,11 +10,15 @@ import {
 } from 'typeorm';
 import type { User } from '../../users/entities/user.entity.js';
 import type { UserAddress } from '../../users/entities/user-address.entity.js';
+import type { Customer } from '../../customers/entities/customer.entity.js';
 import type { OrderItem } from './order-item.entity.js';
 import type { Deposit } from '../../deposits/entities/deposit.entity.js';
 import type { ShippingMethod } from '../../shipping/entities/shipping-method.entity.js';
 
 export type OrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled';
+
+/** user = خرید آنلاین کاربر | customer = سفارش تلفنی سوپرسلر */
+export type OrderType = 'user' | 'customer';
 
 @Entity('orders')
 export class Order {
@@ -23,6 +27,9 @@ export class Order {
 
   @Column({ type: 'varchar', length: 26, nullable: true })
   userId: string | null;
+
+  @Column({ type: 'varchar', length: 26, nullable: true })
+  customerId: string | null;
 
   @Column({ type: 'varchar', length: 26, nullable: true })
   addressId: string | null;
@@ -46,6 +53,9 @@ export class Order {
   @Column({ type: 'varchar', length: 20, default: 'pending' })
   status: OrderStatus;
 
+  @Column({ type: 'varchar', length: 20, default: 'user' })
+  type: OrderType;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -55,6 +65,10 @@ export class Order {
   @ManyToOne('User', { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'userId' })
   user: User | null;
+
+  @ManyToOne('Customer', { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'customerId' })
+  customer: Customer | null;
 
   @ManyToOne('UserAddress', { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'addressId' })

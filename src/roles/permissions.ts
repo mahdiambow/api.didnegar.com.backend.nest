@@ -104,6 +104,12 @@ export const PERMISSIONS = {
     review: 'media:review',
     delete: 'media:delete',
   },
+  customers: {
+    read: 'customers:read',
+    create: 'customers:create',
+    update: 'customers:update',
+    delete: 'customers:delete',
+  },
 } as const;
 
 export const LOCATION_PERMISSIONS = PERMISSIONS.locations;
@@ -424,6 +430,26 @@ export const PERMISSION_DEFINITIONS = [
     label: 'حذف رسانه',
     group: 'media',
   },
+  {
+    key: PERMISSIONS.customers.read,
+    label: 'مشاهده مشتریان تلفنی',
+    group: 'customers',
+  },
+  {
+    key: PERMISSIONS.customers.create,
+    label: 'ایجاد مشتری تلفنی',
+    group: 'customers',
+  },
+  {
+    key: PERMISSIONS.customers.update,
+    label: 'ویرایش مشتری تلفنی',
+    group: 'customers',
+  },
+  {
+    key: PERMISSIONS.customers.delete,
+    label: 'حذف مشتری تلفنی',
+    group: 'customers',
+  },
 ] as const satisfies ReadonlyArray<{
   key: string;
   label: string;
@@ -499,13 +525,22 @@ const SELLER_PERMISSIONS: Permission[] = [
   PERMISSIONS.media.delete,
 ];
 
+/** سفارش تلفنی — فقط سوپرسلر (جدا از حساب User) */
+const SUPER_SELLER_PERMISSIONS: Permission[] = [
+  ...SELLER_PERMISSIONS,
+  PERMISSIONS.customers.read,
+  PERMISSIONS.customers.create,
+  PERMISSIONS.customers.update,
+  PERMISSIONS.customers.delete,
+];
+
 export const DEFAULT_ROLE_PERMISSIONS: Record<
   DefaultRoleSlug,
   readonly Permission[]
 > = {
   [DEFAULT_ROLE_SLUGS.USER]: [],
   [DEFAULT_ROLE_SLUGS.SELLER]: SELLER_PERMISSIONS,
-  [DEFAULT_ROLE_SLUGS.SUPER_SELLER]: SELLER_PERMISSIONS,
+  [DEFAULT_ROLE_SLUGS.SUPER_SELLER]: SUPER_SELLER_PERMISSIONS,
   [DEFAULT_ROLE_SLUGS.ADMIN]: [],
   [DEFAULT_ROLE_SLUGS.SUPER_ADMIN]: ALL_PERMISSIONS,
 };

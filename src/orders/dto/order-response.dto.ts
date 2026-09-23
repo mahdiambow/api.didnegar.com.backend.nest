@@ -37,6 +37,15 @@ export class OrderResponseDto {
   userId: string | null;
 
   @ApiPropertyOptional({ nullable: true })
+  customerId: string | null;
+
+  @ApiProperty({
+    enum: ['user', 'customer'],
+    description: 'user = خرید آنلاین | customer = سفارش تلفنی',
+  })
+  type: string;
+
+  @ApiPropertyOptional({ nullable: true })
   addressId: string | null;
 
   @ApiProperty({ type: [OrderProductResponseDto] })
@@ -109,6 +118,8 @@ export function toOrderResponse(
   return {
     id: order.id,
     userId: order.userId,
+    customerId: order.customerId ?? null,
+    type: order.type ?? 'user',
     addressId: order.addressId ?? null,
     products: order.items.map((item) => ({
       productId: item.productId,

@@ -29,6 +29,7 @@ import { TransactionsModule } from './transactions/transactions.module.js';
 import { WithdrawsModule } from './withdraws/withdraws.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
 import { AddressesModule } from './addresses/addresses.module.js';
+import { CustomersModule } from './customers/customers.module.js';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { AddressesModule } from './addresses/addresses.module.js';
     OffersModule,
     ShoppingCartModule,
     AddressesModule,
+    CustomersModule,
     CreditModule,
     TransactionsModule,
     WithdrawsModule,
