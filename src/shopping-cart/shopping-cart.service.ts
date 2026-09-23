@@ -82,9 +82,13 @@ export class ShoppingCartService {
     return this.toResponse(await this.loadCart(item.cartId));
   }
 
-  async clear(userId: string) {
-    const cart = await this.init(userId);
-    await this.items.delete({ cartId: cart.id });
+  async clear(userId: string, manager?: EntityManager) {
+    const cart = await this.init(userId, manager);
+    const items = manager
+      ? manager.getRepository(ShoppingCartItem)
+      : this.items;
+    await items.delete({ cartId: cart.id });
+    if (manager) return;
     return this.toResponse(await this.loadCart(cart.id));
   }
 

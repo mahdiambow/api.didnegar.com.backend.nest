@@ -12,6 +12,7 @@ import { ShippingService } from '../shipping/shipping.service.js';
 const offerId = '01JEX000000000000000000010';
 const secondId = '01JEX000000000000000000040';
 const shippingMethodId = '01JEX000000000000000000030';
+const addressId = '01JEX000000000000000000050';
 
 function setup(isCod = false) {
   let saved: any;
@@ -59,22 +60,40 @@ function setup(isCod = false) {
       depositId: 'dep1',
     })),
   };
+  const shoppingCart = {
+    get: vi.fn(async () => ({ items: [] })),
+    clear: vi.fn(async () => undefined),
+  };
+  const addresses = {
+    resolveForUser: vi.fn(async () => ({ id: addressId })),
+  };
   const service = new OrdersService(
     dataSource as unknown as DataSource,
     repository as unknown as OrderRepository,
     products as unknown as OffersService,
     shipping as unknown as ShippingService,
     deposits as never,
+    shoppingCart as never,
+    addresses as never,
   );
-  return { service, repository, products, dataSource, deposits };
+  return {
+    service,
+    repository,
+    products,
+    dataSource,
+    deposits,
+    shoppingCart,
+    addresses,
+  };
 }
 
 describe('multi-product orders', () => {
   it.each([false, true])('charges shipping once, COD=%s', async (isCod) => {
-    const { service, dataSource, products } = setup(isCod);
+    const { service, dataSource, products, shoppingCart } = setup(isCod);
     const result = await service.create('user', {
       products: [{ offerId, quantity: 2 }, { offerId: secondId }],
       shippingMethodId,
+      addressId,
     });
     expect(result.products).toHaveLength(2);
     expect(result.products.map((item) => item.offerId)).toEqual([
@@ -90,6 +109,22 @@ describe('multi-product orders', () => {
     expect(result.paymentUrl).toBe('https://gateway.example/start/1');
     expect(dataSource.transaction).toHaveBeenCalledTimes(1);
     expect(products.decrementStockForPurchase).toHaveBeenCalled();
+    expect(shoppingCart.clear).toHaveBeenCalledWith('user', expect.anything());
+  });
+
+  it('creates order from shopping cart items and clears cart', async () => {
+    const { service, shoppingCart, products } = setup();
+    shoppingCart.get.mockResolvedValueOnce({
+      items: [
+        { offerId, quantity: 2 },
+        { offerId: secondId, quantity: 1 },
+      ],
+    });
+    const result = await service.create('user', { shippingMethodId, addressId });
+    expect(result.products).toHaveLength(2);
+    expect(products.resolvePurchasable).toHaveBeenCalledWith(offerId, 2);
+    expect(products.resolvePurchasable).toHaveBeenCalledWith(secondId, 1);
+    expect(shoppingCart.clear).toHaveBeenCalled();
   });
 
   it('passes paymentMethod partial-bank to deposits', async () => {
@@ -97,6 +132,7 @@ describe('multi-product orders', () => {
     await service.create('user', {
       products: [{ offerId }],
       shippingMethodId,
+      addressId,
       paymentMethod: 'partial-bank',
     });
     expect(deposits.requestPayment).toHaveBeenCalledWith(
@@ -115,6 +151,7 @@ describe('multi-product orders', () => {
       service.create('user', {
         products: [{ offerId }, { offerId: secondId }],
         shippingMethodId,
+        addressId,
       }),
     ).rejects.toThrow();
     expect(dataSource.transaction).not.toHaveBeenCalled();
@@ -125,6 +162,7 @@ describe('multi-product orders', () => {
     await service.create('user', {
       products: [{ offerId, quantity: 2 }, { offerId: secondId }],
       shippingMethodId,
+      addressId,
     });
     products.resolvePurchasable.mockClear();
     const shippingUpdate = await service.updateAdmin('order', {
@@ -144,6 +182,7 @@ describe('multi-product orders', () => {
       plainToInstance(CreateOrderDto, {
         products: [{ offerId: 'bad' }],
         shippingMethodId,
+        addressId,
       }),
     );
     expect(errors.length).toBeGreaterThan(0);

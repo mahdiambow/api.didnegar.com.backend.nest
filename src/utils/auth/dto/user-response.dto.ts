@@ -217,7 +217,7 @@ function toUserProfileResponse(profile: UserProfile): UserProfileResponseDto {
   };
 }
 
-function toUserAddressResponse(address: UserAddress): UserAddressResponseDto {
+export function toUserAddressResponse(address: UserAddress): UserAddressResponseDto {
   return {
     id: address.id,
     title: address.title,

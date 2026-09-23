@@ -10,6 +10,8 @@ import { OffersService } from '../offers/offers.service.js';
 import { ShippingService } from '../shipping/shipping.service.js';
 import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
 import { DepositsService } from '../deposits/deposits.service.js';
+import { ShoppingCartService } from '../shopping-cart/shopping-cart.service.js';
+import { AddressesService } from '../addresses/addresses.service.js';
 import { CreateOrderDto, OrderProductDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { toOrderResponse } from './dto/order-response.dto.js';
@@ -25,6 +27,9 @@ export class OrdersService {
     private readonly shippingService: ShippingService,
     @Inject(forwardRef(() => DepositsService))
     private readonly depositsService: DepositsService,
+    @Inject(forwardRef(() => ShoppingCartService))
+    private readonly shoppingCartService: ShoppingCartService,
+    private readonly addressesService: AddressesService,
   ) {}
 
   async findAll(query: {
@@ -52,7 +57,12 @@ export class OrdersService {
   }
 
   async create(userId: string, dto: CreateOrderDto) {
-    const items = await this.resolveProducts(dto.products);
+    const products = await this.resolveCheckoutProducts(userId, dto);
+    const items = await this.resolveProducts(products);
+    const address = await this.addressesService.resolveForUser(
+      userId,
+      dto.addressId,
+    );
     const shippingMethod = await this.shippingService.resolveShippingMethod(
       dto.shippingMethodId,
     );
@@ -60,16 +70,18 @@ export class OrdersService {
 
     const orderId = await this.dataSource.transaction(async (manager) => {
       await this.offersService.decrementStockForPurchase(items, manager);
-      return this.insertOrder(manager, {
+      const id = await this.insertOrder(manager, {
         userId,
         items,
-        addressId: null,
+        addressId: address.id,
         shippingMethodIds: [shippingMethod.id],
         shippingMethodId: shippingMethod.id,
         subtotal: amounts.subtotal,
         shippingAmount: amounts.shippingAmount,
         amount: amounts.payableAmount,
       });
+      await this.shoppingCartService.clear(userId, manager);
+      return id;
     });
 
     const saved = await this.orderRepository.findById(orderId);
@@ -191,6 +203,29 @@ export class OrdersService {
     });
     const saved = await this.orderRepository.findById(updated.id);
     return toOrderResponse(saved!);
+  }
+
+  private async resolveCheckoutProducts(
+    userId: string,
+    dto: CreateOrderDto,
+  ): Promise<OrderProductDto[]> {
+    const cart = await this.shoppingCartService.get(userId);
+    if (cart.items.length > 0) {
+      return cart.items.map((item) => ({
+        offerId: item.offerId,
+        quantity: item.quantity,
+      }));
+    }
+
+    if (dto.products?.length) {
+      return dto.products;
+    }
+
+    throw new ApiException(
+      'CART_EMPTY',
+      'سبد خرید خالی است؛ ابتدا محصول به سبد اضافه کنید',
+      HttpStatus.BAD_REQUEST,
+    );
   }
 
   private async resolveProducts(products: OrderProductDto[]) {
