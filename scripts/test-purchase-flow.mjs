@@ -121,7 +121,7 @@ async function main() {
 
   r = await api('POST', '/shopping-cart/items', {
     token,
-    body: { offerId, quantity: 1 },
+    body: [{ offerId, quantity: 1 }],
   });
   assert(r.status < 400, `add cart failed: ${JSON.stringify(r.json)}`);
   console.log('4) Cart item added');

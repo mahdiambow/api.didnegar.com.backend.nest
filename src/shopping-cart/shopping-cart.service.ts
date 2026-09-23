@@ -28,22 +28,43 @@ export class ShoppingCartService {
     return this.getOrCreate(userId, manager);
   }
 
-  async addItem(userId: string, dto: AddShoppingCartItemDto) {
-    const cart = await this.init(userId);
-    const existing = await this.items.findOne({
-      where: { cartId: cart.id, offerId: dto.offerId },
-    });
-    const quantity = (existing?.quantity ?? 0) + dto.quantity;
-    await this.offersService.resolvePurchasable(dto.offerId, quantity);
-
-    if (existing) {
-      existing.quantity = quantity;
-      await this.items.save(existing);
-    } else {
-      await this.items.save(
-        this.items.create({ cartId: cart.id, offerId: dto.offerId, quantity }),
+  async addItems(userId: string, items: AddShoppingCartItemDto[]) {
+    if (!items?.length) {
+      throw new ApiException(
+        'CART_ITEMS_REQUIRED',
+        'حداقل یک آیتم برای افزودن به سبد لازم است',
+        HttpStatus.BAD_REQUEST,
       );
     }
+
+    const cart = await this.init(userId);
+
+    // جمع quantityهای تکراری در همان درخواست
+    const quantityByOffer = new Map<string, number>();
+    for (const item of items) {
+      quantityByOffer.set(
+        item.offerId,
+        (quantityByOffer.get(item.offerId) ?? 0) + item.quantity,
+      );
+    }
+
+    for (const [offerId, addQuantity] of quantityByOffer) {
+      const existing = await this.items.findOne({
+        where: { cartId: cart.id, offerId },
+      });
+      const quantity = (existing?.quantity ?? 0) + addQuantity;
+      await this.offersService.resolvePurchasable(offerId, quantity);
+
+      if (existing) {
+        existing.quantity = quantity;
+        await this.items.save(existing);
+      } else {
+        await this.items.save(
+          this.items.create({ cartId: cart.id, offerId, quantity }),
+        );
+      }
+    }
+
     return this.toResponse(await this.loadCart(cart.id));
   }
 

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseArrayPipe,
   ParseUUIDPipe,
   Patch,
   Post,
@@ -12,6 +13,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -55,13 +57,25 @@ export class ShoppingCartController {
     code: 'SHOPPING_CART_ITEM_ADDED',
     message: 'Shopping cart item added successfully',
   })
-  @ApiOperation({ summary: 'Add seller offer to shopping cart', description: 'افزودن پیشنهاد فروش به سبد خرید' })
+  @ApiOperation({
+    summary: 'Add seller offers to shopping cart',
+    description:
+      'افزودن یک یا چند پیشنهاد فروش به سبد\n\nBody: `[{ "offerId", "quantity" }, ...]`',
+  })
+  @ApiBody({ type: [AddShoppingCartItemDto] })
   @ApiOkResponse({ type: CartApiResponseDto })
-  addItem(
+  addItems(
     @Req() req: { user: { sub: string } },
-    @Body() dto: AddShoppingCartItemDto,
+    @Body(
+      new ParseArrayPipe({
+        items: AddShoppingCartItemDto,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+      }),
+    )
+    items: AddShoppingCartItemDto[],
   ) {
-    return this.shoppingCartService.addItem(req.user.sub, dto);
+    return this.shoppingCartService.addItems(req.user.sub, items);
   }
 
   @Patch('items/:id')
