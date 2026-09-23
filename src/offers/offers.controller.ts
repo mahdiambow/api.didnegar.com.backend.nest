@@ -183,7 +183,8 @@ export class OffersController {
   )
   @ApiOperation({
     summary: 'Update seller offer',
-    description: 'ویرایش پیشنهاد فروش\n\nتغییر قیمت و سایر فیلدها فوری اعمال می‌شود',
+    description:
+      'ویرایش پیشنهاد فروش\n\nبرای تغییر وضعیت تأیید، فقط `approvalStatus` سطح آفر را بفرستید (نه داخل product). بدون آن، وضعیت فعلی آفر حفظ می‌شود.',
   })
   @ApiResponseMeta({
     code: 'OFFER_UPDATED',

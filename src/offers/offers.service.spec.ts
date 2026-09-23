@@ -243,12 +243,26 @@ describe('seller offers', () => {
     });
   });
 
-  it('applies price updates immediately', async () => {
+  it('applies price updates immediately without forcing approvalStatus', async () => {
     expect(isImmediateOfferUpdate({ price: 70000000 })).toBe(true);
-    const { service } = setup();
+    const { service } = setup({ approvalStatus: 'pending' });
     const result = await service.update(user, 'offer', { price: 70000000 });
-    expect(result.approvalStatus).toBe('approved');
+    expect(result.approvalStatus).toBe('pending');
     expect(result.price).toBe(70000000);
+  });
+
+  it('updates only offer approvalStatus when provided', async () => {
+    const { service, productsService } = setup({ approvalStatus: 'pending' });
+    const result = await service.update(user, 'offer', {
+      approvalStatus: 'approved',
+      product: { name: 'updated' },
+    });
+    expect(result.approvalStatus).toBe('approved');
+    expect(productsService.update).toHaveBeenCalledWith(
+      productId,
+      { name: 'updated' },
+      { preserveApprovalStatus: true },
+    );
   });
 
   it('maps duplicate seller/SKU to conflict', async () => {

@@ -253,7 +253,11 @@ export class ProductsService {
     return response;
   }
 
-  async update(id: string, dto: UpdateProductDto) {
+  async update(
+    id: string,
+    dto: UpdateProductDto,
+    options: { preserveApprovalStatus?: boolean } = {},
+  ) {
     const product = await this.productRepository.findById(id);
     if (!product) {
       throw new ApiException(
@@ -330,7 +334,7 @@ export class ProductsService {
         product.approvalStatus = 'pending';
         product.rejectionReason = null;
       }
-    } else {
+    } else if (!options.preserveApprovalStatus) {
       // تغییر محتوا بدون تعیین صریح وضعیت → منتظر تأیید مجدد
       product.approvalStatus = 'pending';
       product.rejectionReason = null;

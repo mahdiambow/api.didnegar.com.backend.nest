@@ -741,9 +741,18 @@ export class OffersService {
     const offer = await this.getEntity(id);
     assertOfferAccess(user, offer.sellerId);
 
-    const { product: productPatch, ...offerFields } = dto;
+    const {
+      product: productPatch,
+      approvalStatus,
+      rejectionReason,
+      ...offerFields
+    } = dto;
+
     if (productPatch && Object.keys(productPatch).length > 0) {
-      await this.productsService.update(offer.productId, productPatch);
+      // ویرایش از مسیر آفر نباید approvalStatus محصول را به pending برگرداند
+      await this.productsService.update(offer.productId, productPatch, {
+        preserveApprovalStatus: true,
+      });
     }
 
     if (
@@ -759,8 +768,27 @@ export class OffersService {
     }
 
     Object.assign(offer, offerFields);
-    offer.approvalStatus = 'approved';
-    offer.rejectionReason = null;
+
+    if (approvalStatus !== undefined) {
+      if (approvalStatus === 'rejected') {
+        const reason = rejectionReason?.trim();
+        if (!reason) {
+          throw new ApiException(
+            'REJECTION_REASON_REQUIRED',
+            'برای رد پیشنهاد باید دلیل وارد شود',
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+        offer.approvalStatus = 'rejected';
+        offer.rejectionReason = reason;
+      } else if (approvalStatus === 'approved') {
+        offer.approvalStatus = 'approved';
+        offer.rejectionReason = null;
+      } else {
+        offer.approvalStatus = 'pending';
+        offer.rejectionReason = null;
+      }
+    }
 
     return this.save(offer, true);
   }
