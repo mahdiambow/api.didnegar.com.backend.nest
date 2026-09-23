@@ -444,27 +444,28 @@ export class OffersService {
     this.approvedCountCache = null;
   }
 
-  /** sellerIdهای فعال/تأییدشده به ازای هر productId */
-  async findApprovedSellerIdsByProductIds(
+  /** آفرهای فعال/تأییدشده به ازای هر productId (با seller) */
+  async findApprovedOffersByProductIds(
     productIds: string[],
-  ): Promise<Map<string, string[]>> {
-    const byProduct = new Map<string, string[]>();
+  ): Promise<Map<string, SellerOffer[]>> {
+    const byProduct = new Map<string, SellerOffer[]>();
     if (productIds.length === 0) return byProduct;
 
-    const rows = await this.offers
-      .createQueryBuilder('offer')
-      .select('offer.productId', 'productId')
-      .addSelect('offer.sellerId', 'sellerId')
-      .where('offer.productId IN (:...productIds)', { productIds })
-      .andWhere('offer.isActive = true')
-      .andWhere("offer.approvalStatus = 'approved'")
-      .distinct(true)
-      .getRawMany<{ productId: string; sellerId: string }>();
+    const offers = await this.offers.find({
+      where: {
+        productId: In(productIds),
+        isActive: true,
+        approvalStatus: 'approved',
+      },
+      relations: { seller: true },
+      order: { price: 'ASC', createdAt: 'ASC' },
+    });
 
-    for (const row of rows) {
-      const list = byProduct.get(row.productId) ?? [];
-      list.push(row.sellerId);
-      byProduct.set(row.productId, list);
+    for (const offer of offers) {
+      if (offer.seller && offer.seller.status !== 'active') continue;
+      const list = byProduct.get(offer.productId) ?? [];
+      list.push(offer);
+      byProduct.set(offer.productId, list);
     }
     return byProduct;
   }
