@@ -144,6 +144,20 @@ async function main() {
 
   for (let index = 0; index < files.length; index += concurrency) {
     await Promise.all(files.slice(index, index + concurrency).map(processFile));
+    const processed = Math.min(index + concurrency, files.length);
+    if (processed % 100 === 0 || processed === files.length) {
+      process.stdout.write(`${JSON.stringify({
+        type: 'conversion-progress',
+        year: manifest.year,
+        processed,
+        selected: files.length,
+        converted: totals.converted,
+        copied: totals.copied,
+        unchanged: totals.unchanged,
+        missing: totals.missing,
+        invalid: totals.invalid,
+      })}\n`);
+    }
   }
 
   const uniqueOutputs = [...new Set(successfulOutputs)].sort();

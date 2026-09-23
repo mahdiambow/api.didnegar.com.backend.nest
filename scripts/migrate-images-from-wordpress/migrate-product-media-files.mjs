@@ -18,10 +18,7 @@ import dotenv from 'dotenv';
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const workerPath = path.join(currentDirectory, 'convert-product-media-year.mjs');
 // The API container runs as an unprivileged user and /app is read-only there.
-// Callers can override this with MIGRATION_PRODUCT_MEDIA_FILES_REPORT_PATH.
-const reportPath =
-  process.env.MIGRATION_PRODUCT_MEDIA_FILES_REPORT_PATH ||
-  '/tmp/migration-product-media-files-report.jsonl';
+const reportPath = '/tmp/migration-product-media-files-report.jsonl';
 
 function requiredEnv(name) {
   const value = process.env[name]?.trim();
@@ -114,13 +111,16 @@ function close(client) {
   if (client) client.end();
 }
 
-function exec(client, command, stdin) {
+function exec(client, command, { stdin, onStdout } = {}) {
   return new Promise((resolve, reject) => {
     client.exec(command, (error, stream) => {
       if (error) return reject(error);
       let stdout = '';
       let stderr = '';
-      stream.on('data', (chunk) => { stdout += chunk; });
+      stream.on('data', (chunk) => {
+        stdout += chunk;
+        onStdout?.(chunk.toString('utf8'));
+      });
       stream.stderr.on('data', (chunk) => { stderr += chunk; });
       stream.once('close', (code) => {
         if (code === 0) resolve({ stdout, stderr });
@@ -213,6 +213,7 @@ async function processYear({ year, files, wordpress, workspace }) {
   let wordpressClient;
   let fileServerClient;
   try {
+    console.log(JSON.stringify({ type: 'year-started', year, selectedFiles: files.length }));
     wordpressClient = await connect(wordpress);
     const wordpressSftp = await openSftp(wordpressClient);
     const remoteManifest = `${wordpress.optimizerDir}/product-media-${year}.json`;
@@ -224,6 +225,9 @@ async function processYear({ year, files, wordpress, workspace }) {
     await exec(
       wordpressClient,
       `node ${shell(remoteWorker)} --manifest ${shell(remoteManifest)} --source-root ${shell(`${wordpress.uploadsRoot}/${year}`)} --destination-root ${shell(remoteDestination)}`,
+      {
+        onStdout: (line) => process.stdout.write(`[wordpress:${year}] ${line}`),
+      },
     );
 
     const summary = JSON.parse((await sftpRead(wordpressSftp, `${remoteDestination}/product-media-optimization-summary.json`)).toString('utf8'));
@@ -247,14 +251,35 @@ async function processYear({ year, files, wordpress, workspace }) {
     );
     const sourceDone = waitForChannel(tarSource, `WordPress archive for ${year}`);
     const destinationDone = waitForChannel(tarDestination, `File-server extraction for ${year}`);
+    let transferredBytes = 0;
+    let nextProgressBytes = 250 * 1024 * 1024;
+    tarSource.on('data', (chunk) => {
+      transferredBytes += chunk.length;
+      if (transferredBytes >= nextProgressBytes) {
+        console.log(JSON.stringify({
+          type: 'file-transfer-progress',
+          year,
+          transferredMiB: Math.floor(transferredBytes / 1024 / 1024),
+        }));
+        nextProgressBytes += 250 * 1024 * 1024;
+      }
+    });
     await pipeline(tarSource, tarDestination);
     await Promise.all([sourceDone, destinationDone]);
+    console.log(JSON.stringify({
+      type: 'file-transfer-complete',
+      year,
+      transferredMiB: Math.ceil(transferredBytes / 1024 / 1024),
+    }));
 
     const objectPrefix = `${fileServer.prefix}/${year}`;
     const s3Target = `s3://${fileServer.bucket}/${objectPrefix}`;
     await exec(
       fileServerClient,
       `aws --endpoint-url ${shell(fileServer.endpoint)} s3 sync ${shell(remoteStage)} ${shell(s3Target)} --no-progress`,
+      {
+        onStdout: (line) => process.stdout.write(`[seaweed:${year}] ${line}`),
+      },
     );
     const verification = await exec(
       fileServerClient,
@@ -291,6 +316,12 @@ async function main() {
     );
     if (tables.length !== 2) throw new Error('Target database is missing media or product_media');
     const { grouped, rejected, selectedRows } = await loadProductMedia(target, year);
+    console.log(JSON.stringify({
+      type: 'product-media-selected',
+      selectedRows,
+      years: [...grouped.entries()].map(([selectedYear, files]) => ({ year: selectedYear, files: files.size })),
+      skippedUrls: rejected.length,
+    }));
     for (const item of rejected) await report({ type: 'skipped-media-url', ...item });
     const wordpress = wordpressConfig();
     const years = [...grouped.keys()].sort();
