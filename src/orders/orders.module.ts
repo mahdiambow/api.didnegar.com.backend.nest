@@ -10,6 +10,8 @@ import { ShippingModule } from '../shipping/shipping.module.js';
 import { AuthModule } from '../utils/auth/auth.module.js';
 import { RolesModule } from '../roles/roles.module.js';
 import { DepositsModule } from '../deposits/deposits.module.js';
+import { ShoppingCartModule } from '../shopping-cart/shopping-cart.module.js';
+import { AddressesModule } from '../addresses/addresses.module.js';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { DepositsModule } from '../deposits/deposits.module.js';
     forwardRef(() => AuthModule),
     forwardRef(() => RolesModule),
     forwardRef(() => DepositsModule),
+    forwardRef(() => ShoppingCartModule),
+    forwardRef(() => AddressesModule),
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrderRepository],

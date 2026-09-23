@@ -28,6 +28,7 @@ import { CreditModule } from './credit/credit.module.js';
 import { TransactionsModule } from './transactions/transactions.module.js';
 import { WithdrawsModule } from './withdraws/withdraws.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
+import { AddressesModule } from './addresses/addresses.module.js';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { ReviewsModule } from './reviews/reviews.module.js';
     BrandsModule,
     OffersModule,
     ShoppingCartModule,
+    AddressesModule,
     CreditModule,
     TransactionsModule,
     WithdrawsModule,

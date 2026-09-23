@@ -25,13 +25,26 @@ export class OrderProductDto {
 }
 
 export class CreateOrderDto {
-  @ApiProperty({ type: [OrderProductDto], minItems: 1 })
+  @ApiPropertyOptional({
+    type: [OrderProductDto],
+    minItems: 1,
+    description:
+      'اگر خالی باشد، آیتم‌های سبد خرید کاربر برای سفارش استفاده می‌شوند',
+  })
+  @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
   @ArrayUnique((item: OrderProductDto) => item?.offerId)
   @ValidateNested({ each: true })
   @Type(() => OrderProductDto)
-  products: OrderProductDto[];
+  products?: OrderProductDto[];
+
+  @ApiProperty({
+    example: '01JEX000000000000000000010',
+    description: 'شناسه آدرس کاربر (از CRUD آدرس‌ها)',
+  })
+  @IsULID()
+  addressId: string;
 
   @ApiProperty({ example: '01JEX000000000000000000030' })
   @IsULID()

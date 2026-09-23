@@ -68,7 +68,11 @@ export class OrdersController {
     code: 'ORDER_CREATED',
     message: 'Order created successfully',
   })
-  @ApiOperation({ summary: 'Create order', description: 'ایجاد سفارش' })
+  @ApiOperation({
+    summary: 'Create order',
+    description:
+      'ایجاد سفارش از سبد خرید (اگر سبد خالی باشد از `products` استفاده می‌شود). پس از ثبت، سبد خالی می‌شود.',
+  })
   @ApiOkResponse({ type: OrderApiResponseDto })
   create(@Req() req: { user: { sub: string } }, @Body() dto: CreateOrderDto) {
     return this.ordersService.create(req.user.sub, dto);
