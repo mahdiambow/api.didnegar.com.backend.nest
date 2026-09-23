@@ -243,21 +243,20 @@ describe('seller offers', () => {
     });
   });
 
-  it('applies price updates immediately without forcing approvalStatus', async () => {
+  it('sets offer approvalStatus to pending on any update', async () => {
     expect(isImmediateOfferUpdate({ price: 70000000 })).toBe(true);
-    const { service } = setup({ approvalStatus: 'pending' });
+    const { service } = setup({ approvalStatus: 'approved' });
     const result = await service.update(user, 'offer', { price: 70000000 });
     expect(result.approvalStatus).toBe('pending');
     expect(result.price).toBe(70000000);
   });
 
-  it('updates only offer approvalStatus when provided', async () => {
-    const { service, productsService } = setup({ approvalStatus: 'pending' });
+  it('preserves product approvalStatus when patching product via offer', async () => {
+    const { service, productsService } = setup({ approvalStatus: 'approved' });
     const result = await service.update(user, 'offer', {
-      approvalStatus: 'approved',
       product: { name: 'updated' },
     });
-    expect(result.approvalStatus).toBe('approved');
+    expect(result.approvalStatus).toBe('pending');
     expect(productsService.update).toHaveBeenCalledWith(
       productId,
       { name: 'updated' },

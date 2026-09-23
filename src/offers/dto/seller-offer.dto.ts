@@ -102,29 +102,7 @@ export class CreateSellerOffersDto {
 export class UpdateSellerOfferDto extends PartialType(
   OmitType(SellerOfferItemDto, ['productId'] as const),
   { skipNullProperties: false },
-) {
-  @ApiPropertyOptional({
-    enum: ['pending', 'approved', 'rejected'],
-    description:
-      'وضعیت تأیید خود آفر (خارج از product). اگر نفرستید، approvalStatus فعلی آفر حفظ می‌شود.',
-  })
-  @IsOptional()
-  @IsIn(['pending', 'approved', 'rejected'])
-  approvalStatus?: 'pending' | 'approved' | 'rejected';
-
-  @ApiPropertyOptional({
-    example: 'قیمت نامعتبر است',
-    description: 'دلیل رد — وقتی approvalStatus=rejected',
-    nullable: true,
-  })
-  @ValidateIf(
-    (dto: UpdateSellerOfferDto) => dto.approvalStatus === 'rejected',
-  )
-  @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  rejectionReason?: string | null;
-}
+) {}
 
 export class ListSellerOffersDto extends PaginationQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsULID() sellerId?: string;

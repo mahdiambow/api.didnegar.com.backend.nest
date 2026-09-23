@@ -184,7 +184,7 @@ export class OffersController {
   @ApiOperation({
     summary: 'Update seller offer',
     description:
-      'ویرایش پیشنهاد فروش\n\nبرای تغییر وضعیت تأیید، فقط `approvalStatus` سطح آفر را بفرستید (نه داخل product). بدون آن، وضعیت فعلی آفر حفظ می‌شود.',
+      'ویرایش پیشنهاد فروش\n\nبا هر تغییر، `approvalStatus` آفر (خارج از product) به `pending` برمی‌گردد. تأیید مجدد: `PATCH /seller-offers/:id/approval`.',
   })
   @ApiResponseMeta({
     code: 'OFFER_UPDATED',
