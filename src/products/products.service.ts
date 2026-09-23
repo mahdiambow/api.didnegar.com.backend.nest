@@ -481,12 +481,15 @@ export class ProductsService {
     const { OffersService } = await import('../offers/offers.service.js');
     const offersService = this.moduleRef.get(OffersService, { strict: false });
 
-    const sellerIdsByProduct =
-      await offersService.findApprovedSellerIdsByProductIds(
-        products.map((product) => product.id),
-      );
+    const offersByProduct = await offersService.findApprovedOffersByProductIds(
+      products.map((product) => product.id),
+    );
     const offerSellerIds = [
-      ...new Set([...sellerIdsByProduct.values()].flat()),
+      ...new Set(
+        [...offersByProduct.values()].flatMap((offers) =>
+          offers.map((offer) => offer.sellerId),
+        ),
+      ),
     ];
     const allSellerIds = [...new Set([...sellerIds, ...offerSellerIds])];
 
@@ -536,6 +539,26 @@ export class ProductsService {
             .filter((id): id is string => Boolean(id)),
         ),
       ];
+      const productShipping = product.shippingMethodId
+        ? (shippingMethodMap.get(product.shippingMethodId) ?? null)
+        : null;
+      const sellersForProduct = (offersByProduct.get(product.id) ?? [])
+        .map((offer) => {
+          const seller = sellerMap.get(offer.sellerId);
+          if (!seller) return null;
+          return {
+            offerId: offer.id,
+            sellerId: offer.sellerId,
+            price: Number(offer.price),
+            stock: offer.stock,
+            stockStatus: offer.stockStatus,
+            isOnSale: offer.isOnSale,
+            seller,
+            shippingMethod: productShipping,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
       return toProductResponse(product, true, {
         attributes: productAttributeIds
           .map((id) => attributeMap.get(id))
@@ -547,12 +570,8 @@ export class ProductsService {
         createdBySeller: product.createdBySellerId
           ? (sellerMap.get(product.createdBySellerId) ?? null)
           : null,
-        shippingMethod: product.shippingMethodId
-          ? (shippingMethodMap.get(product.shippingMethodId) ?? null)
-          : null,
-        sellers: (sellerIdsByProduct.get(product.id) ?? [])
-          .map((id) => sellerMap.get(id))
-          .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+        shippingMethod: productShipping,
+        sellers: sellersForProduct,
       });
     });
   }

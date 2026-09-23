@@ -22,6 +22,7 @@ import {
   ProductListItemDto,
   ProductPriceResponseDto,
   ProductResponseDto,
+  ProductSellerOfferDto,
 } from '../products/dto/product-response.dto.js';
 import { ListPublicProductsQueryDto } from '../products/dto/list-public-products-query.dto.js';
 import { AttributeValueResponseDto } from '../attributes/dto/attribute-value.dto.js';
@@ -93,6 +94,7 @@ const PublicCategoriesApiResponseDto = createSuccessResponseDto(
   ProductResponseDto,
   ProductListItemDto,
   ProductPriceResponseDto,
+  ProductSellerOfferDto,
   AttributeValueResponseDto,
 )
 @Controller('public')

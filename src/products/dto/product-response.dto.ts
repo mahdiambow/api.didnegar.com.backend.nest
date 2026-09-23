@@ -55,9 +55,40 @@ export type ProductPopulatedRelations = {
   shippingMethod?: ShippingMethodResponseDto | null;
   /** valueId → AttributeValue — برای populate کردن price.valueAttributes */
   attributeValueById?: Map<string, AttributeValueResponseDto>;
-  /** فروشنده‌های فعال با پیشنهاد تأییدشده — فقط در get by id */
-  sellers?: SellerResponseDto[];
+  /** پیشنهادهای تأییدشده فروشنده‌ها — فقط در get by id */
+  sellers?: ProductSellerOfferDto[];
 };
+
+/** فروشندهٔ تأییدشده روی محصول + قیمت آفر و روش ارسال */
+export class ProductSellerOfferDto {
+  @ApiProperty()
+  offerId: string;
+
+  @ApiProperty()
+  sellerId: string;
+
+  @ApiProperty({ example: 68000000, description: 'قیمت پیشنهاد فروش' })
+  price: number;
+
+  @ApiProperty({ example: 10 })
+  stock: number;
+
+  @ApiProperty({ example: 'instock' })
+  stockStatus: string;
+
+  @ApiProperty()
+  isOnSale: boolean;
+
+  @ApiProperty({ type: SellerResponseDto })
+  seller: SellerResponseDto;
+
+  @ApiPropertyOptional({
+    type: ShippingMethodResponseDto,
+    nullable: true,
+    description: 'روش ارسال محصول',
+  })
+  shippingMethod: ShippingMethodResponseDto | null;
+}
 
 export class ProductPriceResponseDto {
   @ApiProperty({
@@ -336,11 +367,11 @@ export class ProductResponseDto {
   categories?: ProductCategoryResponseDto[];
 
   @ApiProperty({
-    type: [SellerResponseDto],
+    type: [ProductSellerOfferDto],
     description:
-      'فروشنده‌های فعال با پیشنهاد تأییدشده روی این محصول (فقط get by id)',
+      'فروشنده‌هایی که روی این محصول آفر approved دارند — با قیمت و shippingMethod (فقط get by id)',
   })
-  sellers: SellerResponseDto[];
+  sellers: ProductSellerOfferDto[];
 }
 
 function normalizeImage(image: Product['image']): ProductImageData {

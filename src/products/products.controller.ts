@@ -23,6 +23,7 @@ import {
   ProductListItemDto,
   ProductPriceResponseDto,
   ProductResponseDto,
+  ProductSellerOfferDto,
 } from './dto/product-response.dto.js';
 import { AttributeValueResponseDto } from '../attributes/dto/attribute-value.dto.js';
 import { ListProductsQueryDto } from './dto/list-products-query.dto.js';
@@ -53,6 +54,7 @@ const BrandsListApiResponseDto = createSuccessResponseDto(BrandResponseDto, {
   ProductResponseDto,
   ProductListItemDto,
   ProductPriceResponseDto,
+  ProductSellerOfferDto,
   AttributeValueResponseDto,
 )
 @ApiBearerAuth('access-token')
