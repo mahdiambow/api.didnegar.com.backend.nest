@@ -12,7 +12,6 @@ import { appendFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pipeline } from 'node:stream/promises';
 import dotenv from 'dotenv';
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -161,14 +160,6 @@ function sftpRead(sftp, remotePath) {
   });
 }
 
-async function prepareFileServerDirectories(client, stageRoot, files) {
-  const directories = [...new Set(files.map((file) => path.posix.dirname(`${stageRoot}/${file}`)))];
-  for (let index = 0; index < directories.length; index += 100) {
-    const command = `mkdir -p ${directories.slice(index, index + 100).map(shell).join(' ')}`;
-    await exec(client, command);
-  }
-}
-
 async function report(event) {
   const entry = { at: new Date().toISOString(), ...event };
   await appendFile(reportPath, `${JSON.stringify(entry)}\n`);
@@ -256,67 +247,34 @@ async function processYear({ year, files, wordpress, workspace }) {
     });
     fileServerClient = await connect(fileServer);
     await report({ type: 'file-server-connected', year });
-    const fileServerSftp = await openSftp(fileServerClient);
+    await report({ type: 'file-server-rsync-prerequisite-check', year });
+    await exec(fileServerClient, 'command -v rsync && command -v aws');
     const remoteStage = `${fileServer.stagingRoot}/${year}`;
     await report({ type: 'file-server-staging-preparing', year, remoteStage });
     await exec(fileServerClient, `mkdir -p ${shell(remoteStage)}`);
-    const successfulOutputs = (await sftpRead(
-      wordpressSftp,
-      `${remoteDestination}/product-media-successful-outputs.list0`,
-    )).toString('utf8').split('\0').filter(Boolean);
-    await prepareFileServerDirectories(fileServerClient, remoteStage, successfulOutputs);
-    await report({ type: 'file-transfer-started', year, successfulOutputs: successfulOutputs.length });
-    let transferredBytes = 0;
-    let nextProgressBytes = 10 * 1024 * 1024;
-    const heartbeat = setInterval(() => {
-      console.log(JSON.stringify({
-        type: 'file-transfer-heartbeat',
-        year,
-        transferredMiB: Math.floor(transferredBytes / 1024 / 1024),
-      }));
-    }, 15_000);
+    const remoteSuccessList = `${remoteDestination}/product-media-successful-outputs.list0`;
+    const passwordFile = path.join(workspace, `file-server-rsync-${year}.password`);
+    const remotePasswordFile = `${wordpress.optimizerDir}/.file-server-rsync-${process.pid}-${year}.password`;
     try {
-      for (let index = 0; index < successfulOutputs.length; index += 1) {
-        const relativePath = successfulOutputs[index];
-        const sourcePath = `${remoteDestination}/${relativePath}`;
-        const destinationPath = `${remoteStage}/${relativePath}`;
-        if (index === 0 || (index + 1) % 100 === 0) {
-          console.log(JSON.stringify({
-            type: 'file-transfer-stream-started',
-            year,
-            fileNumber: index + 1,
-            totalFiles: successfulOutputs.length,
-          }));
-        }
-        const sourceStream = wordpressSftp.createReadStream(sourcePath);
-        sourceStream.on('data', (chunk) => {
-          transferredBytes += chunk.length;
-        });
-        const destinationStream = fileServerSftp.createWriteStream(destinationPath);
-        await pipeline(sourceStream, destinationStream);
-        if (
-          transferredBytes >= nextProgressBytes ||
-          (index + 1) % 100 === 0 ||
-          index + 1 === successfulOutputs.length
-        ) {
-          console.log(JSON.stringify({
-            type: 'file-transfer-progress',
-            year,
-            transferredFiles: index + 1,
-            totalFiles: successfulOutputs.length,
-            transferredMiB: Math.floor(transferredBytes / 1024 / 1024),
-          }));
-          while (transferredBytes >= nextProgressBytes) nextProgressBytes += 10 * 1024 * 1024;
-        }
-      }
+      await report({ type: 'wordpress-rsync-prerequisite-check', year });
+      await exec(wordpressClient, 'command -v rsync && command -v sshpass');
+      await writeFile(passwordFile, fileServer.password, { mode: 0o600 });
+      await sftpFastPut(wordpressSftp, passwordFile, remotePasswordFile);
+      await exec(wordpressClient, `chmod 600 ${shell(remotePasswordFile)}`);
+      await report({ type: 'wordpress-to-file-server-rsync-started', year, remoteStage });
+      await exec(
+        wordpressClient,
+        `cd ${shell(remoteDestination)} && sshpass -f ${shell(remotePasswordFile)} rsync -a --partial --append-verify --from0 --files-from=${shell(remoteSuccessList)} --info=progress2 -e ${shell('ssh -o StrictHostKeyChecking=accept-new')} ./ ${shell(`${fileServer.username}@${fileServer.host}:${remoteStage}/`)}`,
+        {
+          onStdout: (line) => process.stdout.write(`[rsync:${year}] ${line}`),
+          onStderr: (line) => process.stderr.write(`[rsync:${year}:stderr] ${line}`),
+        },
+      );
     } finally {
-      clearInterval(heartbeat);
+      await rm(passwordFile, { force: true });
+      await exec(wordpressClient, `rm -f ${shell(remotePasswordFile)}`).catch(() => {});
     }
-    await report({
-      type: 'file-transfer-complete',
-      year,
-      transferredMiB: Math.ceil(transferredBytes / 1024 / 1024),
-    });
+    await report({ type: 'wordpress-to-file-server-rsync-complete', year, successfulOutputs: summary.successfulOutputs });
 
     const objectPrefix = `${fileServer.prefix}/${year}`;
     const s3Target = `s3://${fileServer.bucket}/${objectPrefix}`;
