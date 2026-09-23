@@ -101,8 +101,16 @@ function outputRelativePath(relativePath) {
 function connect(config) {
   return new Promise((resolve, reject) => {
     const client = new Client();
-    client.once('ready', () => resolve(client));
-    client.once('error', reject);
+    const timeout = setTimeout(() => {
+      client.end();
+      reject(new Error(`SSH connection timed out after ${config.readyTimeout}ms: ${config.username}@${config.host}:${config.port}`));
+    }, config.readyTimeout);
+    const finish = (callback) => (value) => {
+      clearTimeout(timeout);
+      callback(value);
+    };
+    client.once('ready', finish(() => resolve(client)));
+    client.once('error', finish(reject));
     client.connect(config);
   });
 }
@@ -111,7 +119,7 @@ function close(client) {
   if (client) client.end();
 }
 
-function exec(client, command, { stdin, onStdout } = {}) {
+function exec(client, command, { stdin, onStdout, onStderr } = {}) {
   return new Promise((resolve, reject) => {
     client.exec(command, (error, stream) => {
       if (error) return reject(error);
@@ -121,7 +129,10 @@ function exec(client, command, { stdin, onStdout } = {}) {
         stdout += chunk;
         onStdout?.(chunk.toString('utf8'));
       });
-      stream.stderr.on('data', (chunk) => { stderr += chunk; });
+      stream.stderr.on('data', (chunk) => {
+        stderr += chunk;
+        onStderr?.(chunk.toString('utf8'));
+      });
       stream.once('close', (code) => {
         if (code === 0) resolve({ stdout, stderr });
         else reject(new Error(`Remote command failed (${code}): ${stderr || command}`));
@@ -169,7 +180,9 @@ function waitForChannel(channel, label) {
 }
 
 async function report(event) {
-  await appendFile(reportPath, `${JSON.stringify({ at: new Date().toISOString(), ...event })}\n`);
+  const entry = { at: new Date().toISOString(), ...event };
+  await appendFile(reportPath, `${JSON.stringify(entry)}\n`);
+  console.log(JSON.stringify(entry));
 }
 
 async function loadProductMedia(target, requestedYear) {
@@ -213,20 +226,27 @@ async function processYear({ year, files, wordpress, workspace }) {
   let wordpressClient;
   let fileServerClient;
   try {
-    console.log(JSON.stringify({ type: 'year-started', year, selectedFiles: files.length }));
+    await report({ type: 'year-started', year, selectedFiles: files.length });
+    await report({ type: 'wordpress-connection-started', year, host: wordpress.host, port: wordpress.port, username: wordpress.username });
     wordpressClient = await connect(wordpress);
+    await report({ type: 'wordpress-connected', year });
     const wordpressSftp = await openSftp(wordpressClient);
     const remoteManifest = `${wordpress.optimizerDir}/product-media-${year}.json`;
     const remoteWorker = `${wordpress.optimizerDir}/convert-product-media-year.mjs`;
     const remoteDestination = `${wordpress.optimizedRoot}/${year}`;
+    await report({ type: 'wordpress-directories-preparing', year, remoteDestination });
     await exec(wordpressClient, `mkdir -p ${shell(wordpress.optimizerDir)} ${shell(remoteDestination)}`);
+    await report({ type: 'wordpress-worker-upload-started', year, remoteWorker });
     await sftpFastPut(wordpressSftp, workerPath, remoteWorker);
+    await report({ type: 'wordpress-manifest-upload-started', year, remoteManifest, selectedFiles: files.length });
     await sftpFastPut(wordpressSftp, manifestPath, remoteManifest);
+    await report({ type: 'wordpress-conversion-started', year });
     await exec(
       wordpressClient,
       `node ${shell(remoteWorker)} --manifest ${shell(remoteManifest)} --source-root ${shell(`${wordpress.uploadsRoot}/${year}`)} --destination-root ${shell(remoteDestination)}`,
       {
         onStdout: (line) => process.stdout.write(`[wordpress:${year}] ${line}`),
+        onStderr: (line) => process.stderr.write(`[wordpress:${year}:stderr] ${line}`),
       },
     );
 
@@ -237,8 +257,17 @@ async function processYear({ year, files, wordpress, workspace }) {
     // Explicitly reload .env after conversion, before reading independent file-server credentials.
     dotenv.config({ override: true });
     const fileServer = fileServerConfig();
+    await report({
+      type: 'file-server-connection-started',
+      year,
+      host: fileServer.host,
+      port: fileServer.port,
+      username: fileServer.username,
+    });
     fileServerClient = await connect(fileServer);
+    await report({ type: 'file-server-connected', year });
     const remoteStage = `${fileServer.stagingRoot}/${year}`;
+    await report({ type: 'file-server-staging-preparing', year, remoteStage });
     await exec(fileServerClient, `mkdir -p ${shell(remoteStage)}`);
 
     const tarSource = await execChannel(
@@ -251,6 +280,7 @@ async function processYear({ year, files, wordpress, workspace }) {
     );
     const sourceDone = waitForChannel(tarSource, `WordPress archive for ${year}`);
     const destinationDone = waitForChannel(tarDestination, `File-server extraction for ${year}`);
+    await report({ type: 'file-transfer-started', year, successfulOutputs: summary.successfulOutputs });
     let transferredBytes = 0;
     let nextProgressBytes = 250 * 1024 * 1024;
     tarSource.on('data', (chunk) => {
@@ -266,19 +296,21 @@ async function processYear({ year, files, wordpress, workspace }) {
     });
     await pipeline(tarSource, tarDestination);
     await Promise.all([sourceDone, destinationDone]);
-    console.log(JSON.stringify({
+    await report({
       type: 'file-transfer-complete',
       year,
       transferredMiB: Math.ceil(transferredBytes / 1024 / 1024),
-    }));
+    });
 
     const objectPrefix = `${fileServer.prefix}/${year}`;
     const s3Target = `s3://${fileServer.bucket}/${objectPrefix}`;
+    await report({ type: 'seaweed-upload-started', year, s3Target });
     await exec(
       fileServerClient,
       `aws --endpoint-url ${shell(fileServer.endpoint)} s3 sync ${shell(remoteStage)} ${shell(s3Target)} --no-progress`,
       {
         onStdout: (line) => process.stdout.write(`[seaweed:${year}] ${line}`),
+        onStderr: (line) => process.stderr.write(`[seaweed:${year}:stderr] ${line}`),
       },
     );
     const verification = await exec(

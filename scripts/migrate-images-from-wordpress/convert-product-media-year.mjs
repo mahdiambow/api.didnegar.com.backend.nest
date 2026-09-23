@@ -70,7 +70,16 @@ async function main() {
   };
   const successfulOutputs = [];
   const outputOwners = new Map();
-  const report = [];
+  await fs.writeFile(
+    reportPath,
+    `${JSON.stringify({ type: 'run-started', at: new Date().toISOString(), year: manifest.year, selected: manifest.files.length })}\n`,
+  );
+
+  async function log(event) {
+    const entry = { at: new Date().toISOString(), year: manifest.year, ...event };
+    await fs.appendFile(reportPath, `${JSON.stringify(entry)}\n`);
+    process.stdout.write(`${JSON.stringify(entry)}\n`);
+  }
 
   const files = manifest.files
     .map((item) => ({ ...item, relativePath: safeRelativePath(item.relativePath) }))
@@ -81,7 +90,7 @@ async function main() {
     const owner = outputOwners.get(output);
     if (owner && owner !== item.relativePath) {
       totals.collisions += 1;
-      report.push({
+      await log({
         type: 'output-collision',
         sourceRelativePath: item.relativePath,
         conflictingSourceRelativePath: owner,
@@ -100,6 +109,7 @@ async function main() {
     const sourceFile = path.join(sourceRoot, relativePath);
     const outputFile = path.join(destinationRoot, outputRelative);
     try {
+      await log({ type: 'file-started', sourceRelativePath: relativePath, outputRelativePath: outputRelative });
       const sourceStat = await fs.stat(sourceFile);
       if (!sourceStat.isFile()) throw new Error('Source is not a regular file');
 
@@ -109,6 +119,7 @@ async function main() {
       if (existing?.size > 0 && previous?.fingerprint === fingerprint) {
         totals.unchanged += 1;
         successfulOutputs.push(outputRelative);
+        await log({ type: 'file-unchanged', sourceRelativePath: relativePath, outputRelativePath: outputRelative, outputBytes: existing.size });
         return;
       }
 
@@ -130,10 +141,18 @@ async function main() {
       await fs.rename(temporary, outputFile);
       state[relativePath] = { fingerprint, outputRelative, updatedAt: new Date().toISOString() };
       successfulOutputs.push(outputRelative);
+      const outputStat = await fs.stat(outputFile);
+      await log({
+        type: convertibleExtensions.has(path.extname(relativePath).toLowerCase()) ? 'file-converted' : 'file-copied',
+        sourceRelativePath: relativePath,
+        outputRelativePath: outputRelative,
+        sourceBytes: sourceStat.size,
+        outputBytes: outputStat.size,
+      });
     } catch (error) {
       if (error.code === 'ENOENT') totals.missing += 1;
       else totals.invalid += 1;
-      report.push({
+      await log({
         type: error.code === 'ENOENT' ? 'missing-source-file' : 'conversion-failed',
         sourceRelativePath: relativePath,
         outputRelativePath: outputRelative,
@@ -163,10 +182,6 @@ async function main() {
   const uniqueOutputs = [...new Set(successfulOutputs)].sort();
   await fs.writeFile(successListPath, Buffer.from(`${uniqueOutputs.join('\0')}\0`));
   await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
-  await fs.writeFile(
-    reportPath,
-    `${report.map((item) => JSON.stringify({ at: new Date().toISOString(), ...item })).join('\n')}\n`,
-  );
   const summary = {
     type: 'run-complete',
     complete: true,
@@ -177,7 +192,7 @@ async function main() {
     successListPath,
   };
   await fs.writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`);
-  process.stdout.write(`${JSON.stringify(summary)}\n`);
+  await log(summary);
 }
 
 await main();
