@@ -46,7 +46,8 @@
     "db:migrate:offer-attributes": "node scripts/migration-scripts/migrate-offer-attributes.mjs",
     "db:migrate:product-table-info": "node scripts/migration-scripts/migrate-product-table-info.mjs",
     "db:migrate:media": "node scripts/migration-scripts/migrate-media.mjs",
-    "db:migrate:product-images": "node scripts/migration-scripts/migrate-product-images.mjs"
+    "db:migrate:product-images": "node scripts/migration-scripts/migrate-product-images.mjs",
+    "db:migrate:product-media-files": "node scripts/migrate-images-from-wordpress/migrate-product-media-files.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -74,6 +75,7 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "ssh2": "^1.17.0",
     "ssh2-sftp-client": "^12.1.1",
     "typeorm": "^1.1.0",
     "ulid": "^3.0.2"
