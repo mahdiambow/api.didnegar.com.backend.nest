@@ -151,3 +151,19 @@ product variants are intentionally not stored.
 The first valid image ordered by legacy primary flag and sort order becomes
 `featuredImg`; all unique URLs are retained in `gallery`. No target schema migration
 or seller-offer image column is used.
+
+## Product media WebP metadata
+
+After product-linked JPEG/PNG files have been uploaded to SeaweedFS, update
+their Nest media MIME types across every legacy upload year:
+
+```sh
+npm run db:migrate:product-media-webp
+```
+
+The script changes only `media.mimeType` to `image/webp` for product-linked
+media rows that have both `legacyTable` and `legacyId`. It leaves documents,
+GIFs, existing WebP rows, non-legacy rows, `media.url`, and `products.image`
+unchanged.
+Rows whose different source filenames map to the same `.webp` output are also
+skipped and recorded for review.
