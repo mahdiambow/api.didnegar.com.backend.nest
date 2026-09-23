@@ -17,7 +17,11 @@ import dotenv from 'dotenv';
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const workerPath = path.join(currentDirectory, 'convert-product-media-year.mjs');
-const reportPath = process.env.MIGRATION_PRODUCT_MEDIA_FILES_REPORT_PATH || 'migration-product-media-files-report.jsonl';
+// The API container runs as an unprivileged user and /app is read-only there.
+// Callers can override this with MIGRATION_PRODUCT_MEDIA_FILES_REPORT_PATH.
+const reportPath =
+  process.env.MIGRATION_PRODUCT_MEDIA_FILES_REPORT_PATH ||
+  '/tmp/migration-product-media-files-report.jsonl';
 
 function requiredEnv(name) {
   const value = process.env[name]?.trim();
