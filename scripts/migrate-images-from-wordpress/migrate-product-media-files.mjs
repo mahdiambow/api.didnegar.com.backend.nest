@@ -298,7 +298,12 @@ async function processYear({ year, files, wordpress, workspace }) {
       throw new Error(`SeaweedFS verification found unsynchronised objects for ${year}`);
     }
     await report({ type: 'seaweed-year-complete', year, s3Target, successfulOutputs: summary.successfulOutputs });
-    return summary;
+    return {
+      ...summary,
+      fileServerStage: remoteStage,
+      s3Target,
+      seaweedVerified: true,
+    };
   } finally {
     close(fileServerClient);
     close(wordpressClient);
