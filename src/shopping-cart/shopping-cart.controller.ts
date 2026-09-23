@@ -5,7 +5,6 @@ import {
   Get,
   Param,
   ParseArrayPipe,
-  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -83,11 +82,15 @@ export class ShoppingCartController {
     code: 'SHOPPING_CART_ITEM_UPDATED',
     message: 'Shopping cart item updated successfully',
   })
-  @ApiOperation({ summary: 'Update shopping cart item quantity', description: 'تغییر تعداد آیتم سبد خرید' })
+  @ApiOperation({
+    summary: 'Update shopping cart item quantity',
+    description:
+      'تغییر تعداد آیتم سبد — `id` می‌تواند شناسهٔ آیتم سبد یا `offerId` باشد',
+  })
   @ApiOkResponse({ type: CartApiResponseDto })
   updateItem(
     @Req() req: { user: { sub: string } },
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() dto: UpdateShoppingCartItemDto,
   ) {
     return this.shoppingCartService.updateItem(req.user.sub, id, dto);
@@ -98,11 +101,15 @@ export class ShoppingCartController {
     code: 'SHOPPING_CART_ITEM_REMOVED',
     message: 'Shopping cart item removed successfully',
   })
-  @ApiOperation({ summary: 'Remove item from shopping cart', description: 'حذف آیتم از سبد خرید' })
+  @ApiOperation({
+    summary: 'Remove item from shopping cart',
+    description:
+      'حذف آیتم از سبد — `id` می‌تواند شناسهٔ آیتم سبد یا `offerId` باشد',
+  })
   @ApiOkResponse({ type: CartApiResponseDto })
   removeItem(
     @Req() req: { user: { sub: string } },
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
   ) {
     return this.shoppingCartService.removeItem(req.user.sub, id);
   }

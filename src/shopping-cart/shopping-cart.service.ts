@@ -112,12 +112,12 @@ export class ShoppingCartService {
     }));
   }
 
-  private async findUserItem(userId: string, itemId: string) {
+  private async findUserItem(userId: string, idOrOfferId: string) {
     const item = await this.items
       .createQueryBuilder('item')
       .innerJoin('item.cart', 'cart')
-      .where('item.id = :itemId', { itemId })
-      .andWhere('cart.userId = :userId', { userId })
+      .where('cart.userId = :userId', { userId })
+      .andWhere('(item.id = :id OR item.offerId = :id)', { id: idOrOfferId })
       .getOne();
     if (!item) {
       throw new ApiException(
