@@ -18,6 +18,7 @@ export type ReviewStatus = 'approved' | 'pending' | 'spam';
  * Product review / comment.
  *
  * Nested replies: root reviews have `parentId = null`; replies point at a parent.
+ * Depth is unlimited.
  * Rating rules (enforced in service, not DB):
  * - If the user has a paid order containing this productId → rating is required (root only).
  * - Otherwise rating is optional.

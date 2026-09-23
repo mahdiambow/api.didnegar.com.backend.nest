@@ -59,7 +59,7 @@ export class ReviewsController {
   @ApiOperation({
     summary: 'List nested product reviews',
     description:
-      'لیست نظرات تأییدشدهٔ محصول به‌صورت نستد (ریشه + replies تا ۲ سطح)',
+      'لیست نظرات تأییدشدهٔ محصول به‌صورت نستد (ریشه + replies بدون محدودیت عمق)',
   })
   @ApiResponseMeta({
     code: 'REVIEWS_FOUND',

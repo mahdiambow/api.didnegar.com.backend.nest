@@ -18,9 +18,6 @@ import {
 import { assertReviewContentClean } from './helpers/review-content.helper.js';
 import { ReviewRepository } from './repositories/review.repository.js';
 
-/** عمق: ریشه=0، پاسخ=1، پاسخ‌به‌پاسخ=2 */
-const MAX_REPLY_DEPTH = 2;
-
 @Injectable()
 export class ReviewsService {
   constructor(
@@ -86,15 +83,6 @@ export class ReviewsService {
         throw new ApiException(
           'PARENT_PRODUCT_MISMATCH',
           'نظر والد متعلق به این محصول نیست',
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-
-      const parentDepth = await this.getDepth(parent);
-      if (parentDepth + 1 > MAX_REPLY_DEPTH) {
-        throw new ApiException(
-          'REVIEW_DEPTH_EXCEEDED',
-          'حداکثر عمق پاسخ ۲ سطح است',
           HttpStatus.BAD_REQUEST,
         );
       }
@@ -171,7 +159,9 @@ export class ReviewsService {
     }
 
     const wasRatedRoot =
-      review.parentId == null && review.rating != null && review.status === 'approved';
+      review.parentId == null &&
+      review.rating != null &&
+      review.status === 'approved';
     review.status = dto.status;
     await this.reviewRepository.save(review);
 
@@ -217,24 +207,28 @@ export class ReviewsService {
     return {};
   }
 
+  /** همه سطوح پاسخ‌های approved را زیر ریشه‌ها بارگذاری می‌کند */
   private async attachReplies(
     roots: Review[],
   ): Promise<ReviewResponseDto[]> {
     if (roots.length === 0) return [];
 
-    const level1 = await this.reviewRepository.findApprovedRepliesByParentIds(
-      roots.map((r) => r.id),
-    );
-    const level2 = await this.reviewRepository.findApprovedRepliesByParentIds(
-      level1.map((r) => r.id),
-    );
-
     const childrenByParent = new Map<string, Review[]>();
-    for (const reply of [...level1, ...level2]) {
-      if (!reply.parentId) continue;
-      const list = childrenByParent.get(reply.parentId) ?? [];
-      list.push(reply);
-      childrenByParent.set(reply.parentId, list);
+    let frontier = roots.map((review) => review.id);
+
+    while (frontier.length > 0) {
+      const replies =
+        await this.reviewRepository.findApprovedRepliesByParentIds(frontier);
+      if (replies.length === 0) break;
+
+      frontier = [];
+      for (const reply of replies) {
+        if (!reply.parentId) continue;
+        const list = childrenByParent.get(reply.parentId) ?? [];
+        list.push(reply);
+        childrenByParent.set(reply.parentId, list);
+        frontier.push(reply.id);
+      }
     }
 
     const mapNode = (review: Review): ReviewResponseDto =>
@@ -244,17 +238,6 @@ export class ReviewsService {
       );
 
     return roots.map(mapNode);
-  }
-
-  private async getDepth(review: Review): Promise<number> {
-    let depth = 0;
-    let current: Review | null = review;
-    while (current?.parentId) {
-      depth += 1;
-      if (depth > MAX_REPLY_DEPTH + 1) break;
-      current = await this.reviewRepository.findById(current.parentId);
-    }
-    return depth;
   }
 
   private async refreshProductRating(productId: string) {
