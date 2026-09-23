@@ -26,6 +26,7 @@ export type ZibalPaymentStatusCode = keyof typeof ZIBAL_PAYMENT_STATUSES;
 export type ZibalPaymentStatusName =
   (typeof ZIBAL_PAYMENT_STATUSES)[ZibalPaymentStatusCode];
 
+
 type ZibalStatusMeta = {
   name: ZibalPaymentStatusName;
   code: string;

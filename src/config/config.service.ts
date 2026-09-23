@@ -54,6 +54,7 @@ const DEFAULTS: Record<string, string> = {
   ZIBAL_USE_MOCK: 'false',
   LOAN_START_URL: 'https://loan-mock.local/pay',
   LOAN_CALLBACK_URL: '',
+  PUBLIC_API_URL: '',
   PAYMENT_SUCCESS_REDIRECT_URL: 'http://localhost:3001/success',
   PAYMENT_FAILED_REDIRECT_URL: 'http://localhost:3001/failed',
 };
@@ -117,5 +118,12 @@ export class ConfigService {
     if (lower === 'true') return true;
     if (lower === 'false') return false;
     return fallback;
+  }
+
+  /** آدرس عمومی API برای کال‌بک درگاه‌ها */
+  getPublicApiUrl(): string {
+    const configured = this.resolve('PUBLIC_API_URL')?.trim();
+    if (configured) return configured.replace(/\/$/, '');
+    return `http://localhost:${this.get('PORT')}`;
   }
 }

@@ -493,11 +493,15 @@ export class DepositsService {
     sourceType: TransactionSourceType,
     sourceId: string,
   ): string {
-    const base =
+    const path =
       gateway === 'iBank'
-        ? this.config.get('ZIBAL_CALLBACK_URL')
-        : this.config.get('LOAN_CALLBACK_URL');
-    return buildPaymentCallbackUrl(base, sourceType, sourceId);
+        ? '/deposits/callback/zibal'
+        : '/deposits/callback/loan';
+    return buildPaymentCallbackUrl(
+      `${this.config.getPublicApiUrl()}${path}`,
+      sourceType,
+      sourceId,
+    );
   }
 
   private async requirePayableOrder(userId: string, orderId: string) {
