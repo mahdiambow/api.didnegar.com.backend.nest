@@ -161,12 +161,6 @@ function sftpRead(sftp, remotePath) {
   });
 }
 
-function sftpStat(sftp, remotePath) {
-  return new Promise((resolve, reject) => {
-    sftp.stat(remotePath, (error, stats) => (error ? reject(error) : resolve(stats)));
-  });
-}
-
 async function prepareFileServerDirectories(client, stageRoot, files) {
   const directories = [...new Set(files.map((file) => path.posix.dirname(`${stageRoot}/${file}`)))];
   for (let index = 0; index < directories.length; index += 100) {
@@ -286,15 +280,25 @@ async function processYear({ year, files, wordpress, workspace }) {
         const relativePath = successfulOutputs[index];
         const sourcePath = `${remoteDestination}/${relativePath}`;
         const destinationPath = `${remoteStage}/${relativePath}`;
-        const sourceStat = await sftpStat(wordpressSftp, sourcePath);
-        const destinationStat = await sftpStat(fileServerSftp, destinationPath).catch(() => null);
-        if (destinationStat?.size !== sourceStat.size) {
-          const sourceStream = wordpressSftp.createReadStream(sourcePath);
-          const destinationStream = fileServerSftp.createWriteStream(destinationPath);
-          await pipeline(sourceStream, destinationStream);
-          transferredBytes += sourceStat.size;
+        if (index === 0 || (index + 1) % 100 === 0) {
+          console.log(JSON.stringify({
+            type: 'file-transfer-stream-started',
+            year,
+            fileNumber: index + 1,
+            totalFiles: successfulOutputs.length,
+          }));
         }
-        if (transferredBytes >= nextProgressBytes || index + 1 === successfulOutputs.length) {
+        const sourceStream = wordpressSftp.createReadStream(sourcePath);
+        sourceStream.on('data', (chunk) => {
+          transferredBytes += chunk.length;
+        });
+        const destinationStream = fileServerSftp.createWriteStream(destinationPath);
+        await pipeline(sourceStream, destinationStream);
+        if (
+          transferredBytes >= nextProgressBytes ||
+          (index + 1) % 100 === 0 ||
+          index + 1 === successfulOutputs.length
+        ) {
           console.log(JSON.stringify({
             type: 'file-transfer-progress',
             year,
