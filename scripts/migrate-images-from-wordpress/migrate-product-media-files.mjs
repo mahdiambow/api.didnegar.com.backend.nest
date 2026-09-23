@@ -257,7 +257,10 @@ async function processYear({ year, files, wordpress, workspace }) {
     const remotePasswordFile = `${wordpress.optimizerDir}/.file-server-rsync-${process.pid}-${year}.password`;
     try {
       await report({ type: 'wordpress-rsync-prerequisite-check', year });
-      await exec(wordpressClient, 'command -v rsync && command -v sshpass');
+      await exec(
+        wordpressClient,
+        `command -v rsync >/dev/null || { echo 'Missing WordPress prerequisite: rsync' >&2; exit 1; }; command -v sshpass >/dev/null || { echo 'Missing WordPress prerequisite: sshpass' >&2; exit 1; }`,
+      );
       await writeFile(passwordFile, fileServer.password, { mode: 0o600 });
       await sftpFastPut(wordpressSftp, passwordFile, remotePasswordFile);
       await exec(wordpressClient, `chmod 600 ${shell(remotePasswordFile)}`);
