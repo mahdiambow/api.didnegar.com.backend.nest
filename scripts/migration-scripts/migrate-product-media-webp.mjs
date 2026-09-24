@@ -14,6 +14,7 @@ import {
 } from './shared.mjs';
 
 const reportPath = '/tmp/migration-product-media-webp-report.jsonl';
+const BATCH_SIZE = 500;
 
 async function report(event) {
   await appendFile(reportPath, `${JSON.stringify({ at: new Date().toISOString(), ...event })}\n`);
@@ -72,9 +73,16 @@ async function main() {
         .map(([outputPath]) => outputPath),
     );
 
+    console.log(JSON.stringify({
+      type: 'media-webp-selection-complete',
+      selected: rows.length,
+      batchSize: BATCH_SIZE,
+    }));
+
     let updated = 0;
     let unchanged = 0;
     let skippedCollisions = 0;
+    const idsToUpdate = [];
     for (const row of rows) {
       const sourcePath = relativeUploadPath(row.url);
       const outputPath = sourcePath ? webpOutputPath(sourcePath) : null;
@@ -92,11 +100,30 @@ async function main() {
         unchanged += 1;
         continue;
       }
-      await target.execute(
-        "UPDATE media SET mimeType = 'image/webp' WHERE id = ?",
-        [row.id],
+      idsToUpdate.push(row.id);
+    }
+
+    for (let offset = 0; offset < idsToUpdate.length; offset += BATCH_SIZE) {
+      const ids = idsToUpdate.slice(offset, offset + BATCH_SIZE);
+      const placeholders = ids.map(() => '?').join(', ');
+      const [result] = await target.execute(
+        `UPDATE media
+         SET mimeType = 'image/webp'
+         WHERE id IN (${placeholders})
+           AND mimeType <> 'image/webp'`,
+        ids,
       );
-      updated += 1;
+      updated += result.affectedRows;
+
+      const progress = {
+        type: 'media-webp-progress',
+        batch: Math.floor(offset / BATCH_SIZE) + 1,
+        processed: Math.min(offset + ids.length, idsToUpdate.length),
+        eligible: idsToUpdate.length,
+        updated,
+      };
+      console.log(JSON.stringify(progress));
+      await report(progress);
     }
 
     const summary = {
