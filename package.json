@@ -48,6 +48,7 @@
     "db:migrate:media": "node scripts/migration-scripts/migrate-media.mjs",
     "db:migrate:product-images": "node scripts/migration-scripts/migrate-product-images.mjs",
     "db:migrate:product-media-webp": "node scripts/migration-scripts/migrate-product-media-webp.mjs",
+    "db:migrate:product-media-urls": "node scripts/migration-scripts/migrate-product-media-urls.mjs",
     "db:migrate:product-media-files": "node scripts/migrate-images-from-wordpress/migrate-product-media-files.mjs"
   },
   "dependencies": {

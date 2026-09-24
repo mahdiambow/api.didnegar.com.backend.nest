@@ -1,5 +1,18 @@
 # Legacy migration scripts
 
+## Product media URLs
+
+```sh
+npm run db:migrate:product-media-urls
+```
+
+Run after the physical legacy product files have been converted and uploaded to
+SeaweedFS. It verifies each `optimized-wordpress/...webp` object with SeaweedFS
+before repointing product-linked legacy `media.url` and `products.image` values
+to `MEDIA_PUBLIC_BASE_URL/optimized-wordpress/...webp`. Missing objects and
+ambiguous `.jpg`/`.png` → `.webp` collisions are left unchanged and recorded in
+`/tmp/migration-product-media-urls-report.jsonl`. It is idempotent.
+
 `migrate-users.mjs` imports `users`, `user_roles`, and validated `sellers` from the database
 configured by `LEGACY_MIGRATED_DB_*` into this application's existing `users`, `roles`,
 `sellers`, and `admins` tables.
