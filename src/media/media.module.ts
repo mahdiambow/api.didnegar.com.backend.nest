@@ -9,6 +9,7 @@ import { MediaController } from './media.controller.js';
 import { MediaService } from './media.service.js';
 import { MediaStorageService } from './media.storage.service.js';
 import { MediaSftpService } from './media.sftp.service.js';
+import { MediaSeaweedService } from './media-seaweed.service.js';
 import { MediaCleanupCron } from './media.cleanup.cron.js';
 import { MediaThrottlerGuard } from './guards/media-throttler.guard.js';
 
@@ -23,6 +24,7 @@ import { MediaThrottlerGuard } from './guards/media-throttler.guard.js';
     MediaService,
     MediaStorageService,
     MediaSftpService,
+    MediaSeaweedService,
     MediaCleanupCron,
     MediaThrottlerGuard,
   ],

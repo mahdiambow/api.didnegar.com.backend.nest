@@ -1,14 +1,16 @@
 import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { UserResponseDto } from '../../utils/auth/dto/user-response.dto.js';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { SellerResponseDto } from '../../sellers/dto/seller-response.dto.js';
 import {
   MEDIA_GROUPS,
+  MEDIA_SCOPES,
   MEDIA_STATUSES,
   type MediaGroup,
+  type MediaScope,
   type MediaStatus,
 } from '../entities/media-asset.enums.js';
 
@@ -38,6 +40,54 @@ export class UploadMediaDto {
   @IsString()
   @MaxLength(500)
   alt?: string;
+}
+
+/** First step of the browser → SeaweedFS direct-upload flow. */
+export class RequestMediaUploadUrlDto {
+  @ApiProperty({ enum: ['product', 'banner'] as const })
+  @IsIn(['product', 'banner'])
+  scope: Extract<MediaScope, 'product' | 'banner'>;
+
+  @ApiPropertyOptional({ format: 'ulid', description: 'For scope=product only' })
+  @ValidateIf((dto: RequestMediaUploadUrlDto) => dto.scope === 'product')
+  @IsULID()
+  productId?: string;
+
+  @ApiProperty({ example: 'iphone-front.webp', maxLength: 255 })
+  @IsString()
+  @MaxLength(255)
+  filename: string;
+
+  @ApiProperty({ example: 'image/webp', maxLength: 100 })
+  @IsString()
+  @MaxLength(100)
+  mimeType: string;
+
+  @ApiProperty({ example: 284120, minimum: 1 })
+  @IsInt()
+  @Min(1)
+  @Max(2_147_483_647)
+  sizeBytes: number;
+
+  @ApiPropertyOptional({ maxLength: 500 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  alt?: string;
+}
+
+export class DirectUploadUrlResponseDto {
+  @ApiProperty({ format: 'ulid' })
+  mediaId: string;
+
+  @ApiProperty({ description: 'Short-lived URL. Upload with HTTP PUT.' })
+  uploadUrl: string;
+
+  @ApiProperty({ example: 300 })
+  expiresIn: number;
+
+  @ApiProperty({ example: 'products/01seller/01product/01media.webp' })
+  objectKey: string;
 }
 
 export class ListMediaAssetsDto extends PaginationQueryDto {
@@ -107,8 +157,11 @@ export class MediaAssetResponseDto {
   @ApiProperty({ enum: MEDIA_GROUPS })
   group: MediaGroup;
 
+  @ApiProperty({ enum: MEDIA_SCOPES })
+  scope: MediaScope;
+
   @ApiProperty({ format: 'ulid' })
-  sellerId: string;
+  sellerId: string | null;
 
   @ApiProperty({ format: 'ulid' })
   uploadedByUserId: string;

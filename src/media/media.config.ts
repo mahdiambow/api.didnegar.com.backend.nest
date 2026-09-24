@@ -4,8 +4,22 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
 }
 
 const sftpHost = process.env.MEDIA_SFTP_HOST?.trim() || '';
+const seaweedEndpoint = process.env.SEAWEED_S3_ENDPOINT?.trim() || '';
 
 export const mediaConfig = {
+  seaweed: {
+    enabled: Boolean(seaweedEndpoint),
+    endpoint: seaweedEndpoint,
+    region: process.env.SEAWEED_S3_REGION?.trim() || 'us-east-1',
+    bucket: process.env.SEAWEED_S3_BUCKET?.trim() || 'didnegar-media',
+    accessKeyId: process.env.SEAWEED_S3_ACCESS_KEY?.trim() || '',
+    secretAccessKey: process.env.SEAWEED_S3_SECRET_KEY?.trim() || '',
+    publicBaseUrl: (process.env.MEDIA_PUBLIC_BASE_URL?.trim() || '').replace(/\/$/, ''),
+    uploadUrlTtlSeconds: parsePositiveInt(
+      process.env.SEAWEED_S3_UPLOAD_URL_TTL_SECONDS,
+      300,
+    ),
+  },
   /** When host is set, files are stored via SFTP on the remote server. */
   sftp: {
     enabled: Boolean(sftpHost),
