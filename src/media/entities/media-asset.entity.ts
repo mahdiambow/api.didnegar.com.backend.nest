@@ -4,6 +4,7 @@ import type { Product } from '../../products/entities/product.entity.js';
 import type { User } from '../../users/entities/user.entity.js';
 import type {
   MediaGroup,
+  MediaScope,
   MediaStatus,
   MediaStorageLocation,
 } from './media-asset.enums.js';
@@ -18,12 +19,16 @@ export class MediaAsset {
   group: MediaGroup;
 
   @Index()
-  @Column({ type: 'varchar', length: 26 })
-  sellerId: string;
+  @Column({ type: 'varchar', length: 20, default: 'legacy' })
+  scope: MediaScope;
 
-  @ManyToOne('Seller', { onDelete: 'RESTRICT' })
+  @Index()
+  @Column({ type: 'varchar', length: 26, nullable: true })
+  sellerId: string | null;
+
+  @ManyToOne('Seller', { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'sellerId' })
-  seller: Seller;
+  seller: Seller | null;
 
   @Column({ type: 'varchar', length: 26 })
   uploadedByUserId: string;

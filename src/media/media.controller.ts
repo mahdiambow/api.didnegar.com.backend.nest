@@ -27,9 +27,11 @@ import { MediaService } from './media.service.js';
 import { MediaThrottlerGuard } from './guards/media-throttler.guard.js';
 import {
   AttachMediaAssetDto,
+  DirectUploadUrlResponseDto,
   ListMediaAssetsDto,
   MediaAssetResponseDto,
   ReviewMediaAssetDto,
+  RequestMediaUploadUrlDto,
   UploadMediaDto,
 } from './dto/media.dto.js';
 
@@ -118,6 +120,40 @@ export class MediaController {
     @Body() dto: UploadMediaDto,
   ) {
     return this.mediaService.upload(req.user, file, dto);
+  }
+
+  @Post('upload-url')
+  @RequireRole(...sellerRoles)
+  @UseGuards(JwtAuthGuard, RoleGuard, MediaThrottlerGuard)
+  @ApiOperation({
+    summary: 'Create a direct SeaweedFS upload URL',
+    description:
+      'product: فقط ادمین یا فروشنده سازنده محصول. banner: فقط ادمین. فایل با PUT مستقیم به SeaweedFS آپلود می‌شود؛ credentials هرگز به کلاینت داده نمی‌شود.',
+  })
+  @ApiResponseMeta({ code: 'MEDIA_UPLOAD_URL_CREATED', message: 'Upload URL created successfully' })
+  @ApiCreatedResponse({ type: DirectUploadUrlResponseDto })
+  createUploadUrl(
+    @Req() req: { user: AuthUser },
+    @Body() dto: RequestMediaUploadUrlDto,
+  ) {
+    return this.mediaService.requestUploadUrl(req.user, dto);
+  }
+
+  @Post(':id/complete')
+  @RequireRole(...sellerRoles)
+  @UseGuards(JwtAuthGuard, RoleGuard)
+  @ApiOperation({
+    summary: 'Confirm a direct SeaweedFS upload',
+    description:
+      'وجود و حجم فایل در SeaweedFS بررسی می‌شود. محصول: تصویر به featured/gallery محصول اضافه می‌شود. بنر: URL عمومی رسانه بازگردانده می‌شود.',
+  })
+  @ApiResponseMeta({ code: 'MEDIA_UPLOAD_COMPLETED', message: 'Media upload completed successfully' })
+  @ApiOkResponse({ type: MediaApiResponseDto })
+  completeDirectUpload(
+    @Req() req: { user: AuthUser },
+    @Param('id', ParseULIDPipe) id: string,
+  ) {
+    return this.mediaService.completeDirectUpload(req.user, id);
   }
 
   @Get(':id')

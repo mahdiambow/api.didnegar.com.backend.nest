@@ -51,6 +51,8 @@
     "db:migrate:product-media-files": "node scripts/migrate-images-from-wordpress/migrate-product-media-files.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1139.0",
+    "@aws-sdk/s3-request-presigner": "^3.1139.0",
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.0.0",
     "@nestjs/core": "^12.0.1",
