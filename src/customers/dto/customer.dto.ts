@@ -126,6 +126,16 @@ export class CreateCustomerDto {
   @ValidateNested()
   @Type(() => OrderPriceDto)
   price?: OrderPriceDto;
+
+  @ApiPropertyOptional({
+    example: 'NOWROOZ20',
+    description:
+      'کد پروموشن — روی مبلغ سفارش تلفنی اعمال می‌شود (با تخفیف price محصول فرق دارد)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  promotionCode?: string;
 }
 
 export class UpdateCustomerDto {

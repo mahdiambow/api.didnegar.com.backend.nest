@@ -168,6 +168,7 @@ export class OrdersService {
       shippingMethodId: string;
       paymentMethod?: string | null;
       price?: OrderPriceDto;
+      promotionCode?: string | null;
     },
   ) {
     const items = await this.resolveProducts(data.products);
@@ -176,8 +177,12 @@ export class OrdersService {
     );
     const amounts = this.calculateAmounts(items, [shippingMethod]);
     const priced = this.applyPriceOverrides(amounts, data.price);
+    let payableAmount = priced.amount;
+    let discountAmount = priced.discountAmount;
+    let promotionId: string | null = null;
+
     await this.offersService.decrementStockForPurchase(items, manager);
-    return this.insertOrder(manager, {
+    const orderId = await this.insertOrder(manager, {
       type: 'customer',
       userId: null,
       customerId: data.customerId,
@@ -187,11 +192,36 @@ export class OrdersService {
       shippingMethodId: shippingMethod.id,
       subtotal: priced.subtotal,
       shippingAmount: priced.shippingAmount,
-      discountAmount: priced.discountAmount,
-      amount: priced.amount,
+      discountAmount,
+      amount: payableAmount,
       paymentMethod: data.paymentMethod ?? null,
       promotionId: null,
     });
+
+    if (data.promotionCode?.trim()) {
+      const applied = await this.promotionsService.applyToOrderInTransaction(
+        manager,
+        {
+          customerId: data.customerId,
+          orderId,
+          code: data.promotionCode,
+          orderAmount: payableAmount,
+        },
+      );
+      discountAmount = applied.discountAmount;
+      promotionId = applied.promotionId;
+      payableAmount = applied.discountPrice;
+      await manager.getRepository(Order).update(
+        { id: orderId },
+        {
+          discountAmount,
+          amount: payableAmount,
+          promotionId,
+        },
+      );
+    }
+
+    return orderId;
   }
 
   async findOne(id: string, userId: string) {

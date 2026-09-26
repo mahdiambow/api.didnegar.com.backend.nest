@@ -9,10 +9,12 @@ import {
 } from 'typeorm';
 import type { Promotion } from './promotion.entity.js';
 import type { User } from '../../users/entities/user.entity.js';
+import type { Customer } from '../../customers/entities/customer.entity.js';
 import type { Order } from '../../orders/entities/order.entity.js';
 
 @Entity('promotion_usages')
 @Index(['promotionId', 'userId'])
+@Index(['promotionId', 'customerId'])
 export class PromotionUsage {
   @PrimaryColumn({ type: 'varchar', length: 26 })
   id: string;
@@ -21,9 +23,15 @@ export class PromotionUsage {
   @Column({ type: 'varchar', length: 26 })
   promotionId: string;
 
+  /** کاربر آنلاین — برای سفارش type=user */
   @Index()
-  @Column({ type: 'varchar', length: 26 })
-  userId: string;
+  @Column({ type: 'varchar', length: 26, nullable: true })
+  userId: string | null;
+
+  /** مشتری تلفنی — برای سفارش type=customer */
+  @Index()
+  @Column({ type: 'varchar', length: 26, nullable: true })
+  customerId: string | null;
 
   @Column({ type: 'varchar', length: 26, nullable: true })
   orderId: string | null;
@@ -39,9 +47,13 @@ export class PromotionUsage {
   @JoinColumn({ name: 'promotionId' })
   promotion: Promotion;
 
-  @ManyToOne('User', { onDelete: 'CASCADE' })
+  @ManyToOne('User', { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
-  user: User;
+  user: User | null;
+
+  @ManyToOne('Customer', { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'customerId' })
+  customer: Customer | null;
 
   @ManyToOne('Order', { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'orderId' })

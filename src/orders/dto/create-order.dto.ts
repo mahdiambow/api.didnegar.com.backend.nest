@@ -109,7 +109,8 @@ export class CreateOrderDto {
 
   @ApiPropertyOptional({
     example: 'NOWROOZ20',
-    description: 'کد پروموشن / کوپن تخفیف',
+    description:
+      'کد پروموشن/کوپن — روی مبلغ سفارش اعمال می‌شود؛ با discountAmount داخل price محصولات فرق دارد',
   })
   @IsOptional()
   @IsString()

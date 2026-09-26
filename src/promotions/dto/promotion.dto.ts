@@ -12,6 +12,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { IsULID } from '../../common/id/index.js';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import {
   DISCOUNT_TYPES,
@@ -136,7 +137,11 @@ export class ListPromotionsQueryDto extends PaginationQueryDto {
 }
 
 export class PreviewPromotionDto {
-  @ApiProperty({ example: 'NOWROOZ20' })
+  @ApiProperty({
+    example: 'NOWROOZ20',
+    description:
+      'کد پروموشن/کوپن — این تخفیف روی مبلغ سفارش اعمال می‌شود و با discountAmount داخل price محصولات فرق دارد',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(64)
@@ -144,11 +149,22 @@ export class PreviewPromotionDto {
 
   @ApiProperty({
     example: 68000000,
-    description: 'مبلغ پایه سفارش (معمولاً subtotal + shipping)',
+    description:
+      'مبلغ پایه سفارش (subtotal + shipping) — تخفیف پروموشن روی همین مبلغ محاسبه می‌شود',
   })
   @IsNumber({ maxDecimalPlaces: 4 })
   @Min(0)
   orderAmount: number;
+
+  @ApiPropertyOptional({
+    format: 'ulid',
+    example: '01JEX000000000000000000010',
+    description:
+      'اختیاری: برای پیش‌نمایش سقف استفاده مشتری تلفنی؛ اگر نباشد سقف برای یوزر لاگین‌شده چک می‌شود',
+  })
+  @IsOptional()
+  @IsULID()
+  customerId?: string;
 }
 
 export class PromotionResponseDto {

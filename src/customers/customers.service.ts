@@ -107,6 +107,7 @@ export class CustomersService {
             shippingMethodId: dto.shippingMethodId,
             paymentMethod: dto.paymentMethod ?? null,
             price: dto.price,
+            promotionCode: dto.promotionCode,
           },
         );
 
