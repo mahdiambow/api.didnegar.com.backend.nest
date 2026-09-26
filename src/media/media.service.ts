@@ -210,9 +210,9 @@ export class MediaService {
     return product;
   }
 
-  /** Admins may manage every product; a seller only their created product. */
+  /** Elevated media users manage every product; sellers manage their own. */
   private assertProductUploadAccess(user: AuthUser, product: Product) {
-    if (isAdministrator(user)) return;
+    if (canBrowseAllMedia(user)) return;
     if (
       !user.sellerId ||
       !userHasRole(user, DEFAULT_ROLE_SLUGS.SELLER) ||
