@@ -77,7 +77,7 @@ export class ListMediaAssetsDto extends PaginationQueryDto {
   group?: MediaGroup;
 
   @ApiPropertyOptional({
-    description: 'فقط برای سوپرسلر/ادمین؛ سلر معمولی همیشه خودش فیلتر می‌شود',
+    description: 'فقط برای ادمین؛ سوپرسلر همیشه همه رسانه‌ها را می‌بیند',
   })
   @IsOptional()
   @IsULID()

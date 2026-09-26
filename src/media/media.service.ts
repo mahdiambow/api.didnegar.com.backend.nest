@@ -39,6 +39,10 @@ export function canBrowseAllMedia(user: AuthUser): boolean {
   );
 }
 
+function isSuperSeller(user: AuthUser): boolean {
+  return userHasRole(user, DEFAULT_ROLE_SLUGS.SUPER_SELLER);
+}
+
 export function assertMediaAccess(user: AuthUser, sellerId: string | null) {
   if (canBrowseAllMedia(user)) {
     return;
@@ -427,7 +431,9 @@ export class MediaService {
     const qb = this.media.createQueryBuilder('media');
 
     if (canBrowseAllMedia(user)) {
-      if (query.sellerId) {
+      // A super-seller's gallery is always system-wide. Do not let a stale
+      // sellerId query left by the client hide the rest of the media library.
+      if (query.sellerId && !isSuperSeller(user)) {
         qb.andWhere('media.sellerId = :sellerId', {
           sellerId: query.sellerId,
         });
