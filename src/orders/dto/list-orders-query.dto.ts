@@ -24,12 +24,16 @@ export class ListOrdersQueryDto extends PaginationQueryDto {
   @IsIn(ORDER_TYPES)
   type?: (typeof ORDER_TYPES)[number];
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'فیلتر سفارش‌های یک کاربر (خرید آنلاین)',
+  })
   @IsOptional()
   @IsULID()
   userId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'فیلتر سفارش‌های یک مشتری تلفنی',
+  })
   @IsOptional()
   @IsULID()
   customerId?: string;

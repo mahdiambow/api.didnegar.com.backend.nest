@@ -60,6 +60,20 @@ export class OrdersService {
     );
   }
 
+  /** لیست سفارش‌های خود کاربر لاگین‌شده */
+  async findMine(
+    userId: string,
+    query: { page?: string | number; limit?: string | number; status?: string },
+  ) {
+    return this.findAll({
+      page: query.page,
+      limit: query.limit,
+      status: query.status,
+      userId,
+      type: 'user',
+    });
+  }
+
   async create(userId: string, dto: CreateOrderDto) {
     const products = await this.resolveCheckoutProducts(userId, dto);
     const items = await this.resolveProducts(products);

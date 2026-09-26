@@ -26,6 +26,7 @@ import { OrdersService } from './orders.service.js';
 import { CreateOrderDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto.js';
+import { ListMyOrdersQueryDto } from './dto/list-my-orders-query.dto.js';
 import { OrderResponseDto } from './dto/order-response.dto.js';
 
 const OrderApiResponseDto = createSuccessResponseDto(OrderResponseDto, {
@@ -57,10 +58,31 @@ export class OrdersController {
     code: 'ORDERS_FOUND',
     message: 'Orders retrieved successfully',
   })
-  @ApiOperation({ summary: 'List orders (admin)', description: 'لیست سفارش‌ها (ادمین)' })
+  @ApiOperation({
+    summary: 'List orders (admin)',
+    description:
+      'لیست همه سفارش‌ها (ادمین/سوپرسلر). فیلتر سفارش‌های یک کاربر: `?userId=` — سفارش تلفنی: `?customerId=`',
+  })
   @ApiOkResponse({ type: OrdersPaginatedApiResponseDto })
   findAll(@Query() query: ListOrdersQueryDto) {
     return this.ordersService.findAll(query);
+  }
+
+  @Get('me')
+  @ApiResponseMeta({
+    code: 'ORDERS_FOUND',
+    message: 'Orders retrieved successfully',
+  })
+  @ApiOperation({
+    summary: 'List my orders',
+    description: 'لیست سفارش‌های من (کاربر لاگین‌شده)',
+  })
+  @ApiOkResponse({ type: OrdersPaginatedApiResponseDto })
+  findMine(
+    @Req() req: { user: { sub: string } },
+    @Query() query: ListMyOrdersQueryDto,
+  ) {
+    return this.ordersService.findMine(req.user.sub, query);
   }
 
   @Post()
