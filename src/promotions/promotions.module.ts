@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../utils/auth/auth.module.js';
 import { RolesModule } from '../roles/roles.module.js';
+import { Order } from '../orders/entities/order.entity.js';
 import { Promotion } from './entities/promotion.entity.js';
 import { PromotionUsage } from './entities/promotion-usage.entity.js';
 import { PromotionRepository } from './repositories/promotion.repository.js';
@@ -12,7 +13,7 @@ import { PromotionsController } from './promotions.controller.js';
   imports: [
     AuthModule,
     RolesModule,
-    TypeOrmModule.forFeature([Promotion, PromotionUsage]),
+    TypeOrmModule.forFeature([Promotion, PromotionUsage, Order]),
   ],
   controllers: [PromotionsController],
   providers: [PromotionsService, PromotionRepository],

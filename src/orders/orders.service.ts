@@ -91,7 +91,15 @@ export class OrdersService {
       dto.shippingMethodId,
     );
     const amounts = this.calculateAmounts(items, [shippingMethod]);
-    const priced = this.applyPriceOverrides(amounts, dto.price);
+    // با پروموشن، override قیمت کلاینت اعمال نمی‌شود تا مبلغ دستکاری نشود
+    const priced = dto.promotionCode?.trim()
+      ? {
+          subtotal: amounts.subtotal,
+          shippingAmount: amounts.shippingAmount,
+          discountAmount: 0,
+          amount: amounts.payableAmount,
+        }
+      : this.applyPriceOverrides(amounts, dto.price);
     const paymentMethod = dto.paymentMethod ?? 'iBank';
     let payableAmount = priced.amount;
     let discountAmount = priced.discountAmount;
@@ -176,7 +184,15 @@ export class OrdersService {
       data.shippingMethodId,
     );
     const amounts = this.calculateAmounts(items, [shippingMethod]);
-    const priced = this.applyPriceOverrides(amounts, data.price);
+    // با پروموشن، price.discountAmount دستی کلاینت نادیده گرفته می‌شود
+    const priced = data.promotionCode?.trim()
+      ? {
+          subtotal: amounts.subtotal,
+          shippingAmount: amounts.shippingAmount,
+          discountAmount: 0,
+          amount: amounts.payableAmount,
+        }
+      : this.applyPriceOverrides(amounts, data.price);
     let payableAmount = priced.amount;
     let discountAmount = priced.discountAmount;
     let promotionId: string | null = null;

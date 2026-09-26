@@ -148,19 +148,19 @@ export class PreviewPromotionDto {
   code: string;
 
   @ApiProperty({
-    example: 68000000,
+    format: 'ulid',
+    example: '01JEX000000000000000000010',
     description:
-      'مبلغ پایه سفارش (subtotal + shipping) — تخفیف پروموشن روی همین مبلغ محاسبه می‌شود',
+      'شناسه سفارش — مبلغ پایه از خود سفارش (سمت سرور) خوانده می‌شود؛ کلاینت مبلغ نمی‌فرستد',
   })
-  @IsNumber({ maxDecimalPlaces: 4 })
-  @Min(0)
-  orderAmount: number;
+  @IsULID()
+  orderId: string;
 
   @ApiPropertyOptional({
     format: 'ulid',
     example: '01JEX000000000000000000010',
     description:
-      'اختیاری: برای پیش‌نمایش سقف استفاده مشتری تلفنی؛ اگر نباشد سقف برای یوزر لاگین‌شده چک می‌شود',
+      'اختیاری: اگر ست شود باید با customerId سفارش یکی باشد (سقف per-customer)',
   })
   @IsOptional()
   @IsULID()
@@ -230,13 +230,23 @@ export class PromotionPreviewResponseDto {
   @ApiPropertyOptional({ nullable: true })
   code: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'جمع کالا (محاسبه‌شده سمت سرور)' })
+  subtotal: number;
+
+  @ApiProperty({ description: 'هزینه ارسال (محاسبه‌شده سمت سرور)' })
+  shippingAmount: number;
+
+  @ApiProperty({
+    description: 'مبلغ پایه سفارش قبل از پروموشن (subtotal + shipping، سمت سرور)',
+  })
   orderAmount: number;
 
-  @ApiProperty({ description: 'مبلغ تخفیف قابل اعمال' })
+  @ApiProperty({ description: 'مبلغ تخفیف پروموشن قابل اعمال' })
   discountAmount: number;
 
-  @ApiProperty({ description: 'قیمت نهایی بعد از تخفیف' })
+  @ApiProperty({
+    description: 'قیمت نهایی سفارش بعد از تخفیف پروموشن (همان مبلغ قابل پرداخت)',
+  })
   discountPrice: number;
 
   @ApiProperty({ enum: DISCOUNT_TYPES })

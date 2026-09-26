@@ -1,10 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { DataSource, EntityManager } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { ApiException } from '../common/exceptions/api.exception.js';
 import {
   getPaginationParams,
   paginatedList,
 } from '../common/response/helpers/paginated-response.helper.js';
+import { Order } from '../orders/entities/order.entity.js';
 import { Promotion } from './entities/promotion.entity.js';
 import { PromotionUsage } from './entities/promotion-usage.entity.js';
 import { PromotionRepository } from './repositories/promotion.repository.js';
@@ -30,6 +32,8 @@ export class PromotionsService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly promotions: PromotionRepository,
+    @InjectRepository(Order)
+    private readonly orders: Repository<Order>,
   ) {}
 
   async findAll(query: ListPromotionsQueryDto) {
@@ -144,25 +148,53 @@ export class PromotionsService {
   }
 
   /**
-   * پیش‌نمایش تخفیف پروموشن روی مبلغ سفارش (بدون ثبت usage).
-   * با فیلد تخفیف داخل price محصولات فرق دارد.
+   * پیش‌نمایش تخفیف پروموشن روی مبلغ واقعی سفارش ذخیره‌شده.
+   * مبلغ از orderId سمت سرور خوانده می‌شود (نه از کلاینت).
    */
   async preview(
     userId: string,
     dto: PreviewPromotionDto,
   ): Promise<PromotionPreviewResponseDto> {
-    const applied = await this.resolveForSubject(
-      {
-        userId: dto.customerId ? null : userId,
-        customerId: dto.customerId ?? null,
-        code: dto.code,
-        orderAmount: dto.orderAmount,
-      },
-    );
+    const order = await this.orders.findOne({ where: { id: dto.orderId } });
+    if (!order) {
+      throw new ApiException(
+        'ORDER_NOT_FOUND',
+        'سفارش یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    if (dto.customerId && order.customerId !== dto.customerId) {
+      throw new ApiException(
+        'ORDER_CUSTOMER_MISMATCH',
+        'customerId با سفارش مطابقت ندارد',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // مبلغ پایه قبل از تخفیف: amount فعلی + تخفیف قبلی (دستی/پروموشن)
+    const subtotal = Number(order.subtotal);
+    const shippingAmount = Number(order.shippingAmount ?? 0);
+    const orderAmount =
+      Math.round(
+        (Number(order.amount) + Number(order.discountAmount ?? 0)) * 10000,
+      ) / 10000;
+
+    const subjectUserId = order.userId ?? (order.customerId ? null : userId);
+    const subjectCustomerId = order.customerId ?? dto.customerId ?? null;
+
+    const applied = await this.resolveForSubject({
+      userId: subjectUserId,
+      customerId: subjectCustomerId,
+      code: dto.code,
+      orderAmount,
+    });
     const promo = await this.requireById(applied.promotionId);
     return {
       promotionId: applied.promotionId,
       code: applied.code,
+      subtotal,
+      shippingAmount,
       orderAmount: applied.orderAmount,
       discountAmount: applied.discountAmount,
       discountPrice: applied.discountPrice,

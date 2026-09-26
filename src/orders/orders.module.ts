@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity.js';
 import { OrderItem } from './entities/order-item.entity.js';
 import { OrdersService } from './orders.service.js';
+import { CheckoutAmountModule } from './checkout-amount.module.js';
 import { OrdersController } from './orders.controller.js';
 import { OrderRepository } from './repositories/order.repository.js';
 import { ShippingModule } from '../shipping/shipping.module.js';
@@ -25,9 +26,10 @@ import { PromotionsModule } from '../promotions/promotions.module.js';
     forwardRef(() => ShoppingCartModule),
     forwardRef(() => AddressesModule),
     forwardRef(() => PromotionsModule),
+    CheckoutAmountModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService, OrderRepository],
-  exports: [OrdersService, OrderRepository],
+  exports: [OrdersService, OrderRepository, CheckoutAmountModule],
 })
 export class OrdersModule {}

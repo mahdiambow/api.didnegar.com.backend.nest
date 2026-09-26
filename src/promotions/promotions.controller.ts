@@ -68,11 +68,10 @@ export class PromotionsController {
     message: 'Promotion preview calculated',
   })
   @ApiOperation({
-    summary: 'Preview promotion discount on order amount',
+    summary: 'Preview promotion discount on an existing order',
     description:
-      'پیش‌نمایش تخفیف پروموشن روی مبلغ سفارش (یا سقف مشتری با customerId). ' +
-      'این تخفیف کوپن/پروموشن است و با discountAmount داخل price محصولات فرق دارد. ' +
-      'اعمال واقعی: promotionCode در POST /orders یا POST /customers.',
+      'مبلغ از orderId سمت سرور خوانده می‌شود (products/offerId ارسال نمی‌شود). ' +
+      'discountPrice = مبلغ نهایی بعد از پروموشن. اعمال واقعی: promotionCode در POST /orders یا POST /customers.',
   })
   @ApiOkResponse({ type: PreviewApiDto })
   preview(
