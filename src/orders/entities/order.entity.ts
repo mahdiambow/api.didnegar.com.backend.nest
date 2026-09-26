@@ -78,6 +78,14 @@ export class Order {
   @Column({ type: 'decimal', precision: 19, scale: 4, default: 0 })
   discountAmount: number;
 
+  /** قیمت خرید (سفارش همکار / تلفنی) */
+  @Column({ type: 'decimal', precision: 19, scale: 4, nullable: true })
+  purchasePrice: number | null;
+
+  /** قیمت فروش (سفارش همکار / تلفنی) */
+  @Column({ type: 'decimal', precision: 19, scale: 4, nullable: true })
+  salePrice: number | null;
+
   @Column({ type: 'varchar', length: 26, nullable: true })
   promotionId: string | null;
 

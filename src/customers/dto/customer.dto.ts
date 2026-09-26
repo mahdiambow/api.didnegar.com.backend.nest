@@ -5,6 +5,7 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsEmail,
   IsIn,
   IsInt,
@@ -111,6 +112,17 @@ export class CreateCustomerDto {
   shippingMethodId: string;
 
   @ApiPropertyOptional({
+    example: false,
+    default: false,
+    description:
+      'مشتری همکار — اگر true باشد از موجودی انبار محصول کم نمی‌شود',
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isHamkar?: boolean;
+
+  @ApiPropertyOptional({
     enum: ORDER_PAYMENT_METHODS,
     description: 'روش پرداخت — مثل سفارش: credit | iBank | loan | partial-bank',
   })
@@ -120,7 +132,8 @@ export class CreateCustomerDto {
 
   @ApiPropertyOptional({
     type: OrderPriceDto,
-    description: 'قیمت سفارش تلفنی: price / discountAmount / totalPrice',
+    description:
+      'قیمت سفارش تلفنی: price / discountAmount / totalPrice / purchasePrice / salePrice',
   })
   @IsOptional()
   @ValidateNested()
@@ -174,6 +187,15 @@ export class UpdateCustomerDto {
   @IsString()
   @MaxLength(20)
   postalCode?: string;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'مشتری همکار',
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Type(() => Boolean)
+  isHamkar?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -233,6 +255,12 @@ export class CustomerResponseDto {
   @ApiProperty({ example: '09333333333' })
   phone: string | null;
 
+  @ApiProperty({
+    example: false,
+    description: 'مشتری همکار — سفارش همکار موجودی انبار را کم نمی‌کند',
+  })
+  isHamkar: boolean;
+
   @ApiPropertyOptional({ nullable: true })
   countryId: string | null;
 
@@ -266,7 +294,8 @@ export class CustomerResponseDto {
   @ApiPropertyOptional({
     type: OrderPriceResponseDto,
     nullable: true,
-    description: 'قیمت سفارش: price / discountAmount / totalPrice',
+    description:
+      'قیمت سفارش: price / discountAmount / totalPrice / purchasePrice / salePrice',
   })
   price?: OrderPriceResponseDto | null;
 
@@ -299,6 +328,7 @@ export function toCustomerResponse(
     lastName: customer.lastName,
     email: customer.email,
     phone: customer.phone,
+    isHamkar: Boolean(customer.isHamkar),
     countryId: customer.countryId,
     stateId: customer.stateId,
     cityId: customer.cityId,

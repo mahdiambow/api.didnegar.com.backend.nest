@@ -177,9 +177,11 @@ export class OrdersService {
       paymentMethod?: string | null;
       price?: OrderPriceDto;
       promotionCode?: string | null;
+      isHamkar?: boolean;
     },
   ) {
-    const items = await this.resolveProducts(data.products);
+    const skipStock = data.isHamkar === true;
+    const items = await this.resolveProducts(data.products, { skipStock });
     const shippingMethod = await this.shippingService.resolveShippingMethod(
       data.shippingMethodId,
     );
@@ -196,8 +198,18 @@ export class OrdersService {
     let payableAmount = priced.amount;
     let discountAmount = priced.discountAmount;
     let promotionId: string | null = null;
+    const purchasePrice =
+      data.price?.purchasePrice !== undefined && data.price.purchasePrice != null
+        ? Number(data.price.purchasePrice)
+        : null;
+    const salePrice =
+      data.price?.salePrice !== undefined && data.price.salePrice != null
+        ? Number(data.price.salePrice)
+        : null;
 
-    await this.offersService.decrementStockForPurchase(items, manager);
+    if (!skipStock) {
+      await this.offersService.decrementStockForPurchase(items, manager);
+    }
     const orderId = await this.insertOrder(manager, {
       type: 'customer',
       userId: null,
@@ -210,6 +222,8 @@ export class OrdersService {
       shippingAmount: priced.shippingAmount,
       discountAmount,
       amount: payableAmount,
+      purchasePrice,
+      salePrice,
       paymentMethod: data.paymentMethod ?? null,
       promotionId: null,
     });
@@ -370,10 +384,17 @@ export class OrdersService {
     );
   }
 
-  private async resolveProducts(products: OrderProductDto[]) {
+  private async resolveProducts(
+    products: OrderProductDto[],
+    options?: { skipStock?: boolean },
+  ) {
     return Promise.all(
       products.map((item) =>
-        this.offersService.resolvePurchasable(item.offerId, item.quantity ?? 1),
+        this.offersService.resolvePurchasable(
+          item.offerId,
+          item.quantity ?? 1,
+          options,
+        ),
       ),
     );
   }
@@ -400,6 +421,8 @@ export class OrdersService {
       shippingAmount: number;
       discountAmount: number;
       amount: number;
+      purchasePrice?: number | null;
+      salePrice?: number | null;
       paymentMethod: string | null;
       promotionId: string | null;
     },
@@ -418,6 +441,8 @@ export class OrdersService {
         shippingAmount: data.shippingAmount,
         discountAmount: data.discountAmount,
         amount: data.amount,
+        purchasePrice: data.purchasePrice ?? null,
+        salePrice: data.salePrice ?? null,
         paymentMethod: data.paymentMethod,
         promotionId: data.promotionId,
         // سفارش تلفنی بدون درگاه → مستقیم در حال پردازش

@@ -68,6 +68,10 @@ export class Customer {
   @Column({ type: 'varchar', length: 20, nullable: true })
   postalCode: string | null;
 
+  /** مشتری همکار — سفارش همکار از موجودی انبار کم نمی‌کند */
+  @Column({ type: 'boolean', default: false })
+  isHamkar: boolean;
+
   @Index()
   @Column({ type: 'varchar', length: 26, nullable: true })
   cityId: string | null;

@@ -855,8 +855,13 @@ export class OffersService {
     }
   }
 
-  async resolvePurchasable(id: string, quantity: number) {
+  async resolvePurchasable(
+    id: string,
+    quantity: number,
+    options?: { skipStock?: boolean },
+  ) {
     const offer = await this.getEntity(id);
+    const skipStock = options?.skipStock === true;
     if (
       !Number.isInteger(quantity) ||
       quantity < 1 ||
@@ -866,8 +871,8 @@ export class OffersService {
       offer.product.status !== 'publish' ||
       offer.product.approvalStatus !== 'approved' ||
       offer.product.isActive === false ||
-      offer.stockStatus !== 'instock' ||
-      offer.stock < quantity
+      (!skipStock &&
+        (offer.stockStatus !== 'instock' || offer.stock < quantity))
     )
       throw new ApiException(
         'OFFER_UNAVAILABLE',

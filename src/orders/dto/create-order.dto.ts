@@ -60,6 +60,24 @@ export class OrderPriceDto {
   @IsNumber({ maxDecimalPlaces: 4 })
   @Min(0)
   totalPrice?: number;
+
+  @ApiPropertyOptional({
+    example: 50000000,
+    description: 'قیمت خرید',
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  purchasePrice?: number | null;
+
+  @ApiPropertyOptional({
+    example: 65000000,
+    description: 'قیمت فروش',
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  salePrice?: number | null;
 }
 
 export class CreateOrderDto {

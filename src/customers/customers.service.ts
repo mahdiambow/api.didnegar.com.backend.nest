@@ -96,6 +96,7 @@ export class CustomersService {
             userId: null,
             legacyId: null,
             legacyTable: null,
+            isHamkar: dto.isHamkar === true,
           }),
         );
 
@@ -108,6 +109,7 @@ export class CustomersService {
             paymentMethod: dto.paymentMethod ?? null,
             price: dto.price,
             promotionCode: dto.promotionCode,
+            isHamkar: saved.isHamkar,
           },
         );
 
@@ -142,6 +144,7 @@ export class CustomersService {
     if (dto.postalCode !== undefined) {
       customer.postalCode = dto.postalCode?.trim() || null;
     }
+    if (dto.isHamkar !== undefined) customer.isHamkar = dto.isHamkar === true;
     if (dto.countryId !== undefined) customer.countryId = dto.countryId ?? null;
     if (dto.stateId !== undefined) customer.stateId = dto.stateId ?? null;
     if (dto.cityId !== undefined) customer.cityId = dto.cityId ?? null;

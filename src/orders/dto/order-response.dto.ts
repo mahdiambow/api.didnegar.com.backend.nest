@@ -38,6 +38,20 @@ export class OrderPriceResponseDto {
 
   @ApiProperty({ example: 66085000, description: 'مبلغ نهایی قابل پرداخت' })
   totalPrice: number;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 50000000,
+    description: 'قیمت خرید',
+  })
+  purchasePrice: number | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 65000000,
+    description: 'قیمت فروش',
+  })
+  salePrice: number | null;
 }
 
 export class OrderResponseDto {
@@ -149,6 +163,9 @@ export function toOrderPrice(order: Order): OrderPriceResponseDto {
     price: Number(order.subtotal),
     discountAmount: Number(order.discountAmount ?? 0),
     totalPrice: Number(order.amount),
+    purchasePrice:
+      order.purchasePrice == null ? null : Number(order.purchasePrice),
+    salePrice: order.salePrice == null ? null : Number(order.salePrice),
   };
 }
 
