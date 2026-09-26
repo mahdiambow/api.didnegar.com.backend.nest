@@ -1,9 +1,8 @@
 /**
  * Seeds the category hierarchy defined in ../../categories.json.
  *
- * Rows managed by this script are identified by their legacyTable/legacyId pair,
- * not by their display names. This makes the import safe to rerun and ensures a
- * category is always placed below the parent declared in the JSON file.
+ * Existing rows are matched by their exact Persian name. A matching category or
+ * sub-category is moved beneath the parent declared in the JSON file.
  */
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -23,7 +22,8 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: npm run db:migrate:categories-json
 
 Creates or updates the parent-category/category/sub-category tree in
-categories.json. The operation is idempotent and does not remove unmanaged rows.`);
+categories.json. Existing rows match by exact Persian name; the operation does
+not remove unmanaged rows.`);
   process.exit(0);
 }
 
@@ -124,9 +124,10 @@ async function readSource() {
 
 async function loadRows(connection, table) {
   const [rows] = await connection.execute(
-    `SELECT id, legacyId, legacyTable, slug${table === 'sub_categories' ? ', categoryId' : ''} FROM ${table}`,
+    `SELECT id, legacyId, legacyTable, name, slug${table === 'categories' ? ', parentCategoryId' : ''}${table === 'sub_categories' ? ', categoryId' : ''} FROM ${table}`,
   );
   const bySource = new Map();
+  const byName = new Map();
   const slugOwners = new Map();
   for (const row of rows) {
     const slugKey =
@@ -137,13 +138,38 @@ async function loadRows(connection, table) {
     if (row.legacyId !== null && row.legacyTable) {
       bySource.set(`${row.legacyTable}:${row.legacyId}`, row);
     }
+    const namedRows = byName.get(String(row.name)) || [];
+    namedRows.push(row);
+    byName.set(String(row.name), namedRows);
   }
-  return { bySource, slugOwners };
+  return { bySource, byName, slugOwners };
+}
+
+function findExistingByName(state, name, source, relation = null) {
+  const matches = state.byName.get(name) || [];
+  if (relation) {
+    const related = matches.filter(
+      (row) => String(row[relation.field]) === String(relation.id),
+    );
+    if (related.length === 1) return related[0];
+  }
+  if (matches.length === 1) return matches[0];
+
+  const sourceMatch = state.bySource.get(
+    `${source.legacyTable}:${source.legacyId}`,
+  );
+  if (sourceMatch) return sourceMatch;
+  if (matches.length > 1) {
+    throw new Error(
+      `Cannot uniquely match ${name}: ${matches.length} rows share this name.`,
+    );
+  }
+  return null;
 }
 
 async function upsertParent(connection, row, source, sort, state) {
   const key = `${source.legacyTable}:${source.legacyId}`;
-  const existing = state.bySource.get(key);
+  const existing = findExistingByName(state, row.name, source);
   const slug = uniqueSlug(
     baseSlug([
       [row.nameEn, `parent-${source.legacyId}`],
@@ -161,7 +187,7 @@ async function upsertParent(connection, row, source, sort, state) {
     if (existing.slug !== slug) state.slugOwners.delete(existing.slug);
     existing.slug = slug;
     state.slugOwners.set(slug, String(existing.id));
-    return String(existing.id);
+    return { id: String(existing.id), slug };
   }
   const id = newId();
   await connection.execute(
@@ -169,10 +195,11 @@ async function upsertParent(connection, row, source, sort, state) {
      VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, 1, NOW(), NOW())`,
     [id, source.legacyId, source.legacyTable, row.name, row.nameEn, slug, sort],
   );
-  const inserted = { id, slug };
+  const inserted = { id, name: row.name, slug };
   state.bySource.set(key, inserted);
+  state.byName.set(row.name, [inserted]);
   state.slugOwners.set(slug, id);
-  return id;
+  return { id, slug };
 }
 
 async function upsertCategory(
@@ -185,7 +212,10 @@ async function upsertCategory(
   parentSlug,
 ) {
   const key = `${source.legacyTable}:${source.legacyId}`;
-  const existing = state.bySource.get(key);
+  const existing = findExistingByName(state, row.name, source, {
+    field: 'parentCategoryId',
+    id: parentCategoryId,
+  });
   const slug = uniqueSlug(
     baseSlug([
       [parentSlug, `parent-${source.legacyId}`],
@@ -202,6 +232,7 @@ async function upsertCategory(
       [parentCategoryId, row.name, row.nameEn, slug, sort, existing.id],
     );
     if (existing.slug !== slug) state.slugOwners.delete(existing.slug);
+    existing.parentCategoryId = parentCategoryId;
     existing.slug = slug;
     state.slugOwners.set(slug, String(existing.id));
     return { id: String(existing.id), slug };
@@ -221,7 +252,9 @@ async function upsertCategory(
       sort,
     ],
   );
-  state.bySource.set(key, { id, slug });
+  const inserted = { id, name: row.name, parentCategoryId, slug };
+  state.bySource.set(key, inserted);
+  state.byName.set(row.name, [...(state.byName.get(row.name) || []), inserted]);
   state.slugOwners.set(slug, id);
   return { id, slug };
 }
@@ -236,7 +269,10 @@ async function upsertSubCategory(
   categorySlug,
 ) {
   const key = `${source.legacyTable}:${source.legacyId}`;
-  const existing = state.bySource.get(key);
+  const existing = findExistingByName(state, row.name, source, {
+    field: 'categoryId',
+    id: categoryId,
+  });
   // Subcategory slugs are only unique within their category.
   const base = baseSlug([
     [categorySlug, `category-${source.legacyId}`],
@@ -277,7 +313,9 @@ async function upsertSubCategory(
       sort,
     ],
   );
-  state.bySource.set(key, { id, categoryId, slug });
+  const inserted = { id, name: row.name, categoryId, slug };
+  state.bySource.set(key, inserted);
+  state.byName.set(row.name, [...(state.byName.get(row.name) || []), inserted]);
   state.slugOwners.set(ownerKey(slug), id);
 }
 
@@ -303,15 +341,12 @@ async function main() {
       let subCategoryIndex = 0;
       for (const [parentIndex, parent] of parents.entries()) {
         const parentSource = sourceKey('parent', parentIndex);
-        const parentId = await upsertParent(
+        const parentResult = await upsertParent(
           target,
           parent,
           parentSource,
           parentIndex,
           parentState,
-        );
-        const parentRow = parentState.bySource.get(
-          `${parentSource.legacyTable}:${parentSource.legacyId}`,
         );
         for (const [categorySort, category] of parent.categories.entries()) {
           const categorySource = sourceKey('category', categoryIndex++);
@@ -319,10 +354,10 @@ async function main() {
             target,
             category,
             categorySource,
-            parentId,
+            parentResult.id,
             categorySort,
             categoryState,
-            parentRow.slug,
+            parentResult.slug,
           );
           for (const [
             subCategorySort,

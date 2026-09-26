@@ -101,9 +101,10 @@ npm run db:migrate:categories-json
 ```
 
 Creates or updates the parent categories, categories, and sub-categories described
-by the repository's `categories.json`. Each managed row has a deterministic
-`legacyTable`/`legacyId` source identity, so reruns update it and restore its JSON
-parent relationship. It does not delete unrelated categories.
+by the repository's `categories.json`. Existing rows are matched by their exact
+Persian `name`, then their parent/category relation is restored to match the JSON.
+Ambiguous duplicate names stop the import rather than linking the wrong row. It
+does not delete unrelated categories.
 
 ## Attributes
 
