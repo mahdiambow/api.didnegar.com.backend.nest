@@ -514,10 +514,13 @@ export class ProductListBrandDto {
   logoUrl: string | null;
 }
 
-/** تصویر کارت لیست — فقط featured (بدون gallery) */
+/** تصویر کارت لیست — featured + gallery (مثل get by id) */
 export class ProductListImageDto {
   @ApiPropertyOptional({ nullable: true })
   featuredImg: string | null;
+
+  @ApiProperty({ type: [String], example: [] })
+  gallery: string[];
 }
 
 /** قیمت کارت لیست — شناسه‌های ویژگی + فیلدهای قیمت (بدون آبجکت populate) */
@@ -587,7 +590,10 @@ export function toProductListResponse(product: Product): ProductListItemDto {
     id: product.id,
     name: product.name,
     slug: product.slug,
-    image: { featuredImg: product.image?.featuredImg ?? null },
+    image: {
+      featuredImg: product.image?.featuredImg ?? null,
+      gallery: Array.isArray(product.image?.gallery) ? product.image.gallery : [],
+    },
     price: toListPriceResponses(product.price),
     brand: product.brand
       ? {
