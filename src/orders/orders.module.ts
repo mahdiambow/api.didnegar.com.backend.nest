@@ -13,7 +13,6 @@ import { RolesModule } from '../roles/roles.module.js';
 import { DepositsModule } from '../deposits/deposits.module.js';
 import { ShoppingCartModule } from '../shopping-cart/shopping-cart.module.js';
 import { AddressesModule } from '../addresses/addresses.module.js';
-import { PromotionsModule } from '../promotions/promotions.module.js';
 
 @Module({
   imports: [
@@ -25,7 +24,6 @@ import { PromotionsModule } from '../promotions/promotions.module.js';
     forwardRef(() => DepositsModule),
     forwardRef(() => ShoppingCartModule),
     forwardRef(() => AddressesModule),
-    forwardRef(() => PromotionsModule),
     CheckoutAmountModule,
   ],
   controllers: [OrdersController],

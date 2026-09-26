@@ -101,7 +101,7 @@ export class CustomersController {
   @ApiOperation({
     summary: 'Create phone-order customer',
     description:
-      'ثبت مشتری تلفنی + سفارش (type=customer). با promotionCode تخفیف پروموشن روی مبلغ سفارش اعمال می‌شود (نه تخفیف price محصول).',
+      'ثبت مشتری تلفنی + سفارش (type=customer) — حساب User ساخته نمی‌شود',
   })
   @ApiOkResponse({ type: CustomerApiDto })
   create(

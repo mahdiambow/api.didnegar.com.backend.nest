@@ -12,7 +12,6 @@ import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
 import { DepositsService } from '../deposits/deposits.service.js';
 import { ShoppingCartService } from '../shopping-cart/shopping-cart.service.js';
 import { AddressesService } from '../addresses/addresses.service.js';
-import { PromotionsService } from '../promotions/promotions.service.js';
 import {
   CreateOrderDto,
   OrderProductDto,
@@ -35,7 +34,6 @@ export class OrdersService {
     @Inject(forwardRef(() => ShoppingCartService))
     private readonly shoppingCartService: ShoppingCartService,
     private readonly addressesService: AddressesService,
-    private readonly promotionsService: PromotionsService,
   ) {}
 
   async findAll(query: {
@@ -91,19 +89,8 @@ export class OrdersService {
       dto.shippingMethodId,
     );
     const amounts = this.calculateAmounts(items, [shippingMethod]);
-    // با پروموشن، override قیمت کلاینت اعمال نمی‌شود تا مبلغ دستکاری نشود
-    const priced = dto.promotionCode?.trim()
-      ? {
-          subtotal: amounts.subtotal,
-          shippingAmount: amounts.shippingAmount,
-          discountAmount: 0,
-          amount: amounts.payableAmount,
-        }
-      : this.applyPriceOverrides(amounts, dto.price);
+    const priced = this.applyPriceOverrides(amounts, dto.price);
     const paymentMethod = dto.paymentMethod ?? 'iBank';
-    let payableAmount = priced.amount;
-    let discountAmount = priced.discountAmount;
-    let promotionId: string | null = null;
 
     const orderId = await this.dataSource.transaction(async (manager) => {
       await this.offersService.decrementStockForPurchase(items, manager);
@@ -117,34 +104,11 @@ export class OrdersService {
         shippingMethodId: shippingMethod.id,
         subtotal: priced.subtotal,
         shippingAmount: priced.shippingAmount,
-        discountAmount,
-        amount: payableAmount,
+        discountAmount: priced.discountAmount,
+        amount: priced.amount,
         paymentMethod,
         promotionId: null,
       });
-
-      if (dto.promotionCode?.trim()) {
-        const applied = await this.promotionsService.applyToOrderInTransaction(
-          manager,
-          {
-            userId,
-            orderId: id,
-            code: dto.promotionCode,
-            orderAmount: payableAmount,
-          },
-        );
-        discountAmount = applied.discountAmount;
-        promotionId = applied.promotionId;
-        payableAmount = applied.discountPrice;
-        await manager.getRepository(Order).update(
-          { id },
-          {
-            discountAmount,
-            amount: payableAmount,
-            promotionId,
-          },
-        );
-      }
 
       await this.shoppingCartService.clear(userId, manager);
       return id;
@@ -176,7 +140,6 @@ export class OrdersService {
       shippingMethodId: string;
       paymentMethod?: string | null;
       price?: OrderPriceDto;
-      promotionCode?: string | null;
       isHamkar?: boolean;
     },
   ) {
@@ -186,18 +149,7 @@ export class OrdersService {
       data.shippingMethodId,
     );
     const amounts = this.calculateAmounts(items, [shippingMethod]);
-    // با پروموشن، price.discountAmount دستی کلاینت نادیده گرفته می‌شود
-    const priced = data.promotionCode?.trim()
-      ? {
-          subtotal: amounts.subtotal,
-          shippingAmount: amounts.shippingAmount,
-          discountAmount: 0,
-          amount: amounts.payableAmount,
-        }
-      : this.applyPriceOverrides(amounts, data.price);
-    let payableAmount = priced.amount;
-    let discountAmount = priced.discountAmount;
-    let promotionId: string | null = null;
+    const priced = this.applyPriceOverrides(amounts, data.price);
     const purchasePrice =
       data.price?.purchasePrice !== undefined && data.price.purchasePrice != null
         ? Number(data.price.purchasePrice)
@@ -210,7 +162,7 @@ export class OrdersService {
     if (!skipStock) {
       await this.offersService.decrementStockForPurchase(items, manager);
     }
-    const orderId = await this.insertOrder(manager, {
+    return this.insertOrder(manager, {
       type: 'customer',
       userId: null,
       customerId: data.customerId,
@@ -220,38 +172,13 @@ export class OrdersService {
       shippingMethodId: shippingMethod.id,
       subtotal: priced.subtotal,
       shippingAmount: priced.shippingAmount,
-      discountAmount,
-      amount: payableAmount,
+      discountAmount: priced.discountAmount,
+      amount: priced.amount,
       purchasePrice,
       salePrice,
       paymentMethod: data.paymentMethod ?? null,
       promotionId: null,
     });
-
-    if (data.promotionCode?.trim()) {
-      const applied = await this.promotionsService.applyToOrderInTransaction(
-        manager,
-        {
-          customerId: data.customerId,
-          orderId,
-          code: data.promotionCode,
-          orderAmount: payableAmount,
-        },
-      );
-      discountAmount = applied.discountAmount;
-      promotionId = applied.promotionId;
-      payableAmount = applied.discountPrice;
-      await manager.getRepository(Order).update(
-        { id: orderId },
-        {
-          discountAmount,
-          amount: payableAmount,
-          promotionId,
-        },
-      );
-    }
-
-    return orderId;
   }
 
   async findOne(id: string, userId: string) {

@@ -71,7 +71,7 @@ export class PromotionsController {
     summary: 'Preview promotion discount on an existing order',
     description:
       'مبلغ از orderId سمت سرور خوانده می‌شود (products/offerId ارسال نمی‌شود). ' +
-      'discountPrice = مبلغ نهایی بعد از پروموشن. اعمال واقعی: promotionCode در POST /orders یا POST /customers.',
+      'discountPrice = مبلغ نهایی بعد از پروموشن. اعمال واقعی usage در این endpoint نیست.',
   })
   @ApiOkResponse({ type: PreviewApiDto })
   preview(
