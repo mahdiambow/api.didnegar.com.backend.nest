@@ -97,6 +97,16 @@ export class CreateCustomerDto {
   @ApiProperty({ example: '01JEX000000000000000000030' })
   @IsULID()
   shippingMethodId: string;
+
+  @ApiPropertyOptional({
+    example: 'NOWROOZ20',
+    description:
+      'کد پروموشن — روی مبلغ سفارش تلفنی اعمال می‌شود (با تخفیف price محصول فرق دارد)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  promotionCode?: string;
 }
 
 export class UpdateCustomerDto {

@@ -159,6 +159,7 @@ export class OrdersService {
       customerId: string;
       products: OrderProductDto[];
       shippingMethodId: string;
+      promotionCode?: string | null;
     },
   ) {
     const items = await this.resolveProducts(data.products);
@@ -166,8 +167,12 @@ export class OrdersService {
       data.shippingMethodId,
     );
     const amounts = this.calculateAmounts(items, [shippingMethod]);
+    let payableAmount = amounts.payableAmount;
+    let discountAmount = 0;
+    let promotionId: string | null = null;
+
     await this.offersService.decrementStockForPurchase(items, manager);
-    return this.insertOrder(manager, {
+    const orderId = await this.insertOrder(manager, {
       type: 'customer',
       userId: null,
       customerId: data.customerId,
@@ -178,9 +183,34 @@ export class OrdersService {
       subtotal: amounts.subtotal,
       shippingAmount: amounts.shippingAmount,
       discountAmount: 0,
-      amount: amounts.payableAmount,
+      amount: payableAmount,
       promotionId: null,
     });
+
+    if (data.promotionCode?.trim()) {
+      const applied = await this.promotionsService.applyToOrderInTransaction(
+        manager,
+        {
+          customerId: data.customerId,
+          orderId,
+          code: data.promotionCode,
+          orderAmount: payableAmount,
+        },
+      );
+      discountAmount = applied.discountAmount;
+      promotionId = applied.promotionId;
+      payableAmount = applied.discountPrice;
+      await manager.getRepository(Order).update(
+        { id: orderId },
+        {
+          discountAmount,
+          amount: payableAmount,
+          promotionId,
+        },
+      );
+    }
+
+    return orderId;
   }
 
   async findOne(id: string, userId: string) {

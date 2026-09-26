@@ -88,6 +88,7 @@ export class CustomersService {
             customerId: saved.id,
             products: dto.products,
             shippingMethodId: dto.shippingMethodId,
+            promotionCode: dto.promotionCode,
           },
         );
 

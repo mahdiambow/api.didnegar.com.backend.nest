@@ -143,15 +143,21 @@ export class PromotionsService {
     return { id };
   }
 
-  /** پیش‌نمایش تخفیف برای کاربر (بدون ثبت usage) */
+  /**
+   * پیش‌نمایش تخفیف پروموشن روی مبلغ سفارش (بدون ثبت usage).
+   * با فیلد تخفیف داخل price محصولات فرق دارد.
+   */
   async preview(
     userId: string,
     dto: PreviewPromotionDto,
   ): Promise<PromotionPreviewResponseDto> {
-    const applied = await this.resolveForUser(
-      userId,
-      dto.code,
-      dto.orderAmount,
+    const applied = await this.resolveForSubject(
+      {
+        userId: dto.customerId ? null : userId,
+        customerId: dto.customerId ?? null,
+        code: dto.code,
+        orderAmount: dto.orderAmount,
+      },
     );
     const promo = await this.requireById(applied.promotionId);
     return {
@@ -167,21 +173,25 @@ export class PromotionsService {
 
   /**
    * اعمال پروموشن روی سفارش داخل تراکنش:
-   * ثبت usage + افزایش usedCount
+   * ثبت usage (user یا customer) + افزایش usedCount
    */
   async applyToOrderInTransaction(
     manager: EntityManager,
     data: {
-      userId: string;
+      userId?: string | null;
+      customerId?: string | null;
       orderId: string;
       code: string;
       orderAmount: number;
     },
   ): Promise<AppliedPromotion> {
-    const applied = await this.resolveForUser(
-      data.userId,
-      data.code,
-      data.orderAmount,
+    const applied = await this.resolveForSubject(
+      {
+        userId: data.userId ?? null,
+        customerId: data.customerId ?? null,
+        code: data.code,
+        orderAmount: data.orderAmount,
+      },
       manager,
     );
 
@@ -200,7 +210,6 @@ export class PromotionsService {
       );
     }
 
-    // دوباره چک سقف سراسری بعد از قفل
     if (
       locked.usageLimit != null &&
       locked.usedCount >= locked.usageLimit
@@ -215,7 +224,8 @@ export class PromotionsService {
     await usageRepo.save(
       usageRepo.create({
         promotionId: locked.id,
-        userId: data.userId,
+        userId: data.userId ?? null,
+        customerId: data.customerId ?? null,
         orderId: data.orderId,
         discountAmount: applied.discountAmount,
       }),
@@ -227,13 +237,39 @@ export class PromotionsService {
     return applied;
   }
 
+  /** @deprecated ترجیحاً resolveForSubject */
   async resolveForUser(
     userId: string,
     code: string,
     orderAmount: number,
     manager?: EntityManager,
   ): Promise<AppliedPromotion> {
-    const normalized = this.normalizeCode(code);
+    return this.resolveForSubject(
+      { userId, customerId: null, code, orderAmount },
+      manager,
+    );
+  }
+
+  async resolveForSubject(
+    data: {
+      userId?: string | null;
+      customerId?: string | null;
+      code: string;
+      orderAmount: number;
+    },
+    manager?: EntityManager,
+  ): Promise<AppliedPromotion> {
+    const userId = data.userId?.trim() || null;
+    const customerId = data.customerId?.trim() || null;
+    if (!userId && !customerId) {
+      throw new ApiException(
+        'PROMOTION_SUBJECT_REQUIRED',
+        'برای اعمال پروموشن userId یا customerId لازم است',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const normalized = this.normalizeCode(data.code);
     if (!normalized) {
       throw new ApiException(
         'PROMOTION_CODE_REQUIRED',
@@ -242,6 +278,7 @@ export class PromotionsService {
       );
     }
 
+    const orderAmount = data.orderAmount;
     const promoRepo = manager
       ? manager.getRepository(Promotion)
       : this.promotions.getRepo();
@@ -263,36 +300,46 @@ export class PromotionsService {
       ? manager.getRepository(PromotionUsage)
       : this.promotions.getUsageRepo();
 
+    const subjectWhere = userId
+      ? { promotionId: promo.id, userId }
+      : { promotionId: promo.id, customerId: customerId! };
+
     if (promo.usageLimitPerUser != null) {
-      const userCount = await usageRepo.count({
-        where: { promotionId: promo.id, userId },
-      });
-      if (userCount >= promo.usageLimitPerUser) {
+      const subjectCount = await usageRepo.count({ where: subjectWhere });
+      if (subjectCount >= promo.usageLimitPerUser) {
         throw new ApiException(
           'PROMOTION_USER_USAGE_LIMIT',
-          'تعداد مجاز استفاده شما از این پروموشن تمام شده است',
+          'تعداد مجاز استفاده از این پروموشن تمام شده است',
           HttpStatus.CONFLICT,
         );
       }
     }
 
-    const userDiscountSumRaw = await usageRepo
+    const subjectDiscountQb = usageRepo
       .createQueryBuilder('u')
       .select('COALESCE(SUM(u.discountAmount), 0)', 'total')
-      .where('u.promotionId = :promotionId', { promotionId: promo.id })
-      .andWhere('u.userId = :userId', { userId })
-      .getRawOne<{ total: string }>();
-    const userDiscountSum = Number(userDiscountSumRaw?.total ?? 0);
+      .where('u.promotionId = :promotionId', { promotionId: promo.id });
+    if (userId) {
+      subjectDiscountQb.andWhere('u.userId = :userId', { userId });
+    } else {
+      subjectDiscountQb.andWhere('u.customerId = :customerId', {
+        customerId,
+      });
+    }
+    const subjectDiscountSumRaw = await subjectDiscountQb.getRawOne<{
+      total: string;
+    }>();
+    const subjectDiscountSum = Number(subjectDiscountSumRaw?.total ?? 0);
 
     let discountAmount = this.calculateDiscount(promo, orderAmount);
 
     if (promo.maxDiscountAmountPerUser != null) {
       const remaining =
-        Number(promo.maxDiscountAmountPerUser) - userDiscountSum;
+        Number(promo.maxDiscountAmountPerUser) - subjectDiscountSum;
       if (remaining <= 0) {
         throw new ApiException(
           'PROMOTION_USER_AMOUNT_LIMIT',
-          'سقف مبلغ تخفیف شما برای این پروموشن پر شده است',
+          'سقف مبلغ تخفیف برای این پروموشن پر شده است',
           HttpStatus.CONFLICT,
         );
       }
