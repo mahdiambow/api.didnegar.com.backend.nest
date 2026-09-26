@@ -94,6 +94,17 @@ parent-category, ordered by `sort`, then `name`. If none exists, the importer cr
 `default` parent category. Orphan legacy sub-categories attach to a generated or reused
 `default` Nest category beneath that same parent.
 
+## JSON category hierarchy
+
+```sh
+npm run db:migrate:categories-json
+```
+
+Creates or updates the parent categories, categories, and sub-categories described
+by the repository's `categories.json`. Each managed row has a deterministic
+`legacyTable`/`legacyId` source identity, so reruns update it and restore its JSON
+parent relationship. It does not delete unrelated categories.
+
 ## Attributes
 
 ```sh

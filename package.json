@@ -39,6 +39,7 @@
     "db:migrate:wishlists": "node scripts/migration-scripts/migrate-wishlists.mjs",
     "db:migrate:user-carts": "node scripts/migration-scripts/migrate-user-carts.mjs",
     "db:migrate:categories": "node scripts/migration-scripts/migrate-categories.mjs",
+    "db:migrate:categories-json": "node scripts/migration-scripts/migrate-categories-json.mjs",
     "db:migrate:attributes": "node scripts/migration-scripts/migrate-attributes.mjs",
     "db:migrate:catalog": "node scripts/migration-scripts/migrate-catalog.mjs",
     "db:migrate:product-brands": "node scripts/migration-scripts/migrate-product-brands.mjs",

@@ -1,0 +1,870 @@
+{
+	"parent_categories": [
+	  {
+		"name_en": "Photography",
+		"name_fa": "عکاسی",
+		"categories": [
+		  {
+			"name_en": "Film Cameras",
+			"name_fa": "فیلمبرداری"
+		  },
+		  {
+			"name_en": "Camcorders",
+			"name_fa": "نورپردازی"
+		  },
+		  {
+			"name_en": "Audio Equipment",
+			"name_fa": "تجهیزات صدا"
+		  },
+		  {
+			"name_en": "Photography Accessories",
+			"name_fa": "لوازم جانبی عکاسی"
+		  },
+		  {
+			"name_en": "Mobile Accessories",
+			"name_fa": "لوازم جانبی موبایل"
+		  },
+		  {
+			"name_en": "Digital Second-Hand Goods",
+			"name_fa": "کالای دیجیتال دست دوم"
+		  },
+		  {
+			"name_en": "Digital Goods",
+			"name_fa": "کالای دیجیتال"
+		  },
+		  {
+			"name_en": "DIDNEGAR Academy",
+			"name_fa": "آکادمی دیدنگار"
+		  },
+		  {
+			"name_en": "Repair",
+			"name_fa": "تعمیرگاه"
+		  }
+		]
+	  },
+	  {
+		"name_en": "Videography",
+		"name_fa": "فیلمبرداری",
+		"categories": [
+		  {
+			"name_en": "Videography Accessories",
+			"name_fa": "لوازم فیلمبرداری",
+			"sub_categories": [
+			  {
+				"name_en": "Stabilizers",
+				"name_fa": "لرزشگیر"
+			  },
+			  {
+				"name_en": "Camera Gimbals",
+				"name_fa": "گیمبال دوربین"
+			  },
+			  {
+				"name_en": "Mobile Gimbals",
+				"name_fa": "گیمبال موبایل"
+			  },
+			  {
+				"name_en": "Gimbal Accessories",
+				"name_fa": "لوازم جانبی گیمبال"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Video Cameras",
+			"name_fa": "دوربین فیلمبرداری",
+			"sub_categories": [
+			  {
+				"name_en": "Sony Video Cameras",
+				"name_fa": "دوربین فیلمبرداری سونی"
+			  },
+			  {
+				"name_en": "Osmo Cameras",
+				"name_fa": "دوربین اسمو"
+			  },
+			  {
+				"name_en": "GoPro Cameras",
+				"name_fa": "دوربین گوپرو"
+			  },
+			  {
+				"name_en": "Insta360 Cameras",
+				"name_fa": "دوربین اینستا 360"
+			  },
+			  {
+				"name_en": "Panasonic Video Cameras",
+				"name_fa": "دوربین فیلمبرداری پاناسونیک"
+			  },
+			  {
+				"name_en": "Blackmagic Video Cameras",
+				"name_fa": "دوربین فیلمبرداری بلک مجیک"
+			  },
+			  {
+				"name_en": "Brinno Video Cameras",
+				"name_fa": "دوربین فیلمبرداری برینو"
+			  },
+			  {
+				"name_en": "Canon Video Cameras",
+				"name_fa": "دوربین فیلمبرداری کنون"
+			  },
+			  {
+				"name_en": "Professional Video Cameras",
+				"name_fa": "دوربین فیلمبرداری حرفه‌ای"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Videography Accessories",
+			"name_fa": "لوازم جانبی فیلمبرداری",
+			"sub_categories": [
+			  {
+				"name_en": "Videography Monitors",
+				"name_fa": "مانیتور فیلمبرداری"
+			  },
+			  {
+				"name_en": "Camera Sliders",
+				"name_fa": "اسلایدر فیلمبرداری"
+			  },
+			  {
+				"name_en": "Tripods",
+				"name_fa": "سه پایه فیلمبرداری"
+			  },
+			  {
+				"name_en": "Camera Chargers",
+				"name_fa": "شارژر دوربین"
+			  },
+			  {
+				"name_en": "Camera Batteries",
+				"name_fa": "باتری دوربین"
+			  },
+			  {
+				"name_en": "Drone Accessories",
+				"name_fa": "لوازم جانبی پهپاد"
+			  },
+			  {
+				"name_en": "GoPro Accessories",
+				"name_fa": "تجهیزات جانبی گوپرو"
+			  },
+			  {
+				"name_en": "Camera Bags and Backpacks",
+				"name_fa": "کیت و پکیج بلگری"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Beginner Videography Cameras",
+			"name_fa": "دوربین فیلمبرداری مبتدی"
+		  },
+		  {
+			"name_en": "Time-Lapse Cameras",
+			"name_fa": "دوربین تایم لپس"
+		  },
+		  {
+			"name_en": "Sports and Action Cameras",
+			"name_fa": "دوربین ورزشی و اکشن"
+		  }
+		]
+	  },
+	  {
+		"name_en": "Lighting",
+		"name_fa": "نورپردازی",
+		"categories": [
+		  {
+			"name_en": "Lighting Equipment",
+			"name_fa": "تجهیزات نورپردازی",
+			"sub_categories": [
+			  {
+				"name_en": "Softboxes",
+				"name_fa": "سافت باکس"
+			  },
+			  {
+				"name_en": "Light Stands",
+				"name_fa": "پایه نورپردازی"
+			  },
+			  {
+				"name_en": "Umbrellas",
+				"name_fa": "چتر نور"
+			  },
+			  {
+				"name_en": "Light Tents",
+				"name_fa": "خیمه نور"
+			  },
+			  {
+				"name_en": "Reflectors",
+				"name_fa": "رفلکتور"
+			  },
+			  {
+				"name_en": "Octaboxes",
+				"name_fa": "اکتاباکس"
+			  },
+			  {
+				"name_en": "Beauty Dishes",
+				"name_fa": "بیوتی دیش"
+			  },
+			  {
+				"name_en": "Snoots",
+				"name_fa": "اسنوت عکاسی"
+			  },
+			  {
+				"name_en": "Light Shapers",
+				"name_fa": "شیدر"
+			  },
+			  {
+				"name_en": "Light Modifiers",
+				"name_fa": "شکل دهنده نور"
+			  },
+			  {
+				"name_en": "Photography Lamps",
+				"name_fa": "لامپ عکاسی"
+			  },
+			  {
+				"name_en": "Lighting Equipment Bags",
+				"name_fa": "کیف تجهیزات نورپردازی"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Camera Flashes",
+			"name_fa": "فلاش عکاسی",
+			"sub_categories": [
+			  {
+				"name_en": "Ring Flashes",
+				"name_fa": "رینگ فلاش"
+			  },
+			  {
+				"name_en": "External Flashes",
+				"name_fa": "فلاش اکسترنال"
+			  },
+			  {
+				"name_en": "Flash Kits",
+				"name_fa": "کیت فلاش"
+			  },
+			  {
+				"name_en": "Portable Flashes",
+				"name_fa": "فلاش پرتابل"
+			  },
+			  {
+				"name_en": "Studio Flashes",
+				"name_fa": "فلاش استودیویی"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Continuous Lighting",
+			"name_fa": "نور ثابت",
+			"sub_categories": [
+			  {
+				"name_en": "Video Lights",
+				"name_fa": "ویدیو لایت"
+			  },
+			  {
+				"name_en": "Continuous Lighting",
+				"name_fa": "سافت لایت"
+			  },
+			  {
+				"name_en": "LED Continuous Lights",
+				"name_fa": "نور ثابت LED"
+			  },
+			  {
+				"name_en": "RGB Lights",
+				"name_fa": "نور RGB"
+			  },
+			  {
+				"name_en": "Beauty Lights",
+				"name_fa": "نور باتومی"
+			  },
+			  {
+				"name_en": "Ring Lights",
+				"name_fa": "رینگ لایت"
+			  },
+			  {
+				"name_en": "On-Camera Lights",
+				"name_fa": "نور ثابت روی دوربین"
+			  },
+			  {
+				"name_en": "Decorative Lights",
+				"name_fa": "نور تزئینی"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Lighting Accessories",
+			"name_fa": "لوازم جانبی نورپردازی"
+		  },
+		  {
+			"name_en": "Backgrounds and Bases",
+			"name_fa": "بک گراند عکاسی و پایه",
+			"sub_categories": [
+			  {
+				"name_en": "Backdrops",
+				"name_fa": "بک دراپ"
+			  },
+			  {
+				"name_en": "Portable Phones",
+				"name_fa": "فون پرتابل"
+			  },
+			  {
+				"name_en": "Velvet Photography Phones",
+				"name_fa": "فون مخمل عکاسی"
+			  },
+			  {
+				"name_en": "Acrylic Phones",
+				"name_fa": "فون اکریلیک"
+			  },
+			  {
+				"name_en": "Marble Photography Phones",
+				"name_fa": "فون شطرنجی عکاسی"
+			  },
+			  {
+				"name_en": "Paper Photography Phones",
+				"name_fa": "فون کاغذی عکاسی"
+			  },
+			  {
+				"name_en": "Background Stands",
+				"name_fa": "پایه فون"
+			  },
+			  {
+				"name_en": "Background Chains",
+				"name_fa": "پایه فون زنجیری"
+			  }
+			]
+		  }
+		]
+	  },
+	  {
+		"name_en": "Audio Equipment",
+		"name_fa": "تجهیزات صدا",
+		"categories": [
+		  {
+			"name_en": "Microphones",
+			"name_fa": "میکروفون",
+			"sub_categories": [
+			  {
+				"name_en": "Lavalier Microphones",
+				"name_fa": "میکروفون یانمای"
+			  },
+			  {
+				"name_en": "Shotgun Microphones",
+				"name_fa": "میکروفون گرین لاین"
+			  },
+			  {
+				"name_en": "Camera Microphones",
+				"name_fa": "میکروفون کامیکا"
+			  },
+			  {
+				"name_en": "Condenser Microphones",
+				"name_fa": "میکروفون سنهایزر"
+			  },
+			  {
+				"name_en": "Wireless Microphones",
+				"name_fa": "میکروفون شور"
+			  },
+			  {
+				"name_en": "Arocs Microphones",
+				"name_fa": "میکروفون آراروکس"
+			  },
+			  {
+				"name_en": "Desktop Microphones",
+				"name_fa": "میکروفون گوشی"
+			  },
+			  {
+				"name_en": "Studio Microphones",
+				"name_fa": "میکروفون استودیویی"
+			  },
+			  {
+				"name_en": "Collar Microphones",
+				"name_fa": "میکروفون یقه ای"
+			  },
+			  {
+				"name_en": "Chatter Microphones",
+				"name_fa": "میکروفون شاتگان"
+			  },
+			  {
+				"name_en": "Gaming Microphones",
+				"name_fa": "میکروفون گیمینگ"
+			  },
+			  {
+				"name_en": "Rome Microphones",
+				"name_fa": "میکروفون رومیزی"
+			  },
+			  {
+				"name_en": "Godox Microphones",
+				"name_fa": "میکروفون گودکس"
+			  },
+			  {
+				"name_en": "Rode Microphones",
+				"name_fa": "میکروفون رود"
+			  },
+			  {
+				"name_en": "Boya Microphones",
+				"name_fa": "میکروفون بویا"
+			  },
+			  {
+				"name_en": "Hollyland Microphones",
+				"name_fa": "میکروفون هالی لند"
+			  },
+			  {
+				"name_en": "Saramonic Microphones",
+				"name_fa": "میکروفون سارامونیک"
+			  },
+			  {
+				"name_en": "Sony Microphones",
+				"name_fa": "میکروفون سونی"
+			  },
+			  {
+				"name_en": "Behringer Microphones",
+				"name_fa": "میکروفون بهرینگر"
+			  },
+			  {
+				"name_en": "Mano Microphones",
+				"name_fa": "میکروفون ماونو"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Audio Equipment",
+			"name_fa": "انواع تجهیزات صدا",
+			"sub_categories": [
+			  {
+				"name_en": "Sound Recorders",
+				"name_fa": "رکوردر صدا"
+			  },
+			  {
+				"name_en": "Sound Cards",
+				"name_fa": "کارت صدا"
+			  },
+			  {
+				"name_en": "Sound Mixers",
+				"name_fa": "میکسر صدا"
+			  },
+			  {
+				"name_en": "Headphones",
+				"name_fa": "هدفون"
+			  },
+			  {
+				"name_en": "Studio Headphones",
+				"name_fa": "هدفون استودیویی"
+			  },
+			  {
+				"name_en": "Wired Headphones",
+				"name_fa": "هدفون با سیم"
+			  },
+			  {
+				"name_en": "Bluetooth Headphones",
+				"name_fa": "هدفون بلوتوثی"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Audio Accessories",
+			"name_fa": "لوازم جانبی تجهیزات صدا",
+			"sub_categories": [
+			  {
+				"name_en": "Intercom Systems",
+				"name_fa": "سیستم اینترکام"
+			  },
+			  {
+				"name_en": "Microphone Stands",
+				"name_fa": "پایه میکروفون"
+			  },
+			  {
+				"name_en": "Microphone Cables and Connections",
+				"name_fa": "کابل و اتصالات میکروفون"
+			  }
+			]
+		  }
+		]
+	  },
+	  {
+		"name_en": "Photography Cameras",
+		"name_fa": "دوربین عکاسی",
+		"categories": [
+		  {
+			"name_en": "Mirrorless Cameras",
+			"name_fa": "دوربین بدون آینه"
+		  },
+		  {
+			"name_en": "DSLR Cameras",
+			"name_fa": "دوربین DSLR"
+		  },
+		  {
+			"name_en": "Instant Cameras",
+			"name_fa": "دوربین عکاسی چاپ سریع"
+		  },
+		  {
+			"name_en": "Compact Cameras",
+			"name_fa": "دوربین کامپکت"
+		  },
+		  {
+			"name_en": "Medium Format Cameras",
+			"name_fa": "دوربین مدیوم فرمت"
+		  }
+		]
+	  },
+	  {
+		"name_en": "Camera Lenses",
+		"name_fa": "لنز دوربین",
+		"categories": [
+		  {
+			"name_en": "Mirrorless Lenses",
+			"name_fa": "لنز دوربین بدون آینه"
+		  },
+		  {
+			"name_en": "Mobile Lenses",
+			"name_fa": "لنز موبایل"
+		  },
+		  {
+			"name_en": "Medium Format Lenses",
+			"name_fa": "لنز مدیوم فرمت"
+		  }
+		]
+	  },
+	  {
+		"name_en": "Camera Accessories",
+		"name_fa": "لوازم جانبی دوربین",
+		"categories": [
+		  {
+			"name_en": "Camera Bags",
+			"name_fa": "کیف دوربین",
+			"sub_categories": [
+			  {
+				"name_en": "Videography Camera Bags",
+				"name_fa": "کیف دوربین فیلمبرداری"
+			  },
+			  {
+				"name_en": "Shoulder Camera Bags",
+				"name_fa": "کوله پشتی دوربین"
+			  },
+			  {
+				"name_en": "Lighting Equipment Bags",
+				"name_fa": "کیف تجهیزات نورپردازی"
+			  },
+			  {
+				"name_en": "Handheld Camera Bags",
+				"name_fa": "کیف دستی دوربین"
+			  },
+			  {
+				"name_en": "Lens Bags",
+				"name_fa": "کیف لنز دوربین"
+			  },
+			  {
+				"name_en": "Sling Camera Bags",
+				"name_fa": "کیف شانه آویز دوربین"
+			  },
+			  {
+				"name_en": "Compact Camera Bags",
+				"name_fa": "کیف دوربین کامپکت"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Camera Tripods",
+			"name_fa": "پایه دوربین",
+			"sub_categories": [
+			  {
+				"name_en": "Camera Tripods",
+				"name_fa": "سه پایه دوربین"
+			  },
+			  {
+				"name_en": "T-Shape Tripods",
+				"name_fa": "سه پایه تی شو"
+			  },
+			  {
+				"name_en": "Desktop Tripods",
+				"name_fa": "سه پایه رومیزی عکاسی"
+			  },
+			  {
+				"name_en": "Monopods",
+				"name_fa": "تک پایه دوربین"
+			  },
+			  {
+				"name_en": "Lightweight Tripods",
+				"name_fa": "سه پایه سبک عکاسی"
+			  },
+			  {
+				"name_en": "Lighting Stands",
+				"name_fa": "پایه نورپردازی"
+			  },
+			  {
+				"name_en": "Videography Tripods",
+				"name_fa": "سه پایه فیلمبرداری"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Memory Cards",
+			"name_fa": "کارت حافظه",
+			"sub_categories": [
+			  {
+				"name_en": "Camera Memory Cards",
+				"name_fa": "کارت حافظه دوربین"
+			  },
+			  {
+				"name_en": "XQD Memory Cards",
+				"name_fa": "کارت حافظه XQD"
+			  },
+			  {
+				"name_en": "CF Memory Cards",
+				"name_fa": "کارت حافظه CF"
+			  },
+			  {
+				"name_en": "SD Memory Cards",
+				"name_fa": "کارت حافظه SD"
+			  },
+			  {
+				"name_en": "Micro SD Memory Cards",
+				"name_fa": "کارت حافظه میکرو SD"
+			  },
+			  {
+				"name_en": "Card Readers",
+				"name_fa": "کارت ریدر"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Camera Batteries",
+			"name_fa": "باتری دوربین عکاسی",
+			"sub_categories": [
+			  {
+				"name_en": "Canon Camera Batteries",
+				"name_fa": "باتری دوربین کنون"
+			  },
+			  {
+				"name_en": "Nikon Camera Batteries",
+				"name_fa": "باتری دوربین نیکون"
+			  },
+			  {
+				"name_en": "Sony Camera Batteries",
+				"name_fa": "باتری دوربین سونی"
+			  },
+			  {
+				"name_en": "Grip Batteries",
+				"name_fa": "باتری گریپ"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Camera Chargers",
+			"name_fa": "شارژر دوربین عکاسی",
+			"sub_categories": [
+			  {
+				"name_en": "Canon Camera Chargers",
+				"name_fa": "شارژر دوربین کانن"
+			  },
+			  {
+				"name_en": "Chameleon Chargers",
+				"name_fa": "شارژرهای کملئون"
+			  },
+			  {
+				"name_en": "Sony Camera Chargers",
+				"name_fa": "شارژر دوربین سونی"
+			  },
+			  {
+				"name_en": "Nikon Camera Chargers",
+				"name_fa": "شارژر دوربین نیکون"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Camera Filters",
+			"name_fa": "فیلتر عکاسی",
+			"sub_categories": [
+			  {
+				"name_en": "Color Filters",
+				"name_fa": "فیلتر رنگی"
+			  },
+			  {
+				"name_en": "GND Filters",
+				"name_fa": "فیلتر GND"
+			  },
+			  {
+				"name_en": "Polarizing Filters",
+				"name_fa": "فیلتر پلاریزه"
+			  },
+			  {
+				"name_en": "Close-Up Filters",
+				"name_fa": "فیلتر کلوزاپ"
+			  },
+			  {
+				"name_en": "SKY Light Filters",
+				"name_fa": "فیلتر SKY Light"
+			  },
+			  {
+				"name_en": "ND Filters",
+				"name_fa": "فیلتر ND"
+			  },
+			  {
+				"name_en": "UV Filters",
+				"name_fa": "فیلتر UV"
+			  },
+			  {
+				"name_en": "Light Pollution Filters",
+				"name_fa": "فیلتر آلودگی نوری"
+			  },
+			  {
+				"name_en": "Neutral Density Filters",
+				"name_fa": "فیلتر لنز نیسی"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Button Batteries",
+			"name_fa": "باتری شارژی",
+			"sub_categories": [
+			  {
+				"name_en": "Half-Pen Batteries",
+				"name_fa": "باتری نیم قلمی"
+			  },
+			  {
+				"name_en": "Pen Batteries",
+				"name_fa": "باتری قلمی"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Other Accessories",
+			"name_fa": "سایر لوازم جانبی",
+			"sub_categories": [
+			  {
+				"name_en": "Camera Glasses",
+				"name_fa": "گلس دوربین"
+			  },
+			  {
+				"name_en": "Camera Cables and Connections",
+				"name_fa": "کابل و اتصالات دوربین"
+			  },
+			  {
+				"name_en": "Photography Straps",
+				"name_fa": "بند دوربین عکاسی"
+			  },
+			  {
+				"name_en": "Photo Paper",
+				"name_fa": "کاغذ چاپ عکس"
+			  },
+			  {
+				"name_en": "Cleaning Kits",
+				"name_fa": "تمیز کننده‌ها"
+			  },
+			  {
+				"name_en": "Camera Covers",
+				"name_fa": "کاور دوربین"
+			  },
+			  {
+				"name_en": "Viewfinder Eyecups",
+				"name_fa": "منظره‌یاب"
+			  }
+			]
+		  }
+		]
+	  },
+	  {
+		"name_en": "Mobile Accessories",
+		"name_fa": "لوازم جانبی موبایل",
+		"categories": [
+		  {
+			"name_en": "Phone Microphones",
+			"name_fa": "میکروفون گوشی",
+			"sub_categories": [
+			  {
+				"name_en": "Lightning Microphones",
+				"name_fa": "میکروفون لایتنینگ"
+			  },
+			  {
+				"name_en": "Type-C Microphones",
+				"name_fa": "میکروفون تایپ سی"
+			  },
+			  {
+				"name_en": "3.5mm Microphones",
+				"name_fa": "میکروفون درگاه 3.5 میلیمتر"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Other Phone Accessories",
+			"name_fa": "سایر لوازم جانبی گوشی",
+			"sub_categories": [
+			  {
+				"name_en": "Mobile Tripods",
+				"name_fa": "سه پایه موبایل"
+			  },
+			  {
+				"name_en": "Phone Holders",
+				"name_fa": "نگهدارنده گوشی"
+			  },
+			  {
+				"name_en": "Phone Gimbals",
+				"name_fa": "هولدر گردنی موبایل"
+			  },
+			  {
+				"name_en": "Phone Monopods",
+				"name_fa": "مونوپاد گوشی"
+			  },
+			  {
+				"name_en": "Mobile Lenses",
+				"name_fa": "لنز موبایل"
+			  }
+			]
+		  }
+		]
+	  },
+	  {
+		"name_en": "Digital Second-Hand Goods",
+		"name_fa": "کالای دیجیتال دست دوم",
+		"categories": [
+		  {
+			"name_en": "Second-Hand Cameras",
+			"name_fa": "دوربین دست دوم"
+		  },
+		  {
+			"name_en": "Second-Hand Lenses",
+			"name_fa": "لنز دست دوم"
+		  },
+		  {
+			"name_en": "Second-Hand Photography Equipment",
+			"name_fa": "تجهیزات عکاسی دست دوم"
+		  },
+		  {
+			"name_en": "Second-Hand Studio Equipment",
+			"name_fa": "تجهیزات آتلیه دست دوم"
+		  },
+		  {
+			"name_en": "Second-Hand Photography Accessories",
+			"name_fa": "لوازم جانبی دست دوم عکاسی"
+		  }
+		]
+	  },
+	  {
+		"name_en": "Digital Goods",
+		"name_fa": "کالای دیجیتال",
+		"categories": [
+		  {
+			"name_en": "Printers",
+			"name_fa": "پرینتر"
+		  }
+		]
+	  },
+	  {
+		"name_en": "Buying Guides",
+		"name_fa": "راهنمای خرید",
+		"categories": [
+		  {
+			"name_en": "Buying Guide by Price",
+			"name_fa": "راهنمای خرید بر اساس قیمت",
+			"sub_categories": [
+			  {
+				"name_en": "Best Cameras 200 Million Tomans and Up",
+				"name_fa": "بهترین دوربین‌ها ۲۰۰ میلیون تومان"
+			  }
+			]
+		  },
+		  {
+			"name_en": "Buying Guide by Usage",
+			"name_fa": "راهنمای خرید بر اساس کاربرد",
+			"sub_categories": [
+			  {
+				"name_en": "Best Lighting Equipment for Streaming and Gaming",
+				"name_fa": "بهترین تجهیزات نورپردازی برای استریم و گیمینگ"
+			  }
+			]
+		  }
+		]
+	  }
+	]
+  }
