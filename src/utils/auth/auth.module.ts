@@ -20,6 +20,7 @@ import { ConfigService } from '../../config/config.service.js';
 import { RolesModule } from '../../roles/roles.module.js';
 import { ShoppingCartModule } from '../../shopping-cart/shopping-cart.module.js';
 import { CreditModule } from '../../credit/credit.module.js';
+import { SmsModule } from '../sms/sms.module.js';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CreditModule } from '../../credit/credit.module.js';
     forwardRef(() => RolesModule),
     forwardRef(() => ShoppingCartModule),
     forwardRef(() => CreditModule),
+    SmsModule,
     ThrottlerModule.forRoot({
       throttlers: [
         authThrottler.otpSend,

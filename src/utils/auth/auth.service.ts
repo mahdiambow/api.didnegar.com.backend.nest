@@ -24,6 +24,7 @@ import {
   AUTH_PORTAL_ROLES,
   type AuthPortal,
 } from './auth-portal.js';
+import { SmsService } from '../sms/sms.service.js';
 
 @Injectable()
 export class AuthService {
@@ -39,6 +40,7 @@ export class AuthService {
     @Inject(forwardRef(() => CreditService))
     private readonly creditService: CreditService,
     private readonly dataSource: DataSource,
+    private readonly smsService: SmsService,
   ) {}
 
   async loginOrSignup(mobile: string, portal: AuthPortal) {
@@ -81,7 +83,10 @@ export class AuthService {
       await this.assertPortalAccess(user, portal);
     }
 
-    const code = this.config.get('OTP_STATIC_CODE');
+    const isProduction = this.config.get('NODE_ENV') === 'production';
+    const code = isProduction
+      ? this.generateOtpCode()
+      : this.config.get('OTP_STATIC_CODE'); // لوکال: 123456
     const hashedCode = await bcrypt.hash(code, 10);
 
     await this.userRepository.update(user.id, {
@@ -89,12 +94,10 @@ export class AuthService {
       otpExpiresAt: new Date(Date.now() + otpTtlMs()),
     });
 
-    if (this.config.get('NODE_ENV') === 'production') {
-      await this.sendOtpSms(mobile, code);
-    }
+    await this.smsService.sendOtp(mobile, code);
 
     return {
-      code,
+      code: isProduction ? undefined : code,
       isNewUser: !user.password,
       expiresIn: authConfig.otpTtlMinutes * 60,
     };
@@ -377,9 +380,8 @@ export class AuthService {
     }
   }
 
-  private async sendOtpSms(mobile: string, code: string): Promise<void> {
-    // TODO: اتصال به سرویس پیامک واقعی
-    console.log(`[SMS] ارسال کد ${code} به شماره ${mobile}`);
+  private generateOtpCode(): string {
+    return String(Math.floor(100000 + Math.random() * 900000));
   }
 
   private async toResponse(user: User) {
