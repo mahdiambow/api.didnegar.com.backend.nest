@@ -103,8 +103,8 @@ npm run db:migrate:categories-json
 Creates or updates the parent categories, categories, and sub-categories described
 by the repository's `categories.json`. Existing rows are matched by their exact
 Persian `name`, then their parent/category relation is restored to match the JSON.
-Ambiguous duplicate names stop the import rather than linking the wrong row. It
-does not delete unrelated categories.
+Rows not represented in the JSON are set inactive, so the active hierarchy
+matches the file without deleting historical data or breaking foreign keys.
 
 ## Attributes
 

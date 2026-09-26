@@ -22,8 +22,8 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: npm run db:migrate:categories-json
 
 Creates or updates the parent-category/category/sub-category tree in
-categories.json. Existing rows match by exact Persian name; the operation does
-not remove unmanaged rows.`);
+categories.json. Existing rows match by exact Persian name. Rows absent from
+the JSON are deactivated so the active hierarchy exactly matches the file.`);
   process.exit(0);
 }
 
@@ -338,6 +338,15 @@ async function upsertSubCategory(
   state.claimedIds.add(id);
 }
 
+async function deactivateRowsAbsentFromJson(target, table, state) {
+  const ids = [...state.claimedIds];
+  const query = ids.length
+    ? `UPDATE ${table} SET isActive = 0, updatedAt = NOW() WHERE id NOT IN (${ids.map(() => '?').join(', ')}) AND isActive = 1`
+    : `UPDATE ${table} SET isActive = 0, updatedAt = NOW() WHERE isActive = 1`;
+  const [result] = await target.execute(query, ids);
+  return Number(result.affectedRows ?? 0);
+}
+
 async function main() {
   const parents = await readSource();
   const database = requiredEnv('DB_DATABASE');
@@ -394,6 +403,23 @@ async function main() {
           }
         }
       }
+      const deactivated = {
+        parents: await deactivateRowsAbsentFromJson(
+          target,
+          'parent_categories',
+          parentState,
+        ),
+        categories: await deactivateRowsAbsentFromJson(
+          target,
+          'categories',
+          categoryState,
+        ),
+        subCategories: await deactivateRowsAbsentFromJson(
+          target,
+          'sub_categories',
+          subCategoryState,
+        ),
+      };
       await target.commit();
       console.log(
         JSON.stringify(
@@ -402,6 +428,7 @@ async function main() {
             parents: parents.length,
             categories: categoryIndex,
             subCategories: subCategoryIndex,
+            deactivated,
           },
           null,
           2,
