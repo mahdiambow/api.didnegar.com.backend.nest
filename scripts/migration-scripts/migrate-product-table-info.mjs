@@ -14,7 +14,7 @@ import {
 
 const reportPath =
   process.env.MIGRATION_PRODUCT_TABLE_INFO_REPORT_PATH ||
-  'migration-product-table-info-report.jsonl';
+  '/tmp/migration-product-table-info-report.jsonl';
 const TABLE_INFO_NAME = 'مشخصات فنی';
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
