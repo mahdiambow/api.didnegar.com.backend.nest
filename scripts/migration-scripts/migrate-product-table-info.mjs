@@ -44,6 +44,18 @@ function parseJsonArray(value) {
   }
 }
 
+/** Legacy attribute labels may contain URL-percent-encoded UTF-8 text. */
+function decodeLegacyText(value) {
+  const text = String(value ?? '');
+  if (!/%[0-9a-f]{2}/i.test(text)) return text;
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    // Preserve malformed legacy text rather than failing an entire batch.
+    return text;
+  }
+}
+
 async function writeReport(event) {
   await appendFile(reportPath, `${JSON.stringify(event)}\n`, 'utf8');
 }
@@ -100,8 +112,8 @@ function tableInfoFor(product) {
   const items = [...product.attributes.values()]
     .sort((left, right) => Number(left.legacyId) - Number(right.legacyId))
     .map((attribute) => ({
-      key: attribute.label || attribute.name,
-      val: [...attribute.values].join('، '),
+      key: decodeLegacyText(attribute.label || attribute.name),
+      val: [...attribute.values].map(decodeLegacyText).join('، '),
     }));
   return items.length ? [{ name: TABLE_INFO_NAME, items }] : [];
 }
