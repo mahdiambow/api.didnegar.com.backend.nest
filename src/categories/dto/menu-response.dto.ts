@@ -35,6 +35,15 @@ export class MenuSubCategoryDto {
   })
   image: string | null;
 
+  @ApiProperty({ example: false, description: 'دسته ویژه' })
+  isSpecial: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'فقط وقتی isSpecial=true',
+  })
+  specialImage: string | null;
+
   @ApiProperty({ example: MENU_SUB_CATEGORY_EXAMPLE.sort })
   sort: number;
 }
@@ -70,6 +79,15 @@ export class MenuCategoryDto {
     nullable: true,
   })
   image: string | null;
+
+  @ApiProperty({ example: false, description: 'دسته ویژه' })
+  isSpecial: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'فقط وقتی isSpecial=true',
+  })
+  specialImage: string | null;
 
   @ApiProperty({ example: MENU_CATEGORY_EXAMPLE.sort })
   sort: number;
@@ -110,6 +128,15 @@ export class MenuParentCategoryDto {
     nullable: true,
   })
   image: string | null;
+
+  @ApiProperty({ example: false, description: 'دسته ویژه' })
+  isSpecial: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'فقط وقتی isSpecial=true',
+  })
+  specialImage: string | null;
 
   @ApiProperty({ example: MENU_PARENT_CATEGORY_EXAMPLE.sort })
   sort: number;

@@ -39,6 +39,12 @@ export class SubCategory {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  isSpecial: boolean;
+
+  @Column({ type: 'varchar', length: 2048, nullable: true })
+  specialImage: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

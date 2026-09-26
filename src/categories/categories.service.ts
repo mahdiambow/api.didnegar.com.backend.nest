@@ -165,6 +165,8 @@ export class CategoriesService {
       icon: string | null;
       image: string | null;
       sort: number;
+      isSpecial?: boolean;
+      specialImage?: string | null;
     }>,
     categories: Array<{
       id: string;
@@ -175,6 +177,8 @@ export class CategoriesService {
       icon: string | null;
       image: string | null;
       sort: number;
+      isSpecial?: boolean;
+      specialImage?: string | null;
     }>,
     subCategories: Array<{
       id: string;
@@ -185,6 +189,8 @@ export class CategoriesService {
       icon: string | null;
       image: string | null;
       sort: number;
+      isSpecial?: boolean;
+      specialImage?: string | null;
     }>,
   ) {
     type MenuNode = {
@@ -194,7 +200,20 @@ export class CategoriesService {
       slug: string;
       icon: string | null;
       image: string | null;
+      isSpecial: boolean;
+      specialImage: string | null;
       sort: number;
+    };
+
+    const toSpecialFields = (item: {
+      isSpecial?: boolean;
+      specialImage?: string | null;
+    }) => {
+      const isSpecial = item.isSpecial ?? false;
+      return {
+        isSpecial,
+        specialImage: isSpecial ? (item.specialImage ?? null) : null,
+      };
     };
 
     const subsByCategoryId = new Map<string, MenuNode[]>();
@@ -207,6 +226,7 @@ export class CategoriesService {
         slug: sub.slug,
         icon: sub.icon ?? null,
         image: sub.image ?? null,
+        ...toSpecialFields(sub),
         sort: sub.sort ?? 0,
       });
       subsByCategoryId.set(sub.categoryId, list);
@@ -230,6 +250,7 @@ export class CategoriesService {
         slug: category.slug,
         icon: category.icon ?? null,
         image: category.image ?? null,
+        ...toSpecialFields(category),
         sort: category.sort ?? 0,
         subCategories: subsByCategoryId.get(category.id) ?? [],
       });
@@ -243,6 +264,7 @@ export class CategoriesService {
       slug: parent.slug,
       icon: parent.icon ?? null,
       image: parent.image ?? null,
+      ...toSpecialFields(parent),
       sort: parent.sort ?? 0,
       categories: catsByParentId.get(parent.id) ?? [],
     }));
@@ -278,6 +300,8 @@ export class CategoriesService {
         image: dto.image ?? null,
         sort: dto.sort ?? 0,
         isActive: dto.isActive ?? true,
+        isSpecial: dto.isSpecial ?? false,
+        specialImage: dto.specialImage ?? null,
       }),
     );
     return toParentCategoryResponse(parent);
@@ -391,6 +415,8 @@ export class CategoriesService {
         image: dto.image ?? null,
         sort: dto.sort ?? 0,
         isActive: dto.isActive ?? true,
+        isSpecial: dto.isSpecial ?? false,
+        specialImage: dto.specialImage ?? null,
       }),
     );
     const loaded = await this.categoryRepository.findById(category.id);
@@ -504,6 +530,8 @@ export class CategoriesService {
         image: dto.image ?? null,
         sort: dto.sort ?? 0,
         isActive: dto.isActive ?? true,
+        isSpecial: dto.isSpecial ?? false,
+        specialImage: dto.specialImage ?? null,
       }),
     );
     const loaded = await this.subCategoryRepository.findById(subCategory.id);

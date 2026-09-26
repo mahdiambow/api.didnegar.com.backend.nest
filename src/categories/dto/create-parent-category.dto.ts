@@ -65,6 +65,25 @@ export class CreateParentCategoryDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    default: false,
+    description: 'دسته ویژه — اگر true باشد specialImage برمی‌گردد',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isSpecial?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'https://cdn.example.com/categories/digital-special.jpg',
+    description: 'URL تصویر ویژه (وقتی isSpecial=true)',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  specialImage?: string | null;
 }
 
 export class UpdateParentCategoryDto {
@@ -116,4 +135,22 @@ export class UpdateParentCategoryDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'دسته ویژه — اگر true باشد specialImage برمی‌گردد',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isSpecial?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'https://cdn.example.com/categories/digital-special.jpg',
+    description: 'URL تصویر ویژه',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  specialImage?: string | null;
 }

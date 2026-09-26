@@ -199,6 +199,19 @@ export class ParentCategoryResponseDto {
   @ApiProperty({ example: true })
   isActive: boolean;
 
+  @ApiProperty({
+    example: false,
+    description: 'دسته ویژه',
+  })
+  isSpecial: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 'https://cdn.example.com/categories/digital-special.jpg',
+    description: 'فقط وقتی isSpecial=true برمی‌گردد',
+  })
+  specialImage: string | null;
+
   @ApiProperty({ example: PARENT_CATEGORY_RESPONSE_EXAMPLE.createdAt })
   createdAt: Date;
 }
@@ -241,6 +254,19 @@ export class CategoryResponseDto {
 
   @ApiProperty({ example: true })
   isActive: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'دسته ویژه',
+  })
+  isSpecial: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 'https://cdn.example.com/categories/mobile-special.jpg',
+    description: 'فقط وقتی isSpecial=true برمی‌گردد',
+  })
+  specialImage: string | null;
 
   @ApiProperty({ example: CATEGORY_RESPONSE_EXAMPLE.createdAt })
   createdAt: Date;
@@ -296,6 +322,19 @@ export class SubCategoryResponseDto {
 
   @ApiProperty({ example: true })
   isActive: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'دسته ویژه',
+  })
+  isSpecial: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: 'https://cdn.example.com/categories/phones-special.jpg',
+    description: 'فقط وقتی isSpecial=true برمی‌گردد',
+  })
+  specialImage: string | null;
 
   @ApiProperty({ example: SUB_CATEGORY_RESPONSE_EXAMPLE.createdAt })
   createdAt: Date;
@@ -363,6 +402,7 @@ export class ProductCategoryResponseDto {
 export function toParentCategoryResponse(
   parent: ParentCategory,
 ): ParentCategoryResponseDto {
+  const isSpecial = parent.isSpecial ?? false;
   return {
     id: parent.id,
     name: parent.name,
@@ -372,6 +412,8 @@ export function toParentCategoryResponse(
     image: parent.image ?? null,
     sort: parent.sort ?? 0,
     isActive: parent.isActive ?? true,
+    isSpecial,
+    specialImage: isSpecial ? (parent.specialImage ?? null) : null,
     createdAt: parent.createdAt,
   };
 }
@@ -380,6 +422,7 @@ export function toCategoryResponse(
   category: Category,
   includeParent = true,
 ): CategoryResponseDto {
+  const isSpecial = category.isSpecial ?? false;
   return {
     id: category.id,
     parentCategoryId: category.parentCategoryId,
@@ -390,6 +433,8 @@ export function toCategoryResponse(
     image: category.image ?? null,
     sort: category.sort ?? 0,
     isActive: category.isActive ?? true,
+    isSpecial,
+    specialImage: isSpecial ? (category.specialImage ?? null) : null,
     createdAt: category.createdAt,
     parentCategory:
       includeParent && category.parentCategory
@@ -408,6 +453,7 @@ export function toSubCategoryResponse(
     subCategory.category?.parentCategoryId ??
     parentCategory?.id ??
     null;
+  const isSpecial = subCategory.isSpecial ?? false;
 
   return {
     id: subCategory.id,
@@ -420,6 +466,8 @@ export function toSubCategoryResponse(
     image: subCategory.image ?? null,
     sort: subCategory.sort ?? 0,
     isActive: subCategory.isActive ?? true,
+    isSpecial,
+    specialImage: isSpecial ? (subCategory.specialImage ?? null) : null,
     createdAt: subCategory.createdAt,
     parentCategory: parentCategory
       ? toParentCategoryResponse(parentCategory)

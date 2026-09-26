@@ -70,6 +70,25 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    default: false,
+    description: 'دسته ویژه — اگر true باشد specialImage برمی‌گردد',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isSpecial?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'https://cdn.example.com/categories/mobile-special.jpg',
+    description: 'URL تصویر ویژه (وقتی isSpecial=true)',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  specialImage?: string | null;
 }
 
 export class UpdateCategoryDto {
@@ -129,4 +148,22 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: 'دسته ویژه — اگر true باشد specialImage برمی‌گردد',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isSpecial?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'https://cdn.example.com/categories/mobile-special.jpg',
+    description: 'URL تصویر ویژه',
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  specialImage?: string | null;
 }
