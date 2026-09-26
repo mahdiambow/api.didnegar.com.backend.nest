@@ -20,13 +20,19 @@ export class MediaSeaweedService {
       !mediaConfig.seaweed.accessKeyId ||
       !mediaConfig.seaweed.secretAccessKey
     ) {
-      throw new Error('SEAWEED_S3_ACCESS_KEY and SEAWEED_S3_SECRET_KEY are required');
+      throw new Error(
+        'SEAWEED_S3_ACCESS_KEY and SEAWEED_S3_SECRET_KEY are required',
+      );
     }
     if (!this.client) {
       this.client = new S3Client({
         endpoint: mediaConfig.seaweed.endpoint,
         region: mediaConfig.seaweed.region,
         forcePathStyle: true,
+        // A presigned browser PUT has no payload when it is signed. The SDK's
+        // default optional CRC32 calculation signs an empty-body checksum,
+        // which SeaweedFS then rejects for the actual uploaded file.
+        requestChecksumCalculation: 'WHEN_REQUIRED',
         credentials: {
           accessKeyId: mediaConfig.seaweed.accessKeyId,
           secretAccessKey: mediaConfig.seaweed.secretAccessKey,
@@ -67,7 +73,9 @@ export class MediaSeaweedService {
 
   publicUrl(key: string): string {
     if (!mediaConfig.seaweed.publicBaseUrl) {
-      throw new Error('MEDIA_PUBLIC_BASE_URL is required for public SeaweedFS URLs');
+      throw new Error(
+        'MEDIA_PUBLIC_BASE_URL is required for public SeaweedFS URLs',
+      );
     }
     return `${mediaConfig.seaweed.publicBaseUrl}/${key
       .split('\\')
