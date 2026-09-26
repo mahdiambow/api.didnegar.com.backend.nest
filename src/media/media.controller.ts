@@ -95,7 +95,7 @@ export class MediaController {
   @ApiOperation({
     summary: 'Create a direct SeaweedFS upload URL',
     description:
-      'product: فروشنده تصویر محصول را بدون اتصال اولیه به محصول در گالری شخصی SeaweedFS آپلود می‌کند و بعداً آن را متصل می‌کند. banner: فقط ادمین. فایل با PUT مستقیم به SeaweedFS آپلود می‌شود؛ credentials هرگز به کلاینت داده نمی‌شود.',
+      'product: فروشنده یا ادمین تصویر محصول را بدون اتصال اولیه به محصول در گالری SeaweedFS آپلود می‌کند و بعداً آن را متصل می‌کند. banner: فقط ادمین. فایل با PUT مستقیم به SeaweedFS آپلود می‌شود؛ credentials هرگز به کلاینت داده نمی‌شود.',
   })
   @ApiResponseMeta({
     code: 'MEDIA_UPLOAD_URL_CREATED',

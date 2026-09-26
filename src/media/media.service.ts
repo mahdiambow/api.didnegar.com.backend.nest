@@ -320,6 +320,10 @@ export class MediaService {
           HttpStatus.FORBIDDEN,
         );
       }
+    } else if (isAdministrator(user)) {
+      // Admin product-media uploads are unassigned and can later be attached
+      // to any product the administrator manages.
+      sellerId = null;
     } else {
       sellerId = this.requireSellerId(user);
       assertMediaAccess(user, sellerId);
