@@ -209,7 +209,13 @@ export class CustomerResponseDto {
   @ApiPropertyOptional({
     description: 'شناسه سفارش تلفنی ساخته‌شده همراه ثبت مشتری',
   })
-  orderId?: string;
+  orderId?: string | null;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'روش ارسال سفارش تلفنی مرتبط',
+  })
+  shippingMethodId?: string | null;
 
   @ApiPropertyOptional({ description: 'جزئیات سفارش تلفنی (type=customer)' })
   order?: OrderResponseDto;
@@ -223,7 +229,11 @@ export class CustomerResponseDto {
 
 export function toCustomerResponse(
   customer: Customer,
-  extra?: { orderId?: string; order?: OrderResponseDto },
+  extra?: {
+    orderId?: string | null;
+    shippingMethodId?: string | null;
+    order?: OrderResponseDto;
+  },
 ): CustomerResponseDto {
   return {
     id: customer.id,
@@ -238,7 +248,8 @@ export function toCustomerResponse(
     stateId: customer.stateId,
     cityId: customer.cityId,
     postalCode: customer.postalCode,
-    orderId: extra?.orderId,
+    orderId: extra?.orderId ?? null,
+    shippingMethodId: extra?.shippingMethodId ?? null,
     order: extra?.order,
     createdAt: customer.createdAt,
     updatedAt: customer.updatedAt,

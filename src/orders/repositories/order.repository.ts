@@ -24,6 +24,33 @@ export class OrderRepository {
     });
   }
 
+  /** آخرین سفارش type=customer برای هر customerId (سبک — فقط فیلدهای سفارش) */
+  async findLatestByCustomerIds(
+    customerIds: string[],
+  ): Promise<Map<string, Order>> {
+    const map = new Map<string, Order>();
+    if (!customerIds.length) return map;
+
+    const rows = await this.repo
+      .createQueryBuilder('ord')
+      .select([
+        'ord.id',
+        'ord.customerId',
+        'ord.shippingMethodId',
+        'ord.createdAt',
+      ])
+      .where('ord.customerId IN (:...customerIds)', { customerIds })
+      .andWhere('ord.type = :type', { type: 'customer' })
+      .orderBy('ord.createdAt', 'DESC')
+      .getMany();
+
+    for (const order of rows) {
+      if (!order.customerId || map.has(order.customerId)) continue;
+      map.set(order.customerId, order);
+    }
+    return map;
+  }
+
   findByIdForUser(id: string, userId: string) {
     return this.repo.findOne({
       where: { id, userId },

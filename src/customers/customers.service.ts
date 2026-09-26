@@ -38,8 +38,17 @@ export class CustomersService {
       search: query.search,
       phone: query.phone,
     });
+    const orderByCustomer = await this.orderRepository.findLatestByCustomerIds(
+      items.map((c) => c.id),
+    );
     return paginatedList(
-      items.map((c) => toCustomerResponse(c)),
+      items.map((c) => {
+        const order = orderByCustomer.get(c.id);
+        return toCustomerResponse(c, {
+          orderId: order?.id ?? null,
+          shippingMethodId: order?.shippingMethodId ?? null,
+        });
+      }),
       page,
       limit,
       total,
@@ -48,7 +57,18 @@ export class CustomersService {
 
   async findOne(actor: AuthUser, id: string) {
     const customer = await this.requireOwned(actor, id);
-    return toCustomerResponse(customer);
+    const orderByCustomer = await this.orderRepository.findLatestByCustomerIds([
+      customer.id,
+    ]);
+    const latest = orderByCustomer.get(customer.id);
+    const order = latest
+      ? await this.orderRepository.findById(latest.id)
+      : null;
+    return toCustomerResponse(customer, {
+      orderId: order?.id ?? null,
+      shippingMethodId: order?.shippingMethodId ?? null,
+      order: order ? toOrderResponse(order) : undefined,
+    });
   }
 
   async create(actor: AuthUser, dto: CreateCustomerDto) {
@@ -98,6 +118,7 @@ export class CustomersService {
     const order = await this.orderRepository.findById(orderId);
     return toCustomerResponse(customer, {
       orderId,
+      shippingMethodId: order?.shippingMethodId ?? dto.shippingMethodId,
       order: order ? toOrderResponse(order) : undefined,
     });
   }
@@ -124,7 +145,14 @@ export class CustomersService {
     if (dto.cityId !== undefined) customer.cityId = dto.cityId ?? null;
 
     const saved = await this.customers.save(customer);
-    return toCustomerResponse(saved);
+    const orderByCustomer = await this.orderRepository.findLatestByCustomerIds([
+      saved.id,
+    ]);
+    const order = orderByCustomer.get(saved.id);
+    return toCustomerResponse(saved, {
+      orderId: order?.id ?? null,
+      shippingMethodId: order?.shippingMethodId ?? null,
+    });
   }
 
   async remove(actor: AuthUser, id: string) {
