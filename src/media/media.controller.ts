@@ -143,9 +143,9 @@ export class MediaController {
   @Patch(':id/attach')
   @RequireRole(...sellerRoles)
   @ApiOperation({
-    summary: 'Attach approved media to product',
+    summary: 'Attach completed media to product',
     description:
-      'اتصال رسانه تأییدشده به محصول و افزودن URL SeaweedFS به تصویر محصول\n\nis_used=true',
+      'اتصال رسانه‌ای که آپلود آن تکمیل شده به محصول و افزودن URL SeaweedFS به تصویر محصول\n\nis_used=true',
   })
   @ApiResponseMeta({
     code: 'MEDIA_ATTACHED',
