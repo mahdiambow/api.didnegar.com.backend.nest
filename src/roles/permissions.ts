@@ -110,6 +110,12 @@ export const PERMISSIONS = {
     update: 'customers:update',
     delete: 'customers:delete',
   },
+  promotions: {
+    read: 'promotions:read',
+    create: 'promotions:create',
+    update: 'promotions:update',
+    delete: 'promotions:delete',
+  },
 } as const;
 
 export const LOCATION_PERMISSIONS = PERMISSIONS.locations;
@@ -449,6 +455,26 @@ export const PERMISSION_DEFINITIONS = [
     key: PERMISSIONS.customers.delete,
     label: 'حذف مشتری تلفنی',
     group: 'customers',
+  },
+  {
+    key: PERMISSIONS.promotions.read,
+    label: 'مشاهده پروموشن‌ها',
+    group: 'promotions',
+  },
+  {
+    key: PERMISSIONS.promotions.create,
+    label: 'ایجاد پروموشن',
+    group: 'promotions',
+  },
+  {
+    key: PERMISSIONS.promotions.update,
+    label: 'ویرایش پروموشن',
+    group: 'promotions',
+  },
+  {
+    key: PERMISSIONS.promotions.delete,
+    label: 'حذف پروموشن',
+    group: 'promotions',
   },
 ] as const satisfies ReadonlyArray<{
   key: string;

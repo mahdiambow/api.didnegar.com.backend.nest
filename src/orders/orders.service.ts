@@ -12,7 +12,12 @@ import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
 import { DepositsService } from '../deposits/deposits.service.js';
 import { ShoppingCartService } from '../shopping-cart/shopping-cart.service.js';
 import { AddressesService } from '../addresses/addresses.service.js';
-import { CreateOrderDto, OrderProductDto, OrderPriceDto } from './dto/create-order.dto.js';
+import { PromotionsService } from '../promotions/promotions.service.js';
+import {
+  CreateOrderDto,
+  OrderProductDto,
+  OrderPriceDto,
+} from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { toOrderResponse } from './dto/order-response.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
@@ -30,6 +35,7 @@ export class OrdersService {
     @Inject(forwardRef(() => ShoppingCartService))
     private readonly shoppingCartService: ShoppingCartService,
     private readonly addressesService: AddressesService,
+    private readonly promotionsService: PromotionsService,
   ) {}
 
   async findAll(query: {
@@ -87,6 +93,9 @@ export class OrdersService {
     const amounts = this.calculateAmounts(items, [shippingMethod]);
     const priced = this.applyPriceOverrides(amounts, dto.price);
     const paymentMethod = dto.paymentMethod ?? 'iBank';
+    let payableAmount = priced.amount;
+    let discountAmount = priced.discountAmount;
+    let promotionId: string | null = null;
 
     const orderId = await this.dataSource.transaction(async (manager) => {
       await this.offersService.decrementStockForPurchase(items, manager);
@@ -100,10 +109,35 @@ export class OrdersService {
         shippingMethodId: shippingMethod.id,
         subtotal: priced.subtotal,
         shippingAmount: priced.shippingAmount,
-        discountAmount: priced.discountAmount,
-        amount: priced.amount,
+        discountAmount,
+        amount: payableAmount,
         paymentMethod,
+        promotionId: null,
       });
+
+      if (dto.promotionCode?.trim()) {
+        const applied = await this.promotionsService.applyToOrderInTransaction(
+          manager,
+          {
+            userId,
+            orderId: id,
+            code: dto.promotionCode,
+            orderAmount: payableAmount,
+          },
+        );
+        discountAmount = applied.discountAmount;
+        promotionId = applied.promotionId;
+        payableAmount = applied.discountPrice;
+        await manager.getRepository(Order).update(
+          { id },
+          {
+            discountAmount,
+            amount: payableAmount,
+            promotionId,
+          },
+        );
+      }
+
       await this.shoppingCartService.clear(userId, manager);
       return id;
     });
@@ -156,6 +190,7 @@ export class OrdersService {
       discountAmount: priced.discountAmount,
       amount: priced.amount,
       paymentMethod: data.paymentMethod ?? null,
+      promotionId: null,
     });
   }
 
@@ -320,6 +355,7 @@ export class OrdersService {
       discountAmount: number;
       amount: number;
       paymentMethod: string | null;
+      promotionId: string | null;
     },
   ) {
     const orderRepo = manager.getRepository(Order);
@@ -337,6 +373,7 @@ export class OrdersService {
         discountAmount: data.discountAmount,
         amount: data.amount,
         paymentMethod: data.paymentMethod,
+        promotionId: data.promotionId,
         // سفارش تلفنی بدون درگاه → مستقیم در حال پردازش
         status: data.type === 'customer' ? 'processing' : 'pending',
       }),

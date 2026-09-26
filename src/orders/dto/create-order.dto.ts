@@ -9,6 +9,8 @@ import {
   IsInt,
   IsNumber,
   IsOptional,
+  IsString,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -104,4 +106,13 @@ export class CreateOrderDto {
   @ValidateNested()
   @Type(() => OrderPriceDto)
   price?: OrderPriceDto;
+
+  @ApiPropertyOptional({
+    example: 'NOWROOZ20',
+    description: 'کد پروموشن / کوپن تخفیف',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  promotionCode?: string;
 }
