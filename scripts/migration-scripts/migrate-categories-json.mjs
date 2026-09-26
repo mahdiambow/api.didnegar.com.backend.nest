@@ -124,11 +124,12 @@ async function readSource() {
 
 async function loadRows(connection, table) {
   const [rows] = await connection.execute(
-    `SELECT id, legacyId, legacyTable, name, slug${table === 'categories' ? ', parentCategoryId' : ''}${table === 'sub_categories' ? ', categoryId' : ''} FROM ${table}`,
+    `SELECT id, legacyId, legacyTable, name, nameEn, slug${table === 'categories' ? ', parentCategoryId' : ''}${table === 'sub_categories' ? ', categoryId' : ''} FROM ${table}`,
   );
   const bySource = new Map();
   const byName = new Map();
   const slugOwners = new Map();
+  const claimedIds = new Set();
   for (const row of rows) {
     const slugKey =
       table === 'sub_categories'
@@ -142,34 +143,40 @@ async function loadRows(connection, table) {
     namedRows.push(row);
     byName.set(String(row.name), namedRows);
   }
-  return { bySource, byName, slugOwners };
+  return { bySource, byName, slugOwners, claimedIds };
 }
 
-function findExistingByName(state, name, source, relation = null) {
-  const matches = state.byName.get(name) || [];
+function findExistingByName(state, name, nameEn, source, relation = null) {
+  const matches = (state.byName.get(name) || []).filter(
+    (row) => !state.claimedIds.has(String(row.id)),
+  );
   if (relation) {
     const related = matches.filter(
       (row) => String(row[relation.field]) === String(relation.id),
     );
     if (related.length === 1) return related[0];
   }
+  const englishMatches = matches.filter(
+    (row) => String(row.nameEn ?? '').trim() === nameEn,
+  );
+  if (englishMatches.length === 1) return englishMatches[0];
   if (matches.length === 1) return matches[0];
 
   const sourceMatch = state.bySource.get(
     `${source.legacyTable}:${source.legacyId}`,
   );
   if (sourceMatch) return sourceMatch;
-  if (matches.length > 1) {
-    throw new Error(
-      `Cannot uniquely match ${name}: ${matches.length} rows share this name.`,
-    );
-  }
+  // Names are the source identity. If legacy rows have duplicate Persian names
+  // and no English name/relation to distinguish them, consume one stable row
+  // per JSON occurrence so each target relation is restored exactly once.
+  if (matches.length > 1)
+    return matches.sort((a, b) => String(a.id).localeCompare(String(b.id)))[0];
   return null;
 }
 
 async function upsertParent(connection, row, source, sort, state) {
   const key = `${source.legacyTable}:${source.legacyId}`;
-  const existing = findExistingByName(state, row.name, source);
+  const existing = findExistingByName(state, row.name, row.nameEn, source);
   const slug = uniqueSlug(
     baseSlug([
       [row.nameEn, `parent-${source.legacyId}`],
@@ -187,6 +194,7 @@ async function upsertParent(connection, row, source, sort, state) {
     if (existing.slug !== slug) state.slugOwners.delete(existing.slug);
     existing.slug = slug;
     state.slugOwners.set(slug, String(existing.id));
+    state.claimedIds.add(String(existing.id));
     return { id: String(existing.id), slug };
   }
   const id = newId();
@@ -195,10 +203,11 @@ async function upsertParent(connection, row, source, sort, state) {
      VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, ?, 1, NOW(), NOW())`,
     [id, source.legacyId, source.legacyTable, row.name, row.nameEn, slug, sort],
   );
-  const inserted = { id, name: row.name, slug };
+  const inserted = { id, name: row.name, nameEn: row.nameEn, slug };
   state.bySource.set(key, inserted);
   state.byName.set(row.name, [inserted]);
   state.slugOwners.set(slug, id);
+  state.claimedIds.add(id);
   return { id, slug };
 }
 
@@ -212,7 +221,7 @@ async function upsertCategory(
   parentSlug,
 ) {
   const key = `${source.legacyTable}:${source.legacyId}`;
-  const existing = findExistingByName(state, row.name, source, {
+  const existing = findExistingByName(state, row.name, row.nameEn, source, {
     field: 'parentCategoryId',
     id: parentCategoryId,
   });
@@ -235,6 +244,7 @@ async function upsertCategory(
     existing.parentCategoryId = parentCategoryId;
     existing.slug = slug;
     state.slugOwners.set(slug, String(existing.id));
+    state.claimedIds.add(String(existing.id));
     return { id: String(existing.id), slug };
   }
   const id = newId();
@@ -252,10 +262,17 @@ async function upsertCategory(
       sort,
     ],
   );
-  const inserted = { id, name: row.name, parentCategoryId, slug };
+  const inserted = {
+    id,
+    name: row.name,
+    nameEn: row.nameEn,
+    parentCategoryId,
+    slug,
+  };
   state.bySource.set(key, inserted);
   state.byName.set(row.name, [...(state.byName.get(row.name) || []), inserted]);
   state.slugOwners.set(slug, id);
+  state.claimedIds.add(id);
   return { id, slug };
 }
 
@@ -269,7 +286,7 @@ async function upsertSubCategory(
   categorySlug,
 ) {
   const key = `${source.legacyTable}:${source.legacyId}`;
-  const existing = findExistingByName(state, row.name, source, {
+  const existing = findExistingByName(state, row.name, row.nameEn, source, {
     field: 'categoryId',
     id: categoryId,
   });
@@ -296,6 +313,7 @@ async function upsertSubCategory(
     existing.categoryId = categoryId;
     existing.slug = slug;
     state.slugOwners.set(ownerKey(slug), String(existing.id));
+    state.claimedIds.add(String(existing.id));
     return;
   }
   const id = newId();
@@ -313,10 +331,11 @@ async function upsertSubCategory(
       sort,
     ],
   );
-  const inserted = { id, name: row.name, categoryId, slug };
+  const inserted = { id, name: row.name, nameEn: row.nameEn, categoryId, slug };
   state.bySource.set(key, inserted);
   state.byName.set(row.name, [...(state.byName.get(row.name) || []), inserted]);
   state.slugOwners.set(ownerKey(slug), id);
+  state.claimedIds.add(id);
 }
 
 async function main() {
