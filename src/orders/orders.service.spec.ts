@@ -67,6 +67,9 @@ function setup(isCod = false) {
   const addresses = {
     resolveForUser: vi.fn(async () => ({ id: addressId })),
   };
+  const promotions = {
+    applyToOrderInTransaction: vi.fn(),
+  };
   const service = new OrdersService(
     dataSource as unknown as DataSource,
     repository as unknown as OrderRepository,
@@ -75,6 +78,7 @@ function setup(isCod = false) {
     deposits as never,
     shoppingCart as never,
     addresses as never,
+    promotions as never,
   );
   return {
     service,
@@ -84,6 +88,7 @@ function setup(isCod = false) {
     deposits,
     shoppingCart,
     addresses,
+    promotions,
   };
 }
 

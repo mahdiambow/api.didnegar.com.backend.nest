@@ -74,6 +74,12 @@ export class Order {
   @Column({ type: 'decimal', precision: 19, scale: 4 })
   amount: number;
 
+  @Column({ type: 'decimal', precision: 19, scale: 4, default: 0 })
+  discountAmount: number;
+
+  @Column({ type: 'varchar', length: 26, nullable: true })
+  promotionId: string | null;
+
   @Column({ type: 'varchar', length: 20, default: 'pending' })
   status: OrderStatus;
 

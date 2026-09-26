@@ -63,6 +63,26 @@ export class OrderResponseDto {
   @ApiProperty()
   shippingAmount: number;
 
+  @ApiProperty({ description: 'مبلغ تخفیف پروموشن' })
+  discountAmount: number;
+
+  @ApiPropertyOptional({ nullable: true, description: 'شناسه پروموشن اعمال‌شده' })
+  promotionId: string | null;
+
+  @ApiProperty({
+    description: 'قیمت نهایی: price / discountAmount / totalPrice',
+    example: {
+      price: 68000000,
+      discountAmount: 2000000,
+      totalPrice: 66000000,
+    },
+  })
+  price: {
+    price: number;
+    discountAmount: number;
+    totalPrice: number;
+  };
+
   @ApiProperty()
   amount: number;
 
@@ -147,6 +167,13 @@ export function toOrderResponse(
     shippingMethodIds: order.shippingMethodIds ?? null,
     subtotal,
     shippingAmount,
+    discountAmount: Number(order.discountAmount ?? 0),
+    promotionId: order.promotionId ?? null,
+    price: {
+      price: subtotal,
+      discountAmount: Number(order.discountAmount ?? 0),
+      totalPrice: Number(order.amount),
+    },
     amount: Number(order.amount),
     displayTotal: subtotal + shippingAmount,
     status: order.status,
