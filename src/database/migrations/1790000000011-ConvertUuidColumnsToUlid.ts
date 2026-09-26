@@ -156,7 +156,10 @@ export class ConvertUuidColumnsToUlid1790000000011 implements MigrationInterface
     }
 
     for (const [table, column, type] of this.alters) {
+      // Init schema never had banners.categoryId (removed later in 0026);
+      // skip any alter whose table/column is absent on this DB.
       if (!(await queryRunner.hasTable(table))) continue;
+      if (!(await queryRunner.hasColumn(table, column))) continue;
       await queryRunner.query(
         `ALTER TABLE \`${table}\` MODIFY \`${column}\` ${type}`,
       );
@@ -194,6 +197,7 @@ export class ConvertUuidColumnsToUlid1790000000011 implements MigrationInterface
     }
     for (const [table, column, type] of this.alters) {
       if (!(await queryRunner.hasTable(table))) continue;
+      if (!(await queryRunner.hasColumn(table, column))) continue;
       await queryRunner.query(
         `ALTER TABLE \`${table}\` MODIFY \`${column}\` ${type.replace('(26)', '(36)')}`,
       );

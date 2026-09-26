@@ -4,9 +4,18 @@ export class RemoveBannerCategoryId1790000000026 implements MigrationInterface {
   name = 'RemoveBannerCategoryId1790000000026';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE \`banners\` DROP FOREIGN KEY \`FK_banners_categoryId\``,
-    );
+    // Init schema never added banners.categoryId — nothing to remove.
+    if (!(await queryRunner.hasColumn('banners', 'categoryId'))) {
+      return;
+    }
+
+    try {
+      await queryRunner.query(
+        `ALTER TABLE \`banners\` DROP FOREIGN KEY \`FK_banners_categoryId\``,
+      );
+    } catch {
+      /* FK may not exist */
+    }
     await queryRunner.query(
       `ALTER TABLE \`banners\` DROP CHECK \`CHK_banners_placement\``,
     );
