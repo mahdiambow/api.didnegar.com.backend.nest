@@ -29,6 +29,17 @@ export class OrderProductResponseDto {
   subtotal: number;
 }
 
+export class OrderPriceResponseDto {
+  @ApiProperty({ example: 68000000, description: 'مبلغ کالا قبل از تخفیف' })
+  price: number;
+
+  @ApiProperty({ example: 2000000, description: 'مبلغ تخفیف' })
+  discountAmount: number;
+
+  @ApiProperty({ example: 66085000, description: 'مبلغ نهایی قابل پرداخت' })
+  totalPrice: number;
+}
+
 export class OrderResponseDto {
   @ApiProperty()
   id: string;
@@ -57,6 +68,9 @@ export class OrderResponseDto {
   @ApiPropertyOptional({ type: [String], nullable: true })
   shippingMethodIds: string[] | null;
 
+  @ApiProperty({ type: OrderPriceResponseDto })
+  price: OrderPriceResponseDto;
+
   @ApiProperty()
   subtotal: number;
 
@@ -83,6 +97,13 @@ export class OrderResponseDto {
   })
   status: string;
 
+  @ApiPropertyOptional({
+    enum: ['credit', 'iBank', 'loan', 'partial-bank'],
+    nullable: true,
+    description: 'روش پرداخت',
+  })
+  paymentMethod: string | null;
+
   @ApiPropertyOptional({ type: ShippingMethodResponseDto, nullable: true })
   shippingMethod?: ShippingMethodResponseDto | null;
 
@@ -99,7 +120,7 @@ export class OrderResponseDto {
 
   @ApiPropertyOptional({
     enum: ['credit', 'iBank', 'loan', 'partial-bank'],
-    description: 'روش پرداخت استفاده‌شده هنگام ساخت سفارش',
+    description: 'روش پرداخت استفاده‌شده هنگام ساخت سفارش (alias)',
   })
   paymentGateway?: string;
 
@@ -114,6 +135,14 @@ export class OrderResponseDto {
   bankAmount?: number;
 }
 
+export function toOrderPrice(order: Order): OrderPriceResponseDto {
+  return {
+    price: Number(order.subtotal),
+    discountAmount: Number(order.discountAmount ?? 0),
+    totalPrice: Number(order.amount),
+  };
+}
+
 export function toOrderResponse(
   order: Order,
   payment?: {
@@ -125,6 +154,8 @@ export function toOrderResponse(
 ): OrderResponseDto {
   const subtotal = Number(order.subtotal);
   const shippingAmount = Number(order.shippingAmount);
+  const paymentMethod =
+    order.paymentMethod ?? payment?.paymentGateway ?? null;
 
   return {
     id: order.id,
@@ -132,7 +163,7 @@ export function toOrderResponse(
     customerId: order.customerId ?? null,
     type: order.type ?? 'user',
     addressId: order.addressId ?? null,
-    products: order.items.map((item) => ({
+    products: (order.items ?? []).map((item) => ({
       productId: item.productId,
       offerId: item.offerId ?? null,
       attributes: item.attributes ?? {},
@@ -145,11 +176,13 @@ export function toOrderResponse(
     })),
     shippingMethodId: order.shippingMethodId,
     shippingMethodIds: order.shippingMethodIds ?? null,
+    price: toOrderPrice(order),
     subtotal,
     shippingAmount,
     amount: Number(order.amount),
     displayTotal: subtotal + shippingAmount,
     status: order.status,
+    paymentMethod,
     shippingMethod: order.shippingMethod
       ? toShippingMethodResponse(order.shippingMethod)
       : null,
@@ -158,9 +191,11 @@ export function toOrderResponse(
     ...(payment?.paymentUrl !== undefined
       ? { paymentUrl: payment.paymentUrl }
       : {}),
-    ...(payment?.paymentGateway !== undefined
-      ? { paymentGateway: payment.paymentGateway }
-      : {}),
+    ...(paymentMethod !== null
+      ? { paymentGateway: payment?.paymentGateway ?? paymentMethod }
+      : payment?.paymentGateway !== undefined
+        ? { paymentGateway: payment.paymentGateway }
+        : {}),
     ...(payment?.creditApplied !== undefined
       ? { creditApplied: payment.creditApplied }
       : {}),

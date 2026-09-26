@@ -74,6 +74,17 @@ export class Order {
   @Column({ type: 'decimal', precision: 19, scale: 4 })
   amount: number;
 
+  /** مبلغ تخفیف سفارش */
+  @Column({ type: 'decimal', precision: 19, scale: 4, default: 0 })
+  discountAmount: number;
+
+  /**
+   * روش پرداخت — مثل CreateOrder:
+   * credit | iBank | loan | partial-bank
+   */
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  paymentMethod: string | null;
+
   @Column({ type: 'varchar', length: 20, default: 'pending' })
   status: OrderStatus;
 

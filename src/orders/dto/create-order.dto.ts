@@ -7,10 +7,20 @@ import {
   IsArray,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   Min,
   ValidateNested,
 } from 'class-validator';
+
+export const ORDER_PAYMENT_METHODS = [
+  'credit',
+  'iBank',
+  'loan',
+  'partial-bank',
+] as const;
+
+export type OrderPaymentMethod = (typeof ORDER_PAYMENT_METHODS)[number];
 
 export class OrderProductDto {
   @ApiProperty({ example: '01JEX000000000000000000010' })
@@ -22,6 +32,32 @@ export class OrderProductDto {
   @IsInt()
   @Min(1)
   quantity?: number;
+}
+
+export class OrderPriceDto {
+  @ApiPropertyOptional({
+    example: 68000000,
+    description: 'مبلغ کالا قبل از تخفیف (subtotal)',
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  price?: number;
+
+  @ApiPropertyOptional({ example: 2000000, description: 'مبلغ تخفیف' })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  discountAmount?: number;
+
+  @ApiPropertyOptional({
+    example: 66000000,
+    description: 'مبلغ نهایی قابل پرداخت',
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  totalPrice?: number;
 }
 
 export class CreateOrderDto {
@@ -51,12 +87,21 @@ export class CreateOrderDto {
   shippingMethodId: string;
 
   @ApiPropertyOptional({
-    enum: ['credit', 'iBank', 'loan', 'partial-bank'],
+    enum: ORDER_PAYMENT_METHODS,
     default: 'iBank',
     description:
       'روش پرداخت — partial-bank: موجودی ناقص کیف پول + مابقی بانک',
   })
   @IsOptional()
-  @IsIn(['credit', 'iBank', 'loan', 'partial-bank'])
-  paymentMethod?: 'credit' | 'iBank' | 'loan' | 'partial-bank';
+  @IsIn([...ORDER_PAYMENT_METHODS])
+  paymentMethod?: OrderPaymentMethod;
+
+  @ApiPropertyOptional({
+    type: OrderPriceDto,
+    description: 'اختیاری — تخفیف / override مبلغ',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => OrderPriceDto)
+  price?: OrderPriceDto;
 }

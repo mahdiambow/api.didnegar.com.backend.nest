@@ -6,6 +6,7 @@ import {
   ArrayUnique,
   IsArray,
   IsEmail,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -16,7 +17,17 @@ import {
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import type { Customer } from '../entities/customer.entity.js';
-import type { OrderResponseDto } from '../../orders/dto/order-response.dto.js';
+import {
+  ORDER_PAYMENT_METHODS,
+  OrderPriceDto,
+  type OrderPaymentMethod,
+} from '../../orders/dto/create-order.dto.js';
+import {
+  OrderPriceResponseDto,
+  OrderResponseDto,
+  toOrderPrice,
+} from '../../orders/dto/order-response.dto.js';
+import type { Order } from '../../orders/entities/order.entity.js';
 
 export class CustomerOrderProductDto {
   @ApiProperty({ example: '01JEX000000000000000000010' })
@@ -85,7 +96,8 @@ export class CreateCustomerDto {
   @ApiProperty({
     type: [CustomerOrderProductDto],
     minItems: 1,
-    description: 'محصولات سفارش تلفنی — همزمان با ثبت مشتری یک Order با type=customer ساخته می‌شود',
+    description:
+      'محصولات سفارش تلفنی — همزمان با ثبت مشتری یک Order با type=customer ساخته می‌شود',
   })
   @IsArray()
   @ArrayMinSize(1)
@@ -97,6 +109,23 @@ export class CreateCustomerDto {
   @ApiProperty({ example: '01JEX000000000000000000030' })
   @IsULID()
   shippingMethodId: string;
+
+  @ApiPropertyOptional({
+    enum: ORDER_PAYMENT_METHODS,
+    description: 'روش پرداخت — مثل سفارش: credit | iBank | loan | partial-bank',
+  })
+  @IsOptional()
+  @IsIn([...ORDER_PAYMENT_METHODS])
+  paymentMethod?: OrderPaymentMethod;
+
+  @ApiPropertyOptional({
+    type: OrderPriceDto,
+    description: 'قیمت سفارش تلفنی: price / discountAmount / totalPrice',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => OrderPriceDto)
+  price?: OrderPriceDto;
 }
 
 export class UpdateCustomerDto {
@@ -217,6 +246,20 @@ export class CustomerResponseDto {
   })
   shippingMethodId?: string | null;
 
+  @ApiPropertyOptional({
+    enum: ORDER_PAYMENT_METHODS,
+    nullable: true,
+    description: 'روش پرداخت سفارش تلفنی',
+  })
+  paymentMethod?: string | null;
+
+  @ApiPropertyOptional({
+    type: OrderPriceResponseDto,
+    nullable: true,
+    description: 'قیمت سفارش: price / discountAmount / totalPrice',
+  })
+  price?: OrderPriceResponseDto | null;
+
   @ApiPropertyOptional({ description: 'جزئیات سفارش تلفنی (type=customer)' })
   order?: OrderResponseDto;
 
@@ -232,6 +275,8 @@ export function toCustomerResponse(
   extra?: {
     orderId?: string | null;
     shippingMethodId?: string | null;
+    paymentMethod?: string | null;
+    price?: OrderPriceResponseDto | null;
     order?: OrderResponseDto;
   },
 ): CustomerResponseDto {
@@ -250,8 +295,27 @@ export function toCustomerResponse(
     postalCode: customer.postalCode,
     orderId: extra?.orderId ?? null,
     shippingMethodId: extra?.shippingMethodId ?? null,
+    paymentMethod: extra?.paymentMethod ?? null,
+    price: extra?.price ?? null,
     order: extra?.order,
     createdAt: customer.createdAt,
     updatedAt: customer.updatedAt,
+  };
+}
+
+export function customerExtrasFromOrder(order?: Order | null) {
+  if (!order) {
+    return {
+      orderId: null as string | null,
+      shippingMethodId: null as string | null,
+      paymentMethod: null as string | null,
+      price: null as OrderPriceResponseDto | null,
+    };
+  }
+  return {
+    orderId: order.id,
+    shippingMethodId: order.shippingMethodId ?? null,
+    paymentMethod: order.paymentMethod ?? null,
+    price: toOrderPrice(order),
   };
 }

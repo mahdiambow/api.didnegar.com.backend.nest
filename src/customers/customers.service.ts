@@ -16,6 +16,7 @@ import {
   CreateCustomerDto,
   ListCustomersQueryDto,
   UpdateCustomerDto,
+  customerExtrasFromOrder,
   toCustomerResponse,
 } from './dto/customer.dto.js';
 import { CustomerRepository } from './repositories/customer.repository.js';
@@ -44,10 +45,7 @@ export class CustomersService {
     return paginatedList(
       items.map((c) => {
         const order = orderByCustomer.get(c.id);
-        return toCustomerResponse(c, {
-          orderId: order?.id ?? null,
-          shippingMethodId: order?.shippingMethodId ?? null,
-        });
+        return toCustomerResponse(c, customerExtrasFromOrder(order));
       }),
       page,
       limit,
@@ -65,8 +63,7 @@ export class CustomersService {
       ? await this.orderRepository.findById(latest.id)
       : null;
     return toCustomerResponse(customer, {
-      orderId: order?.id ?? null,
-      shippingMethodId: order?.shippingMethodId ?? null,
+      ...customerExtrasFromOrder(order),
       order: order ? toOrderResponse(order) : undefined,
     });
   }
@@ -108,6 +105,8 @@ export class CustomersService {
             customerId: saved.id,
             products: dto.products,
             shippingMethodId: dto.shippingMethodId,
+            paymentMethod: dto.paymentMethod ?? null,
+            price: dto.price,
           },
         );
 
@@ -117,8 +116,10 @@ export class CustomersService {
 
     const order = await this.orderRepository.findById(orderId);
     return toCustomerResponse(customer, {
-      orderId,
-      shippingMethodId: order?.shippingMethodId ?? dto.shippingMethodId,
+      ...customerExtrasFromOrder(order),
+      shippingMethodId:
+        order?.shippingMethodId ?? dto.shippingMethodId ?? null,
+      paymentMethod: order?.paymentMethod ?? dto.paymentMethod ?? null,
       order: order ? toOrderResponse(order) : undefined,
     });
   }
@@ -149,10 +150,7 @@ export class CustomersService {
       saved.id,
     ]);
     const order = orderByCustomer.get(saved.id);
-    return toCustomerResponse(saved, {
-      orderId: order?.id ?? null,
-      shippingMethodId: order?.shippingMethodId ?? null,
-    });
+    return toCustomerResponse(saved, customerExtrasFromOrder(order));
   }
 
   async remove(actor: AuthUser, id: string) {

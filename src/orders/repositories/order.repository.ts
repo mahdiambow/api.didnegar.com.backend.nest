@@ -37,6 +37,11 @@ export class OrderRepository {
         'ord.id',
         'ord.customerId',
         'ord.shippingMethodId',
+        'ord.subtotal',
+        'ord.shippingAmount',
+        'ord.discountAmount',
+        'ord.amount',
+        'ord.paymentMethod',
         'ord.createdAt',
       ])
       .where('ord.customerId IN (:...customerIds)', { customerIds })

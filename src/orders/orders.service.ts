@@ -12,7 +12,7 @@ import { calculateOrderAmounts } from '../shipping/dto/shipping.dto.js';
 import { DepositsService } from '../deposits/deposits.service.js';
 import { ShoppingCartService } from '../shopping-cart/shopping-cart.service.js';
 import { AddressesService } from '../addresses/addresses.service.js';
-import { CreateOrderDto, OrderProductDto } from './dto/create-order.dto.js';
+import { CreateOrderDto, OrderProductDto, OrderPriceDto } from './dto/create-order.dto.js';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { toOrderResponse } from './dto/order-response.dto.js';
 import { OrderRepository } from './repositories/order.repository.js';
@@ -85,6 +85,8 @@ export class OrdersService {
       dto.shippingMethodId,
     );
     const amounts = this.calculateAmounts(items, [shippingMethod]);
+    const priced = this.applyPriceOverrides(amounts, dto.price);
+    const paymentMethod = dto.paymentMethod ?? 'iBank';
 
     const orderId = await this.dataSource.transaction(async (manager) => {
       await this.offersService.decrementStockForPurchase(items, manager);
@@ -96,9 +98,11 @@ export class OrdersService {
         addressId: address.id,
         shippingMethodIds: [shippingMethod.id],
         shippingMethodId: shippingMethod.id,
-        subtotal: amounts.subtotal,
-        shippingAmount: amounts.shippingAmount,
-        amount: amounts.payableAmount,
+        subtotal: priced.subtotal,
+        shippingAmount: priced.shippingAmount,
+        discountAmount: priced.discountAmount,
+        amount: priced.amount,
+        paymentMethod,
       });
       await this.shoppingCartService.clear(userId, manager);
       return id;
@@ -108,7 +112,7 @@ export class OrdersService {
     const payment = await this.depositsService.requestPayment(
       userId,
       orderId,
-      dto.paymentMethod ?? 'iBank',
+      paymentMethod,
     );
     return toOrderResponse(saved!, {
       paymentUrl: payment.paymentUrl,
@@ -128,6 +132,8 @@ export class OrdersService {
       customerId: string;
       products: OrderProductDto[];
       shippingMethodId: string;
+      paymentMethod?: string | null;
+      price?: OrderPriceDto;
     },
   ) {
     const items = await this.resolveProducts(data.products);
@@ -135,6 +141,7 @@ export class OrdersService {
       data.shippingMethodId,
     );
     const amounts = this.calculateAmounts(items, [shippingMethod]);
+    const priced = this.applyPriceOverrides(amounts, data.price);
     await this.offersService.decrementStockForPurchase(items, manager);
     return this.insertOrder(manager, {
       type: 'customer',
@@ -144,9 +151,11 @@ export class OrdersService {
       addressId: null,
       shippingMethodIds: [shippingMethod.id],
       shippingMethodId: shippingMethod.id,
-      subtotal: amounts.subtotal,
-      shippingAmount: amounts.shippingAmount,
-      amount: amounts.payableAmount,
+      subtotal: priced.subtotal,
+      shippingAmount: priced.shippingAmount,
+      discountAmount: priced.discountAmount,
+      amount: priced.amount,
+      paymentMethod: data.paymentMethod ?? null,
     });
   }
 
@@ -308,7 +317,9 @@ export class OrdersService {
       shippingMethodId: string;
       subtotal: number;
       shippingAmount: number;
+      discountAmount: number;
       amount: number;
+      paymentMethod: string | null;
     },
   ) {
     const orderRepo = manager.getRepository(Order);
@@ -323,12 +334,48 @@ export class OrdersService {
         shippingMethodIds: data.shippingMethodIds,
         subtotal: data.subtotal,
         shippingAmount: data.shippingAmount,
+        discountAmount: data.discountAmount,
         amount: data.amount,
+        paymentMethod: data.paymentMethod,
         // سفارش تلفنی بدون درگاه → مستقیم در حال پردازش
         status: data.type === 'customer' ? 'processing' : 'pending',
       }),
     );
     return order.id;
+  }
+
+  private applyPriceOverrides(
+    amounts: {
+      subtotal: number;
+      shippingAmount: number;
+      payableAmount: number;
+    },
+    price?: OrderPriceDto,
+  ) {
+    if (!price) {
+      return {
+        subtotal: amounts.subtotal,
+        shippingAmount: amounts.shippingAmount,
+        discountAmount: 0,
+        amount: amounts.payableAmount,
+      };
+    }
+
+    const subtotal =
+      price.price !== undefined ? Number(price.price) : amounts.subtotal;
+    const shippingAmount = amounts.shippingAmount;
+    const discountAmount =
+      price.discountAmount !== undefined ? Number(price.discountAmount) : 0;
+    const basePayable =
+      price.price !== undefined
+        ? subtotal + shippingAmount
+        : amounts.payableAmount;
+    const amount =
+      price.totalPrice !== undefined
+        ? Number(price.totalPrice)
+        : Math.max(0, basePayable - discountAmount);
+
+    return { subtotal, shippingAmount, discountAmount, amount };
   }
 
   private calculateAmounts(
