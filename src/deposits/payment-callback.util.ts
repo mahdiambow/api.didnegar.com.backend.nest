@@ -2,7 +2,7 @@ import type { TransactionSourceType } from '../transactions/entities/transaction
 import {
   ZIBAL_PAYMENT_STATUSES,
   type ZibalPaymentStatusCode,
-} from './services/zibal-status.js';
+} from '../utils/payment-gateways/zibal/zibal-status.js';
 
 /** کال‌بک درگاه + queryهای اپ: sourceType و sourceId */
 export function buildPaymentCallbackUrl(

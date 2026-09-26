@@ -3,9 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Deposit } from './entities/deposit.entity.js';
 import { DepositsService } from './deposits.service.js';
 import { DepositsController } from './deposits.controller.js';
-import { ZibalService } from './services/zibal.service.js';
-import { ZibalMockService } from './services/zibal-mock.service.js';
-import { LoanMockService } from './services/loan-mock.service.js';
+import { PaymentGatewaysModule } from '../utils/payment-gateways/payment-gateways.module.js';
+import { ZibalGatewayService } from '../utils/payment-gateways/zibal/zibal-gateway.service.js';
+import { ZibalMockService } from '../utils/payment-gateways/zibal/zibal-mock.service.js';
+import { LoanMockService } from '../utils/payment-gateways/loan/loan-mock.service.js';
 import { DepositRepository } from './repositories/deposit.repository.js';
 import { OrdersModule } from '../orders/orders.module.js';
 import { AuthModule } from '../utils/auth/auth.module.js';
@@ -13,8 +14,9 @@ import { RolesModule } from '../roles/roles.module.js';
 import { CreditModule } from '../credit/credit.module.js';
 import { TransactionsModule } from '../transactions/transactions.module.js';
 import { ConfigService } from '../config/config.service.js';
-import type { IBank } from './services/deposit-gateway.interface.js';
+import type { PaymentGateway } from '../utils/payment-gateways/payment-gateway.interface.js';
 import { ZIBAL_PROVIDER } from './zibal.constants.js';
+import { DepositVerificationQueue } from './deposit-verification.queue.js';
 
 @Module({
   imports: [
@@ -22,25 +24,27 @@ import { ZIBAL_PROVIDER } from './zibal.constants.js';
     forwardRef(() => OrdersModule),
     CreditModule,
     TransactionsModule,
+    PaymentGatewaysModule,
     forwardRef(() => AuthModule),
     forwardRef(() => RolesModule),
   ],
   controllers: [DepositsController],
   providers: [
     DepositsService,
-    ZibalService,
-    ZibalMockService,
-    LoanMockService,
+    DepositVerificationQueue,
     DepositRepository,
     {
       provide: ZIBAL_PROVIDER,
-      inject: [ConfigService, ZibalService, ZibalMockService],
+      inject: [ConfigService, ZibalGatewayService, ZibalMockService],
       useFactory: (
         config: ConfigService,
-        real: ZibalService,
+        real: ZibalGatewayService,
         mock: ZibalMockService,
-      ): IBank =>
-        config.getBooleanOptional('ZIBAL_USE_MOCK', false) ? mock : real,
+      ): PaymentGateway =>
+        config.get('NODE_ENV') === 'stage' ||
+        config.getBooleanOptional('ZIBAL_USE_MOCK', false)
+          ? mock
+          : real,
     },
   ],
   exports: [DepositsService, DepositRepository],

@@ -3,4 +3,5 @@ export enum CreditSourceType {
   OUT = 'out',
   LOCK = 'lock',
   UNLOCK = 'unlock',
+  CONSUME_LOCKED = 'consume_locked',
 }

@@ -95,6 +95,22 @@ export class CreditService {
     return this.apply(userId, amount, CreditSourceType.UNLOCK, meta, manager);
   }
 
+  /** Finalise previously locked wallet credit after an external payment succeeds. */
+  async consumeLocked(
+    userId: string,
+    amount: number,
+    meta: CreditTxMeta,
+    manager: EntityManager,
+  ): Promise<UserCredit> {
+    return this.apply(
+      userId,
+      amount,
+      CreditSourceType.CONSUME_LOCKED,
+      meta,
+      manager,
+    );
+  }
+
   private async apply(
     userId: string,
     amount: number,
@@ -138,20 +154,28 @@ export class CreditService {
           })
           .andWhere('`lockedAmount` >= :amount');
         break;
+      case CreditSourceType.CONSUME_LOCKED:
+        qb = qb
+          .set({ lockedAmount: () => '`lockedAmount` - :amount' })
+          .andWhere('`lockedAmount` >= :amount');
+        break;
     }
 
     const result = await qb.execute();
     if (
       (sourceType === CreditSourceType.OUT ||
         sourceType === CreditSourceType.LOCK ||
-        sourceType === CreditSourceType.UNLOCK) &&
+        sourceType === CreditSourceType.UNLOCK ||
+        sourceType === CreditSourceType.CONSUME_LOCKED) &&
       (result.affected ?? 0) === 0
     ) {
       throw new ApiException(
-        sourceType === CreditSourceType.UNLOCK
+        sourceType === CreditSourceType.UNLOCK ||
+        sourceType === CreditSourceType.CONSUME_LOCKED
           ? 'INSUFFICIENT_LOCKED_CREDIT'
           : 'INSUFFICIENT_CREDIT',
-        sourceType === CreditSourceType.UNLOCK
+        sourceType === CreditSourceType.UNLOCK ||
+        sourceType === CreditSourceType.CONSUME_LOCKED
           ? 'مبلغ قفل‌شده کافی نیست'
           : 'موجودی کیف پول کافی نیست',
         HttpStatus.BAD_REQUEST,

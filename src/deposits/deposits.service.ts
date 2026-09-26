@@ -1,4 +1,4 @@
-import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { ConfigService } from '../config/config.service.js';
 import { ApiException } from '../common/exceptions/api.exception.js';
@@ -6,18 +6,20 @@ import { newId } from '../common/id/ulid.js';
 import { toShippingMethodResponse } from '../shipping/dto/shipping.dto.js';
 import { OrderRepository } from '../orders/repositories/order.repository.js';
 import { CreditService } from '../credit/credit.service.js';
-import { LoanMockService } from './services/loan-mock.service.js';
-import type { ExternalPaymentProvider } from './services/deposit-gateway.interface.js';
+import { LoanMockService } from '../utils/payment-gateways/loan/loan-mock.service.js';
+import type { ExternalPaymentProvider } from '../utils/payment-gateways/payment-gateway.interface.js';
 import { DepositRepository } from './repositories/deposit.repository.js';
 import { TransactionService } from '../transactions/transaction.service.js';
 import type { TransactionSourceType } from '../transactions/entities/transaction.types.js';
 import { toDepositResponse } from './dto/deposit.dto.js';
 import { Deposit } from './entities/deposit.entity.js';
 import { Order } from '../orders/entities/order.entity.js';
+import { Transaction } from '../transactions/entities/transaction.entity.js';
 import { ZIBAL_PROVIDER } from './zibal.constants.js';
 import { buildPaymentCallbackUrl } from './payment-callback.util.js';
 
 export type DepositMethod = 'credit' | 'iBank' | 'loan' | 'partial-bank';
+export type DepositCallbackAction = 'none' | 'verify' | 'inquiry';
 
 type GatewayMethod = Exclude<DepositMethod, 'credit' | 'partial-bank'>;
 
@@ -129,6 +131,186 @@ export class DepositsService {
     filters: { userId?: string; status?: Deposit['status'] } = {},
   ) {
     return this.depositRepository.findPaginated(offset, limit, filters);
+  }
+
+  /** First callback stage from the reference flow. The query is not proof of payment. */
+  async recordGatewayCallback(
+    trackId: string,
+    callbackStatus?: string,
+  ): Promise<DepositCallbackAction> {
+    const existing = await this.depositRepository.findByTrackId(trackId);
+    if (!existing || existing.status === 'success' || existing.status === 'failed') return 'none';
+    if (callbackStatus === '1') {
+      await this.dataSource.getRepository(Deposit).update(
+        { id: existing.id },
+        { status: 'payment_accepted' },
+      );
+      return 'inquiry';
+    }
+    if (callbackStatus === '2') {
+      await this.dataSource.getRepository(Deposit).update(
+        { id: existing.id },
+        { status: 'payment_not_accepted' },
+      );
+      return 'verify';
+    }
+    // -1 is still pending. Any other explicit Zibal status is terminal.
+    if (callbackStatus && callbackStatus !== '-1') {
+      await this.failGatewayDeposit(trackId, `ZIBAL_CALLBACK_STATUS_${callbackStatus}`);
+    }
+    return 'none';
+  }
+
+  /** Second stage: server-to-server verify, then RabbitMQ schedules inquiry. */
+  async verifyGatewayDeposit(trackId: string) {
+    const existing = await this.depositRepository.findByTrackId(trackId);
+    if (!existing) throw new ApiException('DEPOSIT_NOT_FOUND', 'واریز یافت نشد', HttpStatus.NOT_FOUND);
+    if (existing.status === 'success' || existing.status === 'failed') return existing;
+
+    const provider = this.providers[existing.gateway as GatewayMethod];
+    if (!provider) {
+      throw new ApiException('UNSUPPORTED_GATEWAY', 'درگاه واریز پشتیبانی نمی‌شود', HttpStatus.BAD_REQUEST);
+    }
+
+    let verified;
+    try {
+      verified = await provider.verifyPayment(trackId, Math.round(Number(existing.amount)));
+    } catch (error) {
+      // A confirmed 4xx gateway rejection is terminal. Network/5xx errors keep
+      // the deposit pending so a later callback or user retry can verify it.
+      if (error instanceof HttpException && error.getStatus() < 500) {
+        await this.failGatewayDeposit(trackId);
+      }
+      throw error;
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const depositRepo = manager.getRepository(Deposit);
+      const deposit = await depositRepo.findOne({
+        where: { trackId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!deposit) {
+        throw new ApiException('DEPOSIT_NOT_FOUND', 'واریز یافت نشد', HttpStatus.NOT_FOUND);
+      }
+      if (deposit.status === 'success') return deposit;
+      if (deposit.status === 'failed') {
+        throw new ApiException('DEPOSIT_FAILED', 'این واریز ناموفق است', HttpStatus.CONFLICT);
+      }
+
+      deposit.status = 'payment_accepted';
+      deposit.refId = verified.refId;
+      await depositRepo.save(deposit);
+      return deposit;
+    });
+  }
+
+  /** Third stage: inquiry persists gateway timestamps then tells the worker whether to execute. */
+  async inquireGatewayDeposit(trackId: string): Promise<boolean> {
+    const deposit = await this.depositRepository.findByTrackId(trackId);
+    if (!deposit || deposit.status === 'success' || deposit.status === 'failed') return false;
+    const provider = this.providers[deposit.gateway as GatewayMethod];
+    if (!provider?.inquiryPayment) {
+      // Loan has no inquiry API. Its successful verify is enough to continue.
+      return deposit.status === 'payment_accepted';
+    }
+    let inquiry;
+    try {
+      inquiry = await provider.inquiryPayment(trackId, Math.round(Number(deposit.amount)));
+    } catch (error) {
+      if (error instanceof HttpException && error.getStatus() < 500) {
+        await this.failGatewayDeposit(trackId);
+      }
+      throw error;
+    }
+    await this.dataSource.getRepository(Deposit).update(
+      { id: deposit.id },
+      {
+        refId: inquiry.refId ?? deposit.refId,
+        paymentRequestCreatedAt: inquiry.createdAt ?? null,
+        paymentRequestPaidAt: inquiry.paidAt ?? null,
+        paymentRequestVerifiedAt: inquiry.verifiedAt ?? null,
+      },
+    );
+    return inquiry.accepted;
+  }
+
+  /** Final stage: idempotently execute transactions and settle the order/wallet. */
+  async executeGatewayDeposit(trackId: string) {
+    return this.dataSource.transaction(async (manager) => {
+      const depositRepo = manager.getRepository(Deposit);
+      const deposit = await depositRepo.findOne({
+        where: { trackId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!deposit) throw new ApiException('DEPOSIT_NOT_FOUND', 'واریز یافت نشد', HttpStatus.NOT_FOUND);
+      if (deposit.status === 'success' || deposit.status === 'failed') return deposit;
+      if (deposit.status !== 'payment_accepted') return deposit;
+
+      deposit.status = 'success';
+      await depositRepo.save(deposit);
+
+      await manager.getRepository(Transaction).update(
+        { sourceId: deposit.id, state: 'pending' },
+        { state: 'executed' },
+      );
+
+      if (deposit.orderId) {
+        if (Number(deposit.creditApplied ?? 0) > 0) {
+          await this.creditService.consumeLocked(
+            deposit.userId,
+            Math.round(Number(deposit.creditApplied)),
+            { sourceId: deposit.id },
+            manager,
+          );
+        }
+        await manager.getRepository(Order).update(
+          { id: deposit.orderId, status: 'pending' },
+          { status: 'processing' },
+        );
+      } else {
+        await this.creditService.incrementTotalAmount(
+          deposit.userId,
+          Math.round(Number(deposit.amount)),
+          { sourceId: deposit.id },
+          manager,
+        );
+      }
+      return deposit;
+    });
+  }
+
+  private async failGatewayDeposit(trackId: string, rejectionReason?: string): Promise<void> {
+    await this.dataSource.transaction(async (manager) => {
+      const depositRepo = manager.getRepository(Deposit);
+      const deposit = await depositRepo.findOne({
+        where: { trackId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (
+        !deposit ||
+        !['pending', 'payment_accepted', 'payment_not_accepted'].includes(
+          deposit.status,
+        )
+      )
+        return;
+
+      deposit.status = 'failed';
+      deposit.rejectionReason = rejectionReason ?? deposit.rejectionReason;
+      await depositRepo.save(deposit);
+      await manager.getRepository(Transaction).update(
+        { sourceId: deposit.id, state: 'pending' },
+        { state: 'rejected' },
+      );
+      if (Number(deposit.creditApplied ?? 0) > 0) {
+        await this.creditService.unlock(
+          deposit.userId,
+          Math.round(Number(deposit.creditApplied)),
+          { sourceId: deposit.id },
+          manager,
+        );
+      }
+    });
   }
 
   /** پرداخت سفارش از موجودی — فقط transaction (debit)، نه deposit */

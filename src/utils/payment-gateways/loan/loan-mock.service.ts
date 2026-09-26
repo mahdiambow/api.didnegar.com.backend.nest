@@ -1,29 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
-import { ConfigService } from '../../config/config.service.js';
+import { ConfigService } from '../../../config/config.service.js';
 import type {
   ILoan,
   PaymentExternalRequestResult,
   PaymentExternalVerifyResult,
-} from './deposit-gateway.interface.js';
+} from '../payment-gateway.interface.js';
 
+/** Development-only adapter until the real loan provider is integrated. */
 @Injectable()
 export class LoanMockService implements ILoan {
   readonly kind = 'loan' as const;
   readonly gateway = 'loan' as const;
-
   private readonly startUrl: string;
 
   constructor(config: ConfigService) {
     this.startUrl = config.get('LOAN_START_URL');
   }
 
-  requestPayment(
-    amount: number,
-    description: string,
-    _orderId: string,
-    _callbackUrl?: string,
-  ): PaymentExternalRequestResult {
+  requestPayment(amount: number, description: string): PaymentExternalRequestResult {
     const trackId = `LOAN-${randomBytes(12).toString('hex').toUpperCase()}`;
     return {
       trackId,
@@ -32,15 +27,8 @@ export class LoanMockService implements ILoan {
     };
   }
 
-  verifyPayment(
-    trackId: string,
-    amount: number,
-  ): PaymentExternalVerifyResult {
-    const refId = `LN-${trackId.slice(-8)}`;
-    return {
-      refId,
-      message: `[MOCK-LOAN] پرداخت وام ${trackId} به مبلغ ${amount} ریال تأیید شد`,
-    };
+  verifyPayment(trackId: string, amount: number): PaymentExternalVerifyResult {
+    return { refId: `LN-${trackId.slice(-8)}`, message: `[MOCK-LOAN] پرداخت وام ${trackId} به مبلغ ${amount} ریال تأیید شد`, amount };
   }
 
   buildPaymentUrl(trackId: string): string {
