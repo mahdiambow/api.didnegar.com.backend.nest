@@ -2,8 +2,11 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ApiException } from '../../common/exceptions/api.exception.js';
 import { ConfigService } from '../../config/config.service.js';
 
+/** قالب پیامک OTP در پنل کاوه‌نگار */
+const KAVENEGAR_OTP_TEMPLATE = 'verifydidnegar';
+
 /**
- * ارسال OTP از طریق پنل کاوه‌نگار (verify/lookup).
+ * ارسال OTP از طریق پنل کاوه‌نگار (verify/lookup) با قالب verifydidnegar.
  * @see https://kavenegar.com/rest.html#verify-lookup
  */
 @Injectable()
@@ -15,7 +18,6 @@ export class SmsService {
   /** ارسال کد OTP به موبایل با قالب verifydidnegar */
   async sendOtp(mobile: string, otp: string): Promise<void> {
     const apiKey = this.config.get('KAVENEGAR_API_KEY').trim();
-    const template = this.config.get('KAVENEGAR_OTP_TEMPLATE').trim();
     const base = this.config
       .get('KAVENEGAR_API_BASE')
       .replace(/\/$/, '');
@@ -32,7 +34,7 @@ export class SmsService {
     const url = new URL(`${base}/${apiKey}/verify/lookup.json`);
     url.searchParams.set('receptor', receptor);
     url.searchParams.set('token', otp);
-    url.searchParams.set('template', template);
+    url.searchParams.set('template', KAVENEGAR_OTP_TEMPLATE);
 
     let response: Response;
     try {
@@ -54,7 +56,7 @@ export class SmsService {
     // 200 = موفقیت طبق مستندات کاوه‌نگار
     if (!response.ok || status !== 200) {
       this.logger.warn(
-        `Kavenegar OTP failed receptor=${receptor} http=${response.status} status=${status} msg=${body?.return?.message ?? ''}`,
+        `Kavenegar OTP failed receptor=${receptor} template=${KAVENEGAR_OTP_TEMPLATE} http=${response.status} status=${status} msg=${body?.return?.message ?? ''}`,
       );
       throw new ApiException(
         'SMS_SEND_FAILED',
@@ -63,7 +65,9 @@ export class SmsService {
       );
     }
 
-    this.logger.log(`OTP SMS sent to ${receptor}`);
+    this.logger.log(
+      `OTP SMS sent to ${receptor} via template=${KAVENEGAR_OTP_TEMPLATE}`,
+    );
   }
 
   private normalizeMobile(mobile: string): string {
