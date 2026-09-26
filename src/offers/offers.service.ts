@@ -68,14 +68,14 @@ export const toOfferResponse = (
   offerId: offer.id,
   sellerId: offer.sellerId,
   productId: offer.productId,
-  sku: offer.sku ?? null,
-  price: Number(offer.price ?? 0),
-  stock: Number(offer.stock ?? 0),
-  stockStatus: offer.stockStatus ?? 'outofstock',
-  isOnSale: offer.isOnSale ?? false,
+  sku: offer.sku,
+  price: Number(offer.price),
+  stock: offer.stock,
+  stockStatus: offer.stockStatus,
+  isOnSale: offer.isOnSale,
   taxStatus: offer.taxStatus,
   taxClass: offer.taxClass,
-  isActive: offer.isActive ?? true,
+  isActive: offer.isActive,
   approvalStatus: offer.approvalStatus ?? 'approved',
   rejectionReason: offer.rejectionReason ?? null,
   ...(product ? { product } : {}),
@@ -90,12 +90,12 @@ export const toOfferListResponse = (
   offerId: offer.id,
   sellerId: offer.sellerId,
   productId: offer.productId,
-  sku: offer.sku ?? null,
-  price: Number(offer.price ?? 0),
-  stock: Number(offer.stock ?? 0),
-  stockStatus: offer.stockStatus ?? 'outofstock',
-  isOnSale: offer.isOnSale ?? false,
-  isActive: offer.isActive ?? true,
+  sku: offer.sku,
+  price: Number(offer.price),
+  stock: offer.stock,
+  stockStatus: offer.stockStatus,
+  isOnSale: offer.isOnSale,
+  isActive: offer.isActive,
   approvalStatus: offer.approvalStatus ?? 'approved',
   ...(product ? { product } : {}),
   createdAt: offer.createdAt,
@@ -508,9 +508,7 @@ export class OffersService {
         HttpStatus.NOT_FOUND,
       );
 
-    const skus = dto.items
-      .map((item) => item.sku?.trim())
-      .filter((sku): sku is string => Boolean(sku));
+    const skus = dto.items.map((item) => item.sku);
     if (new Set(skus).size !== skus.length) {
       throw new ApiException(
         'OFFER_SKU_DUPLICATE',
@@ -583,28 +581,25 @@ export class OffersService {
     }
 
     const patch = item.product ?? {};
-    const fallbackKey = item.sku?.trim() || `offer-${Date.now()}`;
-    const name = patch.name?.trim() || fallbackKey;
-    const slug = patch.slug?.trim() || this.slugifySku(fallbackKey);
-    const sku = patch.sku?.trim() || item.sku?.trim() || null;
-    const unitPrice = item.price ?? 0;
-    const stock = patch.stock ?? item.stock ?? 0;
+    const name = patch.name?.trim() || item.sku;
+    const slug = patch.slug?.trim() || this.slugifySku(item.sku);
+    const sku = patch.sku?.trim() || item.sku;
 
     const created = await this.productsService.create(
       {
         ...patch,
         name,
         slug,
-        sku: sku ?? undefined,
-        stock,
+        sku,
+        stock: patch.stock ?? item.stock,
         taxStatus: patch.taxStatus ?? item.taxStatus ?? undefined,
         taxClass: patch.taxClass ?? item.taxClass ?? undefined,
         price:
           patch.price ??
           ([
             {
-              price: unitPrice,
-              finalPrice: unitPrice,
+              price: item.price,
+              finalPrice: item.price,
             },
           ] as CreateProductDto['price']),
         sellerIds: [...new Set([...(patch.sellerIds ?? []), sellerId])],
@@ -639,19 +634,14 @@ export class OffersService {
     const approvalStatus =
       product.approvalStatus === 'approved' ? 'approved' : 'pending';
 
-    const stock = item.stock ?? 0;
-    const price = item.price ?? 0;
-    const stockStatus =
-      item.stockStatus ?? (stock > 0 ? 'instock' : 'outofstock');
-
     return this.save(
       this.offers.create({
         sellerId,
         productId: product.id,
-        sku: item.sku?.trim() || product.sku || null,
-        price,
-        stock,
-        stockStatus,
+        sku: item.sku,
+        price: item.price,
+        stock: item.stock,
+        stockStatus: item.stockStatus,
         attributes: {},
         isOnSale: item.isOnSale ?? false,
         isActive: item.isActive ?? true,
@@ -877,14 +867,14 @@ export class OffersService {
       offer.product.approvalStatus !== 'approved' ||
       offer.product.isActive === false ||
       offer.stockStatus !== 'instock' ||
-      Number(offer.stock ?? 0) < quantity
+      offer.stock < quantity
     )
       throw new ApiException(
         'OFFER_UNAVAILABLE',
         'پیشنهاد فروش یا موجودی موردنیاز در دسترس نیست',
         HttpStatus.BAD_REQUEST,
       );
-    const price = Number(offer.price ?? 0);
+    const price = Number(offer.price);
     if (!Number.isFinite(price) || price <= 0)
       throw new ApiException(
         'OFFER_PRICE_INVALID',

@@ -6,7 +6,7 @@ import {
   PartialType,
 } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { CreateProductDto } from '../../products/dto/create-product.dto.js';
 import {
@@ -30,33 +30,27 @@ export class SellerOfferItemDto {
   @IsULID()
   productId?: string;
 
-  @ApiPropertyOptional({
-    example: 'SAM-S24U-256-BLU',
-    description: 'اختیاری — در صورت ارسال باید یکتا باشد',
-  })
-  @IsOptional()
+  @ApiProperty({ example: 'SAM-S24U-256-BLU', description: 'باید یکتا باشد' })
   @IsString()
+  @IsNotEmpty()
   @MaxLength(100)
-  sku?: string;
+  sku: string;
 
-  @ApiPropertyOptional({ example: 68000000 })
-  @IsOptional()
+  @ApiProperty({ example: 68000000 })
   @IsNumber({ maxDecimalPlaces: 4 })
   @Min(0)
   @Max(999999999999999)
-  price?: number;
+  price: number;
 
-  @ApiPropertyOptional({ example: 10 })
-  @IsOptional()
+  @ApiProperty({ example: 10 })
   @IsInt()
   @Min(0)
   @Max(2147483647)
-  stock?: number;
+  stock: number;
 
-  @ApiPropertyOptional({ enum: ['instock', 'outofstock', 'onbackorder'] })
-  @IsOptional()
+  @ApiProperty({ enum: ['instock', 'outofstock', 'onbackorder'] })
   @IsIn(['instock', 'outofstock', 'onbackorder'])
-  stockStatus?: string;
+  stockStatus: string;
 
   @ApiPropertyOptional({ default: false })
   @ValidateIf((_object, value) => value !== undefined)
