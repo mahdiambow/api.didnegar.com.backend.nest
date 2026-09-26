@@ -1,11 +1,19 @@
-import { PrimaryColumn, Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, UpdateDateColumn } from 'typeorm';
+import {
+  PrimaryColumn,
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  UpdateDateColumn,
+} from 'typeorm';
 import type { Seller } from '../../sellers/entities/seller.entity.js';
 import type { Product } from '../../products/entities/product.entity.js';
 import type { User } from '../../users/entities/user.entity.js';
 import type {
   MediaGroup,
   MediaScope,
-  MediaStatus,
   MediaStorageLocation,
 } from './media-asset.enums.js';
 
@@ -68,19 +76,12 @@ export class MediaAsset {
   storageLocation: MediaStorageLocation;
 
   @Index()
-  @Column({ type: 'varchar', length: 20, default: 'pending' })
-  status: MediaStatus;
-
-  @Index()
   @Column({ type: 'boolean', default: false })
   isUsed: boolean;
 
   @Index()
   @Column({ type: 'datetime', nullable: true })
   expiresAt: Date | null;
-
-  @Column({ type: 'varchar', length: 1000, nullable: true })
-  rejectionReason: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

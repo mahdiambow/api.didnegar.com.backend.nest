@@ -10,7 +10,6 @@ import {
   Max,
   MaxLength,
   Min,
-  ValidateIf,
 } from 'class-validator';
 import { UserResponseDto } from '../../utils/auth/dto/user-response.dto.js';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
@@ -18,10 +17,8 @@ import { SellerResponseDto } from '../../sellers/dto/seller-response.dto.js';
 import {
   MEDIA_GROUPS,
   MEDIA_SCOPES,
-  MEDIA_STATUSES,
   type MediaGroup,
   type MediaScope,
-  type MediaStatus,
 } from '../entities/media-asset.enums.js';
 
 /** First step of the browser → SeaweedFS direct-upload flow. */
@@ -88,11 +85,6 @@ export class ListMediaAssetsDto extends PaginationQueryDto {
   @IsULID()
   productId?: string;
 
-  @ApiPropertyOptional({ enum: MEDIA_STATUSES })
-  @IsOptional()
-  @IsIn(MEDIA_STATUSES)
-  status?: MediaStatus;
-
   @ApiPropertyOptional()
   @IsOptional()
   @Transform(({ value }) =>
@@ -100,25 +92,6 @@ export class ListMediaAssetsDto extends PaginationQueryDto {
   )
   @IsBoolean()
   isUsed?: boolean;
-}
-
-export class ReviewMediaAssetDto {
-  @ApiProperty({
-    enum: ['approved', 'rejected'] as const,
-    example: 'approved',
-  })
-  @IsIn(['approved', 'rejected'])
-  status: 'approved' | 'rejected';
-
-  @ApiPropertyOptional({
-    example: 'کیفیت تصویر پایین است',
-    description: 'برای rejected الزامی است',
-    nullable: true,
-  })
-  @ValidateIf((dto: ReviewMediaAssetDto) => dto.status === 'rejected')
-  @IsString()
-  @MaxLength(1000)
-  rejectionReason?: string | null;
 }
 
 export class AttachMediaAssetDto {
@@ -179,17 +152,11 @@ export class MediaAssetResponseDto {
   @ApiProperty({ enum: ['staging', 'gallery'] })
   storageLocation: 'staging' | 'gallery';
 
-  @ApiProperty({ enum: MEDIA_STATUSES })
-  status: MediaStatus;
-
   @ApiProperty()
   isUsed: boolean;
 
   @ApiPropertyOptional({ nullable: true })
   expiresAt: Date | null;
-
-  @ApiPropertyOptional({ nullable: true })
-  rejectionReason: string | null;
 
   @ApiProperty({
     description: 'آدرس عمومی فایل (staging یا gallery)',

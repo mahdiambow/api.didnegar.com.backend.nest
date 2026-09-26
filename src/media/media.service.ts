@@ -26,7 +26,6 @@ import type {
   MediaAssetResponseDto,
   DirectUploadUrlResponseDto,
   RequestMediaUploadUrlDto,
-  ReviewMediaAssetDto,
 } from './dto/media.dto.js';
 import type { MediaScope } from './entities/media-asset.enums.js';
 
@@ -110,10 +109,8 @@ export class MediaService {
       mimeType: asset.mimeType,
       sizeBytes: asset.sizeBytes,
       storageLocation: asset.storageLocation,
-      status: asset.status,
       isUsed: asset.isUsed,
       expiresAt: asset.expiresAt,
-      rejectionReason: asset.rejectionReason,
       url:
         asset.scope === 'product' ||
         asset.scope === 'banner' ||
@@ -355,10 +352,8 @@ export class MediaService {
       sizeBytes: dto.sizeBytes,
       relativePath: objectKey,
       storageLocation: 'gallery',
-      status: 'pending',
       isUsed: false,
       expiresAt: hoursFromNow(mediaConfig.pendingTtlHours),
-      rejectionReason: null,
     });
     await this.media.save(asset);
 
@@ -417,7 +412,6 @@ export class MediaService {
       );
     }
 
-    asset.status = 'approved';
     asset.expiresAt = null;
     asset.isUsed = Boolean(asset.productId);
     await this.media.save(asset);
@@ -450,9 +444,6 @@ export class MediaService {
       qb.andWhere('media.productId = :productId', {
         productId: query.productId,
       });
-    }
-    if (query.status) {
-      qb.andWhere('media.status = :status', { status: query.status });
     }
     if (query.isUsed !== undefined) {
       qb.andWhere('media.isUsed = :isUsed', { isUsed: query.isUsed });
@@ -490,61 +481,6 @@ export class MediaService {
     return this.toEnrichedResponse(asset);
   }
 
-  async review(user: AuthUser, id: string, dto: ReviewMediaAssetDto) {
-    if (!canBrowseAllMedia(user)) {
-      throw new ApiException(
-        'FORBIDDEN',
-        'فقط ادمین / سوپرسلر می‌تواند رسانه را تأیید یا رد کند',
-        HttpStatus.FORBIDDEN,
-      );
-    }
-
-    const asset = await this.getEntity(id);
-
-    if (
-      asset.scope === 'product' ||
-      asset.scope === 'banner' ||
-      asset.scope === 'gallery'
-    ) {
-      throw new ApiException(
-        'MEDIA_DIRECT_UPLOAD_REVIEW_NOT_SUPPORTED',
-        'رسانه‌های SeaweedFS فقط با /media/:id/complete تأیید می‌شوند',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    if (asset.status === 'approved' && dto.status === 'approved') {
-      return this.toEnrichedResponse(asset);
-    }
-
-    if (asset.isUsed && dto.status === 'rejected') {
-      throw new ApiException(
-        'MEDIA_IN_USE',
-        'رسانه متصل به محصول قابل رد نیست؛ ابتدا جدا کنید',
-        HttpStatus.CONFLICT,
-      );
-    }
-
-    if (dto.status === 'approved') {
-      if (asset.storageLocation === 'staging') {
-        await this.storage.promoteToGallery(asset.relativePath);
-        asset.storageLocation = 'gallery';
-      }
-      asset.status = 'approved';
-      asset.expiresAt = null;
-      asset.rejectionReason = null;
-    } else {
-      asset.status = 'rejected';
-      asset.isUsed = false;
-      asset.productId = null;
-      asset.expiresAt = hoursFromNow(mediaConfig.rejectedTtlHours);
-      asset.rejectionReason = dto.rejectionReason ?? null;
-    }
-
-    await this.media.save(asset);
-    return this.toEnrichedResponse(asset);
-  }
-
   async attach(user: AuthUser, id: string, dto: AttachMediaAssetDto) {
     const asset = await this.getEntity(id);
     await this.assertDirectAssetManageAccess(user, asset);
@@ -557,10 +493,10 @@ export class MediaService {
       );
     }
 
-    if (asset.status !== 'approved') {
+    if (asset.expiresAt !== null) {
       throw new ApiException(
-        'MEDIA_NOT_APPROVED',
-        'فقط رسانه تأییدشده قابل اتصال به محصول است',
+        'MEDIA_UPLOAD_INCOMPLETE',
+        'فقط رسانه‌ای که آپلود آن تکمیل شده قابل اتصال به محصول است',
         HttpStatus.BAD_REQUEST,
       );
     }
@@ -585,9 +521,6 @@ export class MediaService {
 
     asset.productId = null;
     asset.isUsed = false;
-    if (asset.status === 'approved') {
-      asset.expiresAt = null;
-    }
     await this.media.save(asset);
     return this.toEnrichedResponse(asset);
   }
@@ -622,22 +555,10 @@ export class MediaService {
   async cleanupExpired(): Promise<{ deleted: number }> {
     const now = new Date();
     const expired = await this.media.find({
-      where: [
-        {
-          status: 'pending',
-          isUsed: false,
-          expiresAt: LessThan(now),
-        },
-        {
-          status: 'rejected',
-          isUsed: false,
-          expiresAt: LessThan(now),
-        },
-      ],
+      where: { isUsed: false, expiresAt: LessThan(now) },
     });
 
-    // Also catch rows where expiresAt is somehow null but unused pending/rejected
-    // — skip; user rule requires expires_at < NOW().
+    // Assets with no expiry have completed upload and remain in the gallery.
 
     let deleted = 0;
     for (const asset of expired) {

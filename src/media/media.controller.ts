@@ -34,7 +34,6 @@ import {
   DirectUploadUrlResponseDto,
   ListMediaAssetsDto,
   MediaAssetResponseDto,
-  ReviewMediaAssetDto,
   RequestMediaUploadUrlDto,
 } from './dto/media.dto.js';
 
@@ -55,12 +54,6 @@ const MediaListApiResponseDto = createPaginatedResponseDto(
 
 const sellerRoles = [
   DEFAULT_ROLE_SLUGS.SELLER,
-  DEFAULT_ROLE_SLUGS.SUPER_SELLER,
-  DEFAULT_ROLE_SLUGS.ADMIN,
-  DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
-] as const;
-
-const reviewerRoles = [
   DEFAULT_ROLE_SLUGS.SUPER_SELLER,
   DEFAULT_ROLE_SLUGS.ADMIN,
   DEFAULT_ROLE_SLUGS.SUPER_ADMIN,
@@ -145,26 +138,6 @@ export class MediaController {
     @Param('id', ParseULIDPipe) id: string,
   ) {
     return this.mediaService.findOne(req.user, id);
-  }
-
-  @Patch(':id/approval')
-  @RequireRole(...reviewerRoles)
-  @ApiOperation({
-    summary: 'Approve or reject media',
-    description:
-      'تأیید یا رد رسانه\n\napproved → انتقال به gallery و expires_at=null. rejected → expires_at=+24h.',
-  })
-  @ApiResponseMeta({
-    code: 'MEDIA_REVIEWED',
-    message: 'Media review updated',
-  })
-  @ApiOkResponse({ type: MediaApiResponseDto })
-  review(
-    @Req() req: { user: AuthUser },
-    @Param('id', ParseULIDPipe) id: string,
-    @Body() dto: ReviewMediaAssetDto,
-  ) {
-    return this.mediaService.review(req.user, id, dto);
   }
 
   @Patch(':id/attach')
