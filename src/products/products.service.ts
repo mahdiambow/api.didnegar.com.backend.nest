@@ -549,10 +549,10 @@ export class ProductsService {
           return {
             offerId: offer.id,
             sellerId: offer.sellerId,
-            price: Number(offer.price),
-            stock: offer.stock,
-            stockStatus: offer.stockStatus,
-            isOnSale: offer.isOnSale,
+            price: Number(offer.price ?? 0),
+            stock: Number(offer.stock ?? 0),
+            stockStatus: offer.stockStatus ?? 'outofstock',
+            isOnSale: offer.isOnSale ?? false,
             seller,
             shippingMethod: productShipping,
           };

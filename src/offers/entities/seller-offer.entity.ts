@@ -31,33 +31,66 @@ export class SellerOffer {
   @Column({ type: 'varchar', length: 26 }) productId: string;
   @Column({ type: 'json', default: {} }) attributes: Record<string, string>;
   @Column({ type: 'varchar', length: 100, nullable: true }) sku: string | null;
-  @Column({ type: 'decimal', precision: 19, scale: 4 }) price: number;
+
+  @Column({
+    type: 'decimal',
+    precision: 19,
+    scale: 4,
+    nullable: true,
+    default: 0,
+  })
+  price: number | null;
+
   @Column({ type: 'decimal', precision: 19, scale: 4, nullable: true })
   minPrice: number | null;
+
   @Column({ type: 'decimal', precision: 19, scale: 4, nullable: true })
   maxPrice: number | null;
-  @Column({ type: 'int', default: 0 }) stock: number;
-  @Column({ type: 'varchar', length: 50, default: 'outofstock' })
-  stockStatus: string;
-  @Column({ type: 'boolean', default: false }) isVirtual: boolean;
-  @Column({ type: 'boolean', default: false }) isDownloadable: boolean;
-  @Column({ type: 'boolean', default: false }) isOnSale: boolean;
+
+  @Column({ type: 'int', nullable: true, default: 0 }) stock: number | null;
+
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    default: 'outofstock',
+  })
+  stockStatus: string | null;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  isVirtual: boolean | null;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  isDownloadable: boolean | null;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  isOnSale: boolean | null;
+
   @Column({ type: 'varchar', length: 50, nullable: true }) taxStatus:
     string | null;
+
   @Column({ type: 'varchar', length: 100, nullable: true }) taxClass:
     string | null;
+
   @Column({ type: 'longtext', nullable: true }) description: string | null;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true }) weight:
     number | null;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true }) length:
     number | null;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true }) width:
     number | null;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true }) height:
     number | null;
+
   @Column({ type: 'varchar', length: 2048, nullable: true }) image:
     string | null;
-  @Column({ type: 'boolean', default: true }) isActive: boolean;
+
+  @Column({ type: 'boolean', nullable: true, default: true })
+  isActive: boolean | null;
 
   @Index()
   @Column({ type: 'varchar', length: 20, default: 'approved' })
