@@ -27,9 +27,8 @@ import type {
   DirectUploadUrlResponseDto,
   RequestMediaUploadUrlDto,
   ReviewMediaAssetDto,
-  UploadMediaDto,
 } from './dto/media.dto.js';
-import type { MediaGroup, MediaScope } from './entities/media-asset.enums.js';
+import type { MediaScope } from './entities/media-asset.enums.js';
 
 export function canBrowseAllMedia(user: AuthUser): boolean {
   return userHasRole(
@@ -67,37 +66,6 @@ function isAdministrator(user: AuthUser): boolean {
 
 function hoursFromNow(hours: number): Date {
   return new Date(Date.now() + hours * 60 * 60 * 1000);
-}
-
-function startOfDayInTimeZone(timeZone: string, now = new Date()): Date {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(now);
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((part) => part.type === type)?.value ?? 0);
-
-  // Wall-clock in target TZ → reconstruct UTC instant of local midnight.
-  const asUtcGuess = Date.UTC(get('year'), get('month') - 1, get('day'), 0, 0, 0);
-  const noonUtc = new Date(
-    Date.UTC(get('year'), get('month') - 1, get('day'), 12, 0, 0),
-  );
-  const tzNoon = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(noonUtc);
-  const tzHour = Number(tzNoon.find((p) => p.type === 'hour')?.value ?? 12);
-  const tzMinute = Number(tzNoon.find((p) => p.type === 'minute')?.value ?? 0);
-  const offsetMinutes = (tzHour - 12) * 60 + tzMinute;
-  return new Date(asUtcGuess - offsetMinutes * 60_000);
 }
 
 @Injectable()
@@ -143,7 +111,9 @@ export class MediaService {
       expiresAt: asset.expiresAt,
       rejectionReason: asset.rejectionReason,
       url:
-        asset.scope === 'product' || asset.scope === 'banner'
+        asset.scope === 'product' ||
+        asset.scope === 'banner' ||
+        asset.scope === 'gallery'
           ? this.seaweed.publicUrl(asset.relativePath)
           : this.storage.publicUrl(asset.storageLocation, asset.relativePath),
       createdAt: asset.createdAt,
@@ -165,9 +135,7 @@ export class MediaService {
       ...new Set(assets.map((asset) => asset.sellerId).filter(Boolean)),
     ] as string[];
     const userIds = [
-      ...new Set(
-        assets.map((asset) => asset.uploadedByUserId).filter(Boolean),
-      ),
+      ...new Set(assets.map((asset) => asset.uploadedByUserId).filter(Boolean)),
     ];
 
     const [sellers, users] = await Promise.all([
@@ -215,7 +183,11 @@ export class MediaService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    if (!Number.isInteger(sizeBytes) || sizeBytes < 1 || sizeBytes > mediaConfig.maxFileBytes) {
+    if (
+      !Number.isInteger(sizeBytes) ||
+      sizeBytes < 1 ||
+      sizeBytes > mediaConfig.maxFileBytes
+    ) {
       throw new ApiException(
         'MEDIA_FILE_TOO_LARGE',
         `حجم فایل باید بین 1 و ${mediaConfig.maxFileBytes} بایت باشد`,
@@ -228,7 +200,11 @@ export class MediaService {
   private async getProductForUpload(productId: string): Promise<Product> {
     const product = await this.products.findOne({ where: { id: productId } });
     if (!product) {
-      throw new ApiException('PRODUCT_NOT_FOUND', 'محصول یافت نشد', HttpStatus.NOT_FOUND);
+      throw new ApiException(
+        'PRODUCT_NOT_FOUND',
+        'محصول یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
     }
     return product;
   }
@@ -253,17 +229,22 @@ export class MediaService {
     scope: Extract<MediaScope, 'product' | 'banner'>,
     assetId: string,
     filename: string,
-    product: Product | null,
     sellerId: string | null,
   ): string {
-    const extension = filename.match(/\.[a-z0-9]{1,10}$/i)?.[0]?.toLowerCase() ?? '';
+    const extension =
+      filename.match(/\.[a-z0-9]{1,10}$/i)?.[0]?.toLowerCase() ?? '';
     if (scope === 'banner') return `banners/${assetId}${extension}`;
     const owner = sellerId ?? 'admin';
-    return `products/${owner}/${product!.id}/${assetId}${extension}`;
+    return `products/${owner}/gallery/${assetId}${extension}`;
   }
 
-  private async addDirectProductImage(asset: MediaAsset): Promise<void> {
-    if (asset.scope !== 'product' || !asset.productId) return;
+  private async addSeaweedProductImage(asset: MediaAsset): Promise<void> {
+    if (
+      asset.scope === 'legacy' ||
+      asset.scope === 'banner' ||
+      !asset.productId
+    )
+      return;
     const product = await this.getProductForUpload(asset.productId);
     const url = this.seaweed.publicUrl(asset.relativePath);
     const image = product.image ?? { featuredImg: null, gallery: [] };
@@ -274,26 +255,44 @@ export class MediaService {
   }
 
   /** Keep the denormalized Product.image JSON free of stale Seaweed URLs. */
-  private async removeDirectProductImage(asset: MediaAsset): Promise<void> {
-    if (asset.scope !== 'product' || !asset.productId) return;
-    const product = await this.products.findOne({ where: { id: asset.productId } });
+  private async removeSeaweedProductImage(asset: MediaAsset): Promise<void> {
+    if (
+      asset.scope === 'legacy' ||
+      asset.scope === 'banner' ||
+      !asset.productId
+    )
+      return;
+    const product = await this.products.findOne({
+      where: { id: asset.productId },
+    });
     if (!product) return;
 
     const url = this.seaweed.publicUrl(asset.relativePath);
     const image = product.image ?? { featuredImg: null, gallery: [] };
     const gallery = (image.gallery ?? []).filter((item) => item !== url);
-    const featuredImg = image.featuredImg === url ? (gallery.shift() ?? null) : image.featuredImg;
-    if (featuredImg === image.featuredImg && gallery.length === (image.gallery ?? []).length) {
+    const featuredImg =
+      image.featuredImg === url ? (gallery.shift() ?? null) : image.featuredImg;
+    if (
+      featuredImg === image.featuredImg &&
+      gallery.length === (image.gallery ?? []).length
+    ) {
       return;
     }
     product.image = { featuredImg, gallery };
     await this.products.save(product);
   }
 
-  private async assertDirectAssetManageAccess(user: AuthUser, asset: MediaAsset) {
+  private async assertDirectAssetManageAccess(
+    user: AuthUser,
+    asset: MediaAsset,
+  ) {
     if (asset.scope === 'banner') {
       if (!isAdministrator(user)) {
-        throw new ApiException('FORBIDDEN', 'فقط ادمین می‌تواند بنر سایت را مدیریت کند', HttpStatus.FORBIDDEN);
+        throw new ApiException(
+          'FORBIDDEN',
+          'فقط ادمین می‌تواند بنر سایت را مدیریت کند',
+          HttpStatus.FORBIDDEN,
+        );
       }
       return;
     }
@@ -311,28 +310,37 @@ export class MediaService {
   ): Promise<DirectUploadUrlResponseDto> {
     const mimeType = this.assertAllowedMimeAndSize(dto.mimeType, dto.sizeBytes);
     const scope = dto.scope;
-    let product: Product | null = null;
     let sellerId: string | null = null;
 
     if (scope === 'banner') {
       if (!isAdministrator(user)) {
-        throw new ApiException('FORBIDDEN', 'فقط ادمین می‌تواند بنر سایت آپلود کند', HttpStatus.FORBIDDEN);
+        throw new ApiException(
+          'FORBIDDEN',
+          'فقط ادمین می‌تواند بنر سایت آپلود کند',
+          HttpStatus.FORBIDDEN,
+        );
       }
     } else {
-      product = await this.getProductForUpload(dto.productId!);
-      this.assertProductUploadAccess(user, product);
-      sellerId = product.createdBySellerId;
+      sellerId = this.requireSellerId(user);
+      assertMediaAccess(user, sellerId);
+      if (!(await this.sellers.existsBy({ id: sellerId }))) {
+        throw new ApiException(
+          'SELLER_NOT_FOUND',
+          'فروشنده یافت نشد',
+          HttpStatus.NOT_FOUND,
+        );
+      }
     }
 
     const id = newId();
-    const objectKey = this.buildSeaweedKey(scope, id, dto.filename, product, sellerId);
+    const objectKey = this.buildSeaweedKey(scope, id, dto.filename, sellerId);
     const asset = this.media.create({
       id,
       group: scope === 'banner' ? 'banner' : 'product',
       scope,
       sellerId,
       uploadedByUserId: user.sub,
-      productId: product?.id ?? null,
+      productId: null,
       originalName: dto.filename.trim().slice(0, 255),
       alt: dto.alt?.trim().slice(0, 500) || null,
       mimeType,
@@ -357,7 +365,11 @@ export class MediaService {
     } catch (error) {
       await this.media.delete(id);
       const message = error instanceof Error ? error.message : String(error);
-      throw new ApiException('MEDIA_STORAGE_FAILED', message, HttpStatus.BAD_GATEWAY);
+      throw new ApiException(
+        'MEDIA_STORAGE_FAILED',
+        message,
+        HttpStatus.BAD_GATEWAY,
+      );
     }
   }
 
@@ -365,28 +377,44 @@ export class MediaService {
     const asset = await this.getEntity(id);
     if (asset.scope === 'banner') {
       if (!isAdministrator(user)) {
-        throw new ApiException('FORBIDDEN', 'فقط ادمین می‌تواند بنر سایت را تأیید کند', HttpStatus.FORBIDDEN);
+        throw new ApiException(
+          'FORBIDDEN',
+          'فقط ادمین می‌تواند بنر سایت را تأیید کند',
+          HttpStatus.FORBIDDEN,
+        );
       }
-    } else if (asset.scope === 'product') {
-      const product = await this.getProductForUpload(asset.productId!);
-      this.assertProductUploadAccess(user, product);
+    } else if (asset.scope === 'product' || asset.scope === 'gallery') {
+      if (asset.scope === 'product' && asset.productId) {
+        const product = await this.getProductForUpload(asset.productId);
+        this.assertProductUploadAccess(user, product);
+      } else {
+        assertMediaAccess(user, asset.sellerId);
+      }
     } else {
-      throw new ApiException('MEDIA_SCOPE_INVALID', 'این رسانه از آپلود مستقیم SeaweedFS نیست', HttpStatus.BAD_REQUEST);
+      throw new ApiException(
+        'MEDIA_SCOPE_INVALID',
+        'این رسانه از آپلود مستقیم SeaweedFS نیست',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     try {
       await this.seaweed.assertObject(asset.relativePath, asset.sizeBytes);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      throw new ApiException('MEDIA_UPLOAD_INCOMPLETE', message, HttpStatus.BAD_REQUEST);
+      throw new ApiException(
+        'MEDIA_UPLOAD_INCOMPLETE',
+        message,
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     asset.status = 'approved';
     asset.expiresAt = null;
-    asset.isUsed = asset.scope === 'product';
+    asset.isUsed = Boolean(asset.productId);
     await this.media.save(asset);
 
-    await this.addDirectProductImage(asset);
+    await this.addSeaweedProductImage(asset);
     return this.toEnrichedResponse(asset);
   }
 
@@ -452,118 +480,6 @@ export class MediaService {
     return this.toEnrichedResponse(asset);
   }
 
-  async upload(
-    user: AuthUser,
-    file: Express.Multer.File | undefined,
-    dto: UploadMediaDto,
-  ) {
-    this.logger.log(
-      `upload start user=${user.sub} sellerId=${user.sellerId} group=${dto.group} file=${file?.originalname ?? 'none'} size=${file?.size ?? 0} sftp=${mediaConfig.sftp.enabled}`,
-    );
-    const group: MediaGroup = dto.group;
-    if (group === 'product' || group === 'banner') {
-      throw new ApiException(
-        'MEDIA_DIRECT_UPLOAD_REQUIRED',
-        'برای تصویر محصول و بنر سایت از /media/upload-url استفاده کنید',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    const sellerId = this.requireSellerId(user);
-    assertMediaAccess(user, sellerId);
-
-    if (!file?.buffer?.length) {
-      throw new ApiException(
-        'MEDIA_FILE_REQUIRED',
-        'فایل الزامی است',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    if (file.size > mediaConfig.maxFileBytes) {
-      throw new ApiException(
-        'MEDIA_FILE_TOO_LARGE',
-        `حداکثر حجم فایل ${mediaConfig.maxFileBytes} بایت است`,
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const mime = (file.mimetype || '').toLowerCase();
-    if (!mediaConfig.allowedMimeTypes.includes(mime)) {
-      throw new ApiException(
-        'MEDIA_MIME_NOT_ALLOWED',
-        'نوع فایل مجاز نیست',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    if (!(await this.sellers.existsBy({ id: sellerId }))) {
-      throw new ApiException(
-        'SELLER_NOT_FOUND',
-        'فروشنده یافت نشد',
-        HttpStatus.NOT_FOUND,
-      );
-    }
-
-    const dayStart = startOfDayInTimeZone(mediaConfig.cleanupTz);
-    const dailyCount = await this.media
-      .createQueryBuilder('media')
-      .where('media.sellerId = :sellerId', { sellerId })
-      .andWhere('media.createdAt >= :dayStart', { dayStart })
-      .getCount();
-
-    if (dailyCount >= mediaConfig.dailyUploadQuota) {
-      throw new ApiException(
-        'MEDIA_DAILY_QUOTA_EXCEEDED',
-        `سهمیه آپلود روزانه (${mediaConfig.dailyUploadQuota}) تمام شده است`,
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    const id = newId();
-    const relativePath = this.storage.buildRelativePath(
-      group,
-      sellerId,
-      id,
-      file.originalname || 'upload',
-    );
-
-    try {
-      await this.storage.ensureDirs(group, sellerId);
-      await this.storage.writeStaging(relativePath, file.buffer);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`storage write failed: ${message}`);
-      throw new ApiException(
-        'MEDIA_STORAGE_FAILED',
-        `ذخیره فایل روی سرور مدیا ناموفق بود (SFTP): ${message}`,
-        HttpStatus.BAD_GATEWAY,
-      );
-    }
-
-    const asset = this.media.create({
-      id,
-      group,
-      scope: 'legacy',
-      sellerId,
-      uploadedByUserId: user.sub,
-      productId: null,
-      originalName: (file.originalname || 'upload').slice(0, 255),
-      alt: dto.alt?.trim() ? dto.alt.trim().slice(0, 500) : null,
-      mimeType: mime,
-      sizeBytes: file.size,
-      relativePath,
-      storageLocation: 'staging',
-      status: 'pending',
-      isUsed: false,
-      expiresAt: hoursFromNow(mediaConfig.pendingTtlHours),
-      rejectionReason: null,
-    });
-
-    await this.media.save(asset);
-    this.logger.log(`upload ok id=${asset.id} path=${relativePath}`);
-    return this.toEnrichedResponse(asset);
-  }
-
   async review(user: AuthUser, id: string, dto: ReviewMediaAssetDto) {
     if (!canBrowseAllMedia(user)) {
       throw new ApiException(
@@ -575,7 +491,11 @@ export class MediaService {
 
     const asset = await this.getEntity(id);
 
-    if (asset.scope === 'product' || asset.scope === 'banner') {
+    if (
+      asset.scope === 'product' ||
+      asset.scope === 'banner' ||
+      asset.scope === 'gallery'
+    ) {
       throw new ApiException(
         'MEDIA_DIRECT_UPLOAD_REVIEW_NOT_SUPPORTED',
         'رسانه‌های SeaweedFS فقط با /media/:id/complete تأیید می‌شوند',
@@ -617,7 +537,15 @@ export class MediaService {
 
   async attach(user: AuthUser, id: string, dto: AttachMediaAssetDto) {
     const asset = await this.getEntity(id);
-    assertMediaAccess(user, asset.sellerId);
+    await this.assertDirectAssetManageAccess(user, asset);
+
+    if (asset.scope === 'banner') {
+      throw new ApiException(
+        'MEDIA_SCOPE_INVALID',
+        'بنر سایت قابل اتصال به محصول نیست',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
 
     if (asset.status !== 'approved') {
       throw new ApiException(
@@ -630,10 +558,12 @@ export class MediaService {
     const product = await this.getProductForUpload(dto.productId);
     this.assertProductUploadAccess(user, product);
 
+    await this.removeSeaweedProductImage(asset);
     asset.productId = dto.productId;
     asset.isUsed = true;
     asset.expiresAt = null;
     await this.media.save(asset);
+    await this.addSeaweedProductImage(asset);
     return this.toEnrichedResponse(asset);
   }
 
@@ -641,7 +571,7 @@ export class MediaService {
     const asset = await this.getEntity(id);
     await this.assertDirectAssetManageAccess(user, asset);
 
-    await this.removeDirectProductImage(asset);
+    await this.removeSeaweedProductImage(asset);
 
     asset.productId = null;
     asset.isUsed = false;
@@ -664,9 +594,13 @@ export class MediaService {
       );
     }
 
-    await this.removeDirectProductImage(asset);
+    await this.removeSeaweedProductImage(asset);
 
-    if (asset.scope === 'product' || asset.scope === 'banner') {
+    if (
+      asset.scope === 'product' ||
+      asset.scope === 'banner' ||
+      asset.scope === 'gallery'
+    ) {
       await this.seaweed.deleteObject(asset.relativePath);
     } else {
       await this.storage.deleteFile(asset.storageLocation, asset.relativePath);
@@ -700,10 +634,17 @@ export class MediaService {
       if (asset.expiresAt == null) {
         continue;
       }
-      if (asset.scope === 'product' || asset.scope === 'banner') {
+      if (
+        asset.scope === 'product' ||
+        asset.scope === 'banner' ||
+        asset.scope === 'gallery'
+      ) {
         await this.seaweed.deleteObject(asset.relativePath);
       } else {
-        await this.storage.deleteFile(asset.storageLocation, asset.relativePath);
+        await this.storage.deleteFile(
+          asset.storageLocation,
+          asset.relativePath,
+        );
       }
       await this.media.delete(asset.id);
       deleted += 1;

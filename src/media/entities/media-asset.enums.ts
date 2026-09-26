@@ -18,9 +18,9 @@ export const MEDIA_GROUPS = [
 export type MediaGroup = (typeof MEDIA_GROUPS)[number];
 
 /**
- * `legacy` is retained for the previous SFTP gallery rows. New direct uploads
- * always use product or banner and are stored in SeaweedFS.
+ * `legacy` is retained for the previous SFTP gallery rows. `gallery` is a
+ * seller-owned SeaweedFS upload that is not yet attached to a product.
  */
-export const MEDIA_SCOPES = ['legacy', 'product', 'banner'] as const;
+export const MEDIA_SCOPES = ['legacy', 'product', 'banner', 'gallery'] as const;
 
 export type MediaScope = (typeof MEDIA_SCOPES)[number];

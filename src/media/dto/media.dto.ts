@@ -1,7 +1,17 @@
 import { IsULID } from '../../common/id/index.js';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 import { UserResponseDto } from '../../utils/auth/dto/user-response.dto.js';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import { SellerResponseDto } from '../../sellers/dto/seller-response.dto.js';
@@ -14,44 +24,11 @@ import {
   type MediaStatus,
 } from '../entities/media-asset.enums.js';
 
-export class UploadMediaDto {
-  @ApiProperty({
-    type: 'string',
-    format: 'binary',
-    description: 'فایل تصویر',
-  })
-  file: Express.Multer.File;
-
-  @ApiProperty({
-    enum: MEDIA_GROUPS,
-    example: 'seller',
-    description:
-      'گروه سرویس: blog | product | setting | seller | other — مسیر فولدر بر همین اساس است',
-  })
-  @IsIn(MEDIA_GROUPS)
-  group: MediaGroup;
-
-  @ApiPropertyOptional({
-    example: 'عکس محصول دوربین کانن',
-    description: 'متن جایگزین تصویر (alt)',
-    maxLength: 500,
-  })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  alt?: string;
-}
-
 /** First step of the browser → SeaweedFS direct-upload flow. */
 export class RequestMediaUploadUrlDto {
   @ApiProperty({ enum: ['product', 'banner'] as const })
   @IsIn(['product', 'banner'])
   scope: Extract<MediaScope, 'product' | 'banner'>;
-
-  @ApiPropertyOptional({ format: 'ulid', description: 'For scope=product only' })
-  @ValidateIf((dto: RequestMediaUploadUrlDto) => dto.scope === 'product')
-  @IsULID()
-  productId?: string;
 
   @ApiProperty({ example: 'iphone-front.webp', maxLength: 255 })
   @IsString()
@@ -86,7 +63,7 @@ export class DirectUploadUrlResponseDto {
   @ApiProperty({ example: 300 })
   expiresIn: number;
 
-  @ApiProperty({ example: 'products/01seller/01product/01media.webp' })
+  @ApiProperty({ example: 'products/01seller/gallery/01media.webp' })
   objectKey: string;
 }
 

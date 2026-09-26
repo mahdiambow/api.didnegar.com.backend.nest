@@ -1,18 +1,23 @@
 import { ParseULIDPipe } from '../common/id/index.js';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiTooManyRequestsResponse,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../utils/auth/guards/jwt-auth.guard.js';
 import { RoleGuard } from '../utils/auth/guards/role.guard.js';
 import { RequireRole } from '../utils/auth/decorators/require-role.decorator.js';
@@ -22,7 +27,6 @@ import { createSuccessResponseDto } from '../common/response/dto/create-success-
 import { createPaginatedResponseDto } from '../common/response/dto/create-paginated-response.dto.js';
 import { ApiErrorResponseDto } from '../common/response/dto/api-error-response.dto.js';
 import type { AuthUser } from '../utils/auth/types/auth-user.type.js';
-import { mediaConfig } from './media.config.js';
 import { MediaService } from './media.service.js';
 import { MediaThrottlerGuard } from './guards/media-throttler.guard.js';
 import {
@@ -32,7 +36,6 @@ import {
   MediaAssetResponseDto,
   ReviewMediaAssetDto,
   RequestMediaUploadUrlDto,
-  UploadMediaDto,
 } from './dto/media.dto.js';
 
 const MediaApiResponseDto = createSuccessResponseDto(MediaAssetResponseDto, {
@@ -74,52 +77,16 @@ export class MediaController {
   @RequireRole(...sellerRoles)
   @ApiOperation({
     summary: 'List media gallery',
-    description: 'لیست گالری رسانه\n\nبا group فیلتر کن (blog/product/setting/seller/other). سلر معمولی فقط رسانه خودش را می‌بیند.',
+    description:
+      'لیست گالری رسانه\n\nبا group فیلتر کن (blog/product/setting/seller/other). سلر معمولی فقط رسانه خودش را می‌بیند.',
   })
   @ApiResponseMeta({
     code: 'MEDIA_LIST',
     message: 'Media assets retrieved successfully',
   })
   @ApiOkResponse({ type: MediaListApiResponseDto })
-  findAll(
-    @Req() req: { user: AuthUser },
-    @Query() query: ListMediaAssetsDto,
-  ) {
+  findAll(@Req() req: { user: AuthUser }, @Query() query: ListMediaAssetsDto) {
     return this.mediaService.findAll(req.user, query);
-  }
-
-  @Post('upload')
-  @ApiBearerAuth('access-token')
-  @RequireRole(...sellerRoles)
-  @UseGuards(JwtAuthGuard, RoleGuard, MediaThrottlerGuard)
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: memoryStorage(),
-      limits: { fileSize: mediaConfig.maxFileBytes },
-    }),
-  )
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: 'آپلود فایل رسانه — قبلش از Authorize توکن را بگذار',
-    type: UploadMediaDto,
-  })
-  @ApiOperation({
-    summary: 'Upload media to gallery (staging)',
-    description: 'آپلود رسانه به گالری (staging)\n\nفیلد group مسیر فولدر را مشخص می‌کند. برای seller مسیر seller/{sellerId}/ است. sellerId از JWT خوانده می‌شود. از دکمه Authorize بالای صفحه توکن را ست کن.',
-  })
-  @ApiResponseMeta({
-    code: 'MEDIA_UPLOADED',
-    message: 'Media uploaded successfully',
-  })
-  @ApiCreatedResponse({ type: MediaApiResponseDto })
-  @ApiUnauthorizedResponse({ type: ApiErrorResponseDto })
-  @ApiTooManyRequestsResponse({ type: ApiErrorResponseDto })
-  upload(
-    @Req() req: { user: AuthUser },
-    @UploadedFile() file: Express.Multer.File,
-    @Body() dto: UploadMediaDto,
-  ) {
-    return this.mediaService.upload(req.user, file, dto);
   }
 
   @Post('upload-url')
@@ -128,9 +95,12 @@ export class MediaController {
   @ApiOperation({
     summary: 'Create a direct SeaweedFS upload URL',
     description:
-      'product: فقط ادمین یا فروشنده سازنده محصول. banner: فقط ادمین. فایل با PUT مستقیم به SeaweedFS آپلود می‌شود؛ credentials هرگز به کلاینت داده نمی‌شود.',
+      'product: فروشنده تصویر محصول را بدون اتصال اولیه به محصول در گالری شخصی SeaweedFS آپلود می‌کند و بعداً آن را متصل می‌کند. banner: فقط ادمین. فایل با PUT مستقیم به SeaweedFS آپلود می‌شود؛ credentials هرگز به کلاینت داده نمی‌شود.',
   })
-  @ApiResponseMeta({ code: 'MEDIA_UPLOAD_URL_CREATED', message: 'Upload URL created successfully' })
+  @ApiResponseMeta({
+    code: 'MEDIA_UPLOAD_URL_CREATED',
+    message: 'Upload URL created successfully',
+  })
   @ApiCreatedResponse({ type: DirectUploadUrlResponseDto })
   createUploadUrl(
     @Req() req: { user: AuthUser },
@@ -145,9 +115,12 @@ export class MediaController {
   @ApiOperation({
     summary: 'Confirm a direct SeaweedFS upload',
     description:
-      'وجود و حجم فایل در SeaweedFS بررسی می‌شود. محصول: تصویر به featured/gallery محصول اضافه می‌شود. بنر: URL عمومی رسانه بازگردانده می‌شود.',
+      'وجود و حجم فایل در SeaweedFS بررسی می‌شود. product: تصویر محصول بدون اتصال اولیه به محصول در گالری فروشنده تأیید می‌شود. بنر: URL عمومی رسانه بازگردانده می‌شود.',
   })
-  @ApiResponseMeta({ code: 'MEDIA_UPLOAD_COMPLETED', message: 'Media upload completed successfully' })
+  @ApiResponseMeta({
+    code: 'MEDIA_UPLOAD_COMPLETED',
+    message: 'Media upload completed successfully',
+  })
   @ApiOkResponse({ type: MediaApiResponseDto })
   completeDirectUpload(
     @Req() req: { user: AuthUser },
@@ -158,7 +131,10 @@ export class MediaController {
 
   @Get(':id')
   @RequireRole(...sellerRoles)
-  @ApiOperation({ summary: 'Get one media item', description: 'دریافت یک رسانه' })
+  @ApiOperation({
+    summary: 'Get one media item',
+    description: 'دریافت یک رسانه',
+  })
   @ApiResponseMeta({
     code: 'MEDIA_FOUND',
     message: 'Media asset retrieved successfully',
@@ -175,7 +151,8 @@ export class MediaController {
   @RequireRole(...reviewerRoles)
   @ApiOperation({
     summary: 'Approve or reject media',
-    description: 'تأیید یا رد رسانه\n\napproved → انتقال به gallery و expires_at=null. rejected → expires_at=+24h.',
+    description:
+      'تأیید یا رد رسانه\n\napproved → انتقال به gallery و expires_at=null. rejected → expires_at=+24h.',
   })
   @ApiResponseMeta({
     code: 'MEDIA_REVIEWED',
@@ -194,7 +171,8 @@ export class MediaController {
   @RequireRole(...sellerRoles)
   @ApiOperation({
     summary: 'Attach approved media to product',
-    description: 'اتصال رسانه تأییدشده به محصول\n\nis_used=true',
+    description:
+      'اتصال رسانه تأییدشده به محصول و افزودن URL SeaweedFS به تصویر محصول\n\nis_used=true',
   })
   @ApiResponseMeta({
     code: 'MEDIA_ATTACHED',
@@ -211,7 +189,10 @@ export class MediaController {
 
   @Patch(':id/detach')
   @RequireRole(...sellerRoles)
-  @ApiOperation({ summary: 'Detach media from product', description: 'جدا کردن رسانه از محصول' })
+  @ApiOperation({
+    summary: 'Detach media from product',
+    description: 'جدا کردن رسانه از محصول',
+  })
   @ApiResponseMeta({
     code: 'MEDIA_DETACHED',
     message: 'Media detached from product',
@@ -226,7 +207,10 @@ export class MediaController {
 
   @Delete(':id')
   @RequireRole(...sellerRoles)
-  @ApiOperation({ summary: 'Delete unused media', description: 'حذف رسانه استفاده‌نشده' })
+  @ApiOperation({
+    summary: 'Delete unused media',
+    description: 'حذف رسانه استفاده‌نشده',
+  })
   @ApiResponseMeta({
     code: 'MEDIA_DELETED',
     message: 'Media deleted successfully',
