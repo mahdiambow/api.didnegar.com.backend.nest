@@ -76,7 +76,7 @@ export class ReviewsController {
   @ApiOperation({
     summary: 'Create product review or nested reply',
     description:
-      'ثبت نظر یا پاسخ. اگر کاربر محصول را خریده باشد rating روی کامنت ریشه الزامی است.',
+      'ثبت نظر یا پاسخ با offerId. محصول از روی پیشنهاد resolve می‌شود. اگر کاربر محصول را خریده باشد rating روی کامنت ریشه الزامی است.',
   })
   @ApiResponseMeta({
     code: 'REVIEW_CREATED',

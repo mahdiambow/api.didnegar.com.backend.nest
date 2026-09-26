@@ -17,9 +17,13 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto.js';
 import type { ReviewStatus } from '../entities/review.entity.js';
 
 export class CreateReviewDto {
-  @ApiProperty({ format: 'ulid' })
+  @ApiProperty({
+    format: 'ulid',
+    example: '01JEX000000000000000000010',
+    description: 'شناسه پیشنهاد فروش (seller offer) — محصول از روی آفر resolve می‌شود',
+  })
   @IsULID()
-  productId: string;
+  offerId: string;
 
   @ApiProperty({
     example: 'کیفیت خوبی داشت، راضی هستم.',
@@ -33,8 +37,12 @@ export class CreateReviewDto {
   content: string;
 
   @ApiPropertyOptional({
+    type: String,
     format: 'ulid',
-    description: 'اگر ست شود، این نظر پاسخ (reply) است و rating پذیرفته نمی‌شود',
+    nullable: true,
+    example: '01JEX000000000000000000080',
+    description:
+      'شناسه نظر والد برای پاسخ (reply) — برای کامنت ریشه نفرستید یا null بگذارید',
   })
   @IsOptional()
   @IsULID()
@@ -83,6 +91,9 @@ export class ReviewResponseDto {
   productId: string;
 
   @ApiPropertyOptional({ nullable: true, format: 'ulid' })
+  offerId: string | null;
+
+  @ApiPropertyOptional({ nullable: true, format: 'ulid' })
   parentId: string | null;
 
   @ApiProperty()
@@ -112,6 +123,7 @@ export function toReviewResponse(
   review: {
     id: string;
     productId: string;
+    offerId?: string | null;
     parentId: string | null;
     content: string;
     rating: number | null;
@@ -141,6 +153,7 @@ export function toReviewResponse(
   return {
     id: review.id,
     productId: review.productId,
+    offerId: review.offerId ?? null,
     parentId: review.parentId,
     content: review.content,
     rating: review.rating,

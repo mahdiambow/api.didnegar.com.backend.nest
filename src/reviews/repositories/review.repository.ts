@@ -22,6 +22,12 @@ export class ReviewRepository {
     });
   }
 
+  findRootByUserAndOffer(userId: string, offerId: string) {
+    return this.repo.findOne({
+      where: { userId, offerId, parentId: IsNull() },
+    });
+  }
+
   async getNextLegacyId(): Promise<number> {
     const result = await this.repo
       .createQueryBuilder('review')

@@ -6,6 +6,7 @@ import {
 } from '../common/response/helpers/paginated-response.helper.js';
 import { OrderRepository } from '../orders/repositories/order.repository.js';
 import { ProductRepository } from '../products/repositories/product.repository.js';
+import { OffersService } from '../offers/offers.service.js';
 import type { AuthUser } from '../utils/auth/types/auth-user.type.js';
 import { Review } from './entities/review.entity.js';
 import {
@@ -24,6 +25,7 @@ export class ReviewsService {
     private readonly reviewRepository: ReviewRepository,
     private readonly orderRepository: OrderRepository,
     private readonly productRepository: ProductRepository,
+    private readonly offersService: OffersService,
   ) {}
 
   async findByProduct(query: ListReviewsQueryDto) {
@@ -49,11 +51,13 @@ export class ReviewsService {
       );
     }
 
-    const product = await this.productRepository.findById(dto.productId);
+    const offer = await this.offersService.getEntity(dto.offerId);
+    const productId = offer.productId;
+    const product = await this.productRepository.findById(productId);
     if (!product) {
       throw new ApiException(
         'PRODUCT_NOT_FOUND',
-        'محصول یافت نشد',
+        'محصول مرتبط با این پیشنهاد یافت نشد',
         HttpStatus.NOT_FOUND,
       );
     }
@@ -79,7 +83,7 @@ export class ReviewsService {
           HttpStatus.NOT_FOUND,
         );
       }
-      if (parent.productId !== dto.productId) {
+      if (parent.productId !== productId) {
         throw new ApiException(
           'PARENT_PRODUCT_MISMATCH',
           'نظر والد متعلق به این محصول نیست',
@@ -87,21 +91,21 @@ export class ReviewsService {
         );
       }
     } else {
-      const existing = await this.reviewRepository.findRootByUserAndProduct(
+      const existing = await this.reviewRepository.findRootByUserAndOffer(
         user.sub,
-        dto.productId,
+        dto.offerId,
       );
       if (existing) {
         throw new ApiException(
           'REVIEW_EXISTS',
-          'برای این محصول قبلاً نظر ثبت کرده‌اید',
+          'برای این پیشنهاد قبلاً نظر ثبت کرده‌اید',
           HttpStatus.CONFLICT,
         );
       }
 
       const hasPurchased = await this.orderRepository.userHasPaidProduct(
         user.sub,
-        dto.productId,
+        productId,
       );
       if (hasPurchased && (rating == null || rating < 1 || rating > 5)) {
         throw new ApiException(
@@ -127,7 +131,8 @@ export class ReviewsService {
       this.reviewRepository.create({
         legacyId,
         legacyTable: 'reviews',
-        productId: dto.productId,
+        productId,
+        offerId: dto.offerId,
         userId: user.sub,
         authorName: null,
         authorEmail: null,
@@ -141,7 +146,7 @@ export class ReviewsService {
     );
 
     if (!parentId && rating != null) {
-      await this.refreshProductRating(dto.productId);
+      await this.refreshProductRating(productId);
     }
 
     const loaded = await this.reviewRepository.findById(saved.id);

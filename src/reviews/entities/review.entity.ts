@@ -40,6 +40,11 @@ export class Review {
   @Column({ type: 'varchar', length: 26 })
   productId: string;
 
+  /** پیشنهاد فروش مرتبط با این نظر (خرید از این آفر) */
+  @Index()
+  @Column({ type: 'varchar', length: 26, nullable: true })
+  offerId: string | null;
+
   @Index()
   @Column({ type: 'varchar', length: 26, nullable: true })
   userId: string | null;
