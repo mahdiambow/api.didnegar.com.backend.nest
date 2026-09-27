@@ -17,7 +17,7 @@ import {
 
 const reportPath =
   process.env.MIGRATION_PRODUCT_RELATIONS_REPORT_PATH ||
-  'migration-product-relations-report.jsonl';
+  '/tmp/migration-product-relations-report.jsonl';
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: node scripts/migration-scripts/migrate-product-relations.mjs
