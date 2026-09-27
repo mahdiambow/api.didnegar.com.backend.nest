@@ -23,10 +23,9 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 
 Creates or updates the parent-category/category/sub-category tree in
 categories.json. Missing parent categories are created. Categories and
-sub-categories must be rows imported by the legacy category migration and are
-matched by exact Persian name. All other categories and sub-categories, plus
-legacy rows absent from the JSON, are deactivated. Unmatched JSON rows are
-reported and skipped.`);
+sub-categories are matched to the closest existing rows, with legacy-imported
+rows preferred when names otherwise match. All unselected categories and
+sub-categories are deactivated. Unmatched JSON rows are reported and skipped.`);
   process.exit(0);
 }
 
@@ -125,16 +124,74 @@ async function readSource() {
   });
 }
 
-async function loadRows(connection, table, requiredLegacyTable = null) {
+function normalizeMatchText(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[يى]/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/ة/g, 'ه')
+    .replace(/[\u064b-\u065f\u0670]/g, '')
+    .replace(/[\u200c\u200d]/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function levenshtein(left, right) {
+  const previous = Array.from(
+    { length: right.length + 1 },
+    (_, index) => index,
+  );
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1] + 1,
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] +
+          (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length];
+}
+
+function similarity(left, right) {
+  const normalizedLeft = normalizeMatchText(left);
+  const normalizedRight = normalizeMatchText(right);
+  if (!normalizedLeft || !normalizedRight) return 0;
+  if (normalizedLeft === normalizedRight) return 1;
+
+  const leftTokens = new Set(normalizedLeft.split(' '));
+  const rightTokens = new Set(normalizedRight.split(' '));
+  const sharedTokens = [...leftTokens].filter((token) =>
+    rightTokens.has(token),
+  );
+  const tokenScore =
+    sharedTokens.length / new Set([...leftTokens, ...rightTokens]).size;
+  const characterScore =
+    1 -
+    levenshtein(normalizedLeft, normalizedRight) /
+      Math.max(normalizedLeft.length, normalizedRight.length);
+  return Math.max(tokenScore, characterScore);
+}
+
+async function loadRows(connection, table, legacyTable = null) {
   const [rows] = await connection.execute(
-    `SELECT id, legacyId, legacyTable, name, nameEn, slug${table === 'categories' ? ', parentCategoryId' : ''}${table === 'sub_categories' ? ', categoryId' : ''} FROM ${table}${requiredLegacyTable ? ' WHERE legacyId IS NOT NULL AND legacyTable = ?' : ''}`,
-    requiredLegacyTable ? [requiredLegacyTable] : [],
+    `SELECT id, legacyId, legacyTable, name, nameEn, slug${table === 'categories' ? ', parentCategoryId' : ''}${table === 'sub_categories' ? ', categoryId' : ''} FROM ${table}`,
   );
   const bySource = new Map();
   const byName = new Map();
+  const byNormalizedName = new Map();
   const slugOwners = new Map();
   const claimedIds = new Set();
   for (const row of rows) {
+    row.isLegacyImported =
+      legacyTable !== null &&
+      row.legacyId !== null &&
+      row.legacyTable === legacyTable;
     const slugKey =
       table === 'sub_categories'
         ? `${row.categoryId}:${row.slug}`
@@ -146,14 +203,27 @@ async function loadRows(connection, table, requiredLegacyTable = null) {
     const namedRows = byName.get(String(row.name)) || [];
     namedRows.push(row);
     byName.set(String(row.name), namedRows);
+    const normalizedName = normalizeMatchText(row.name);
+    const normalizedRows = byNormalizedName.get(normalizedName) || [];
+    normalizedRows.push(row);
+    byNormalizedName.set(normalizedName, normalizedRows);
   }
-  return { bySource, byName, slugOwners, claimedIds };
+  return { bySource, byName, byNormalizedName, slugOwners, claimedIds };
 }
 
-function findExistingByName(state, name, nameEn, source, relation = null) {
-  const matches = (state.byName.get(name) || []).filter(
-    (row) => !state.claimedIds.has(String(row.id)),
-  );
+function findExistingByName(
+  state,
+  name,
+  nameEn,
+  source,
+  relation = null,
+  onFuzzyMatch = null,
+) {
+  const availableRows = [...state.byName.values()]
+    .flat()
+    .filter((row) => !state.claimedIds.has(String(row.id)));
+  const exactRows = state.byNormalizedName.get(normalizeMatchText(name)) || [];
+  const matches = exactRows.filter((row) => availableRows.includes(row));
   if (relation) {
     const related = matches.filter(
       (row) => String(row[relation.field]) === String(relation.id),
@@ -175,12 +245,41 @@ function findExistingByName(state, name, nameEn, source, relation = null) {
   // per JSON occurrence so each target relation is restored exactly once.
   if (matches.length > 1)
     return matches.sort((a, b) => String(a.id).localeCompare(String(b.id)))[0];
-  return null;
+
+  const scored = availableRows
+    .map((row) => ({ row, score: similarity(name, row.name) }))
+    .filter(({ score }) => score >= 0.6)
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        Number(right.row.isLegacyImported) -
+          Number(left.row.isLegacyImported) ||
+        String(left.row.id).localeCompare(String(right.row.id)),
+    );
+  if (!scored.length) return null;
+  const best = scored[0];
+  const second = scored[1];
+  if (second && best.score - second.score < 0.05) return null;
+  onFuzzyMatch?.(best.row, best.score);
+  return best.row;
 }
 
 function reportUnmatched(errors, message) {
   errors.push(message);
   console.error(`Skipped: ${message}`);
+}
+
+function reportFuzzyMatch(matches, type, jsonName, matchedRow, score) {
+  const match = {
+    type,
+    jsonName,
+    matchedName: matchedRow.name,
+    id: String(matchedRow.id),
+    score: Number(score.toFixed(3)),
+    legacyImported: matchedRow.isLegacyImported,
+  };
+  matches.push(match);
+  console.log(`Matched ${type}: "${jsonName}" -> "${matchedRow.name}"`);
 }
 
 async function upsertParent(connection, row, source, sort, state) {
@@ -225,11 +324,17 @@ async function upsertCategory(
   sort,
   state,
   errors,
+  fuzzyMatches,
 ) {
-  const existing = findExistingByName(state, row.name, row.nameEn, source, {
-    field: 'parentCategoryId',
-    id: parentCategoryId,
-  });
+  const existing = findExistingByName(
+    state,
+    row.name,
+    row.nameEn,
+    source,
+    { field: 'parentCategoryId', id: parentCategoryId },
+    (matchedRow, score) =>
+      reportFuzzyMatch(fuzzyMatches, 'category', row.name, matchedRow, score),
+  );
   if (existing) {
     await connection.execute(
       `UPDATE categories SET parentCategoryId = ?, name = ?, nameEn = ?, sort = ?, isActive = 1, updatedAt = NOW() WHERE id = ?`,
@@ -241,7 +346,7 @@ async function upsertCategory(
   }
   reportUnmatched(
     errors,
-    `Category "${row.name}" was not found among legacy-imported categories.`,
+    `Category "${row.name}" had no sufficiently close existing category match.`,
   );
   return null;
 }
@@ -254,11 +359,23 @@ async function upsertSubCategory(
   sort,
   state,
   errors,
+  fuzzyMatches,
 ) {
-  const existing = findExistingByName(state, row.name, row.nameEn, source, {
-    field: 'categoryId',
-    id: categoryId,
-  });
+  const existing = findExistingByName(
+    state,
+    row.name,
+    row.nameEn,
+    source,
+    { field: 'categoryId', id: categoryId },
+    (matchedRow, score) =>
+      reportFuzzyMatch(
+        fuzzyMatches,
+        'sub-category',
+        row.name,
+        matchedRow,
+        score,
+      ),
+  );
   if (existing) {
     await connection.execute(
       `UPDATE sub_categories SET categoryId = ?, name = ?, nameEn = ?, sort = ?, isActive = 1, updatedAt = NOW() WHERE id = ?`,
@@ -270,7 +387,7 @@ async function upsertSubCategory(
   }
   reportUnmatched(
     errors,
-    `Sub-category "${row.name}" was not found among legacy-imported sub-categories.`,
+    `Sub-category "${row.name}" had no sufficiently close existing sub-category match.`,
   );
   return null;
 }
@@ -301,6 +418,7 @@ async function main() {
       loadRows(target, 'sub_categories', 'sub_categories'),
     ]);
     const errors = [];
+    const fuzzyMatches = [];
     await target.beginTransaction();
     try {
       let categoryIndex = 0;
@@ -324,6 +442,7 @@ async function main() {
             categorySort,
             categoryState,
             errors,
+            fuzzyMatches,
           );
           for (const [
             subCategorySort,
@@ -345,6 +464,7 @@ async function main() {
               subCategorySort,
               subCategoryState,
               errors,
+              fuzzyMatches,
             );
           }
         }
@@ -377,6 +497,8 @@ async function main() {
             deactivated,
             skipped: errors.length,
             errors,
+            fuzzyMatches: fuzzyMatches.length,
+            matches: fuzzyMatches,
           },
           null,
           2,
