@@ -25,7 +25,8 @@ Creates or updates the parent-category/category/sub-category tree in
 categories.json. Missing parent categories are created. Categories and
 sub-categories must be rows imported by the legacy category migration and are
 matched by exact Persian name. All other categories and sub-categories, plus
-legacy rows absent from the JSON, are deactivated.`);
+legacy rows absent from the JSON, are deactivated. Unmatched JSON rows are
+reported and skipped.`);
   process.exit(0);
 }
 
@@ -177,6 +178,11 @@ function findExistingByName(state, name, nameEn, source, relation = null) {
   return null;
 }
 
+function reportUnmatched(errors, message) {
+  errors.push(message);
+  console.error(`Skipped: ${message}`);
+}
+
 async function upsertParent(connection, row, source, sort, state) {
   const key = `${source.legacyTable}:${source.legacyId}`;
   const existing = findExistingByName(state, row.name, row.nameEn, source);
@@ -218,6 +224,7 @@ async function upsertCategory(
   parentCategoryId,
   sort,
   state,
+  errors,
 ) {
   const existing = findExistingByName(state, row.name, row.nameEn, source, {
     field: 'parentCategoryId',
@@ -232,9 +239,11 @@ async function upsertCategory(
     state.claimedIds.add(String(existing.id));
     return { id: String(existing.id) };
   }
-  throw new Error(
-    `Cannot link category "${row.name}": no legacy-imported category matched this name.`,
+  reportUnmatched(
+    errors,
+    `Category "${row.name}" was not found among legacy-imported categories.`,
   );
+  return null;
 }
 
 async function upsertSubCategory(
@@ -244,6 +253,7 @@ async function upsertSubCategory(
   categoryId,
   sort,
   state,
+  errors,
 ) {
   const existing = findExistingByName(state, row.name, row.nameEn, source, {
     field: 'categoryId',
@@ -258,9 +268,11 @@ async function upsertSubCategory(
     state.claimedIds.add(String(existing.id));
     return;
   }
-  throw new Error(
-    `Cannot link sub-category "${row.name}": no legacy-imported sub-category matched this name.`,
+  reportUnmatched(
+    errors,
+    `Sub-category "${row.name}" was not found among legacy-imported sub-categories.`,
   );
+  return null;
 }
 
 async function deactivateRowsAbsentFromJson(target, table, state) {
@@ -288,6 +300,7 @@ async function main() {
       loadRows(target, 'categories', 'categories'),
       loadRows(target, 'sub_categories', 'sub_categories'),
     ]);
+    const errors = [];
     await target.beginTransaction();
     try {
       let categoryIndex = 0;
@@ -310,11 +323,20 @@ async function main() {
             parentResult.id,
             categorySort,
             categoryState,
+            errors,
           );
           for (const [
             subCategorySort,
             subCategory,
           ] of category.subCategories.entries()) {
+            if (!categoryRow) {
+              reportUnmatched(
+                errors,
+                `Sub-category "${subCategory.name}" was skipped because its category "${category.name}" was not linked.`,
+              );
+              subCategoryIndex += 1;
+              continue;
+            }
             await upsertSubCategory(
               target,
               subCategory,
@@ -322,6 +344,7 @@ async function main() {
               categoryRow.id,
               subCategorySort,
               subCategoryState,
+              errors,
             );
           }
         }
@@ -352,6 +375,8 @@ async function main() {
             categories: categoryIndex,
             subCategories: subCategoryIndex,
             deactivated,
+            skipped: errors.length,
+            errors,
           },
           null,
           2,
