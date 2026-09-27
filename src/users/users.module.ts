@@ -5,6 +5,7 @@ import { UserAuthController } from './user-auth.controller.js';
 import { AuthModule } from '../utils/auth/auth.module.js';
 import { RolesModule } from '../roles/roles.module.js';
 import { SellersModule } from '../sellers/sellers.module.js';
+import { AdminModule } from '../admin/admin.module.js';
 import { CreditModule } from '../credit/credit.module.js';
 
 @Module({
@@ -12,6 +13,7 @@ import { CreditModule } from '../credit/credit.module.js';
     forwardRef(() => AuthModule),
     RolesModule,
     SellersModule,
+    AdminModule,
     CreditModule,
   ],
   controllers: [UsersController, UserAuthController],
