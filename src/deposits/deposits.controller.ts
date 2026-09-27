@@ -31,7 +31,7 @@ import { PermissionsGuard } from '../utils/auth/guards/permissions.guard.js';
 import { RequirePermissions } from '../utils/auth/decorators/require-permissions.decorator.js';
 import { PERMISSIONS } from '../roles/permissions.js';
 import { DepositsService } from './deposits.service.js';
-import { DepositVerificationQueue } from './deposit-verification.queue.js';
+import { DepositVerificationQueue } from './queues/deposit-verification.queue.js';
 import { DepositResponseDto } from './dto/deposit.dto.js';
 import { buildFrontendPaymentCallbackUrl } from './payment-callback.util.js';
 

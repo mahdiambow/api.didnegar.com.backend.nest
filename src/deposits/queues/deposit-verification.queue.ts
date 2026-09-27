@@ -11,8 +11,8 @@ import amqp, {
   type ChannelModel,
   type ConsumeMessage,
 } from 'amqplib';
-import { ConfigService } from '../config/config.service.js';
-import { DepositsService } from './deposits.service.js';
+import { ConfigService } from '../../config/config.service.js';
+import { DepositsService } from '../deposits.service.js';
 
 type Stage = 'verify' | 'inquiry' | 'execute';
 type Job = { trackId: string };

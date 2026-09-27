@@ -16,7 +16,7 @@ import { TransactionsModule } from '../transactions/transactions.module.js';
 import { ConfigService } from '../config/config.service.js';
 import type { PaymentGateway } from '../utils/payment-gateways/payment-gateway.interface.js';
 import { ZIBAL_PROVIDER } from './zibal.constants.js';
-import { DepositVerificationQueue } from './deposit-verification.queue.js';
+import { DepositVerificationQueue } from './queues/deposit-verification.queue.js';
 
 @Module({
   imports: [
