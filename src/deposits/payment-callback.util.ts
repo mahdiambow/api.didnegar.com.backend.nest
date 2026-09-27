@@ -32,6 +32,7 @@ export function buildFrontendPaymentCallbackUrl(
     status: number | string | null | undefined;
     trackId?: string | null;
     success?: string | number | null;
+    depositId?: string | null;
     sourceType?: string | null;
     sourceId?: string | null;
   },
@@ -43,6 +44,9 @@ export function buildFrontendPaymentCallbackUrl(
   }
   if (params.success != null && params.success !== '') {
     url.searchParams.set('success', String(params.success));
+  }
+  if (params.depositId) {
+    url.searchParams.set('depositId', params.depositId);
   }
   if (params.sourceType) {
     url.searchParams.set('sourceType', params.sourceType);

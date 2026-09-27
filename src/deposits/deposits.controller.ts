@@ -17,7 +17,15 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import type { Response } from 'express';
 import { ApiResponseMeta } from '../common/decorators/api-response.decorator.js';
 import { createSuccessResponseDto } from '../common/response/dto/create-success-response.dto.js';
@@ -50,6 +58,17 @@ class CreateTopUpDto {
   @IsOptional()
   @IsIn(['iBank', 'loan'])
   method?: 'iBank' | 'loan';
+
+  @ApiPropertyOptional({
+    example: 'https://app.didnegar.net/payment/result',
+    description:
+      'آدرس بازگشت کاربر پس از کال‌بک درگاه؛ status و trackId به query آن افزوده می‌شود',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  @MaxLength(500)
+  callbackUrl?: string;
 }
 
 class ListDepositsQueryDto {
@@ -120,10 +139,7 @@ export class DepositsController {
     description:
       'کال‌بک زیبال: status عددی را به استرینگ (مثل PAYED_ACCEPTED) تبدیل و به ZIBAL_CALLBACK_URL ریدایرکت می‌کند',
   })
-  callbackZibal(
-    @Query() query: GatewayCallbackQueryDto,
-    @Res() res: Response,
-  ) {
+  callbackZibal(@Query() query: GatewayCallbackQueryDto, @Res() res: Response) {
     return this.handleGatewayCallback(query, res);
   }
 
@@ -151,16 +167,18 @@ export class DepositsController {
         success = '0';
       }
     }
-    const target = buildFrontendPaymentCallbackUrl(
+    const redirect = await this.resolveRedirect(
+      query.trackId,
       this.config.get('ZIBAL_CALLBACK_URL'),
-      {
-        status,
-        trackId: query.trackId,
-        success,
-        sourceType: query.sourceType,
-        sourceId: query.sourceId,
-      },
     );
+    const target = buildFrontendPaymentCallbackUrl(redirect.url, {
+      status,
+      trackId: query.trackId,
+      success,
+      depositId: redirect.depositId,
+      sourceType: query.sourceType,
+      sourceId: query.sourceId,
+    });
     return res.redirect(302, target);
   }
 
@@ -194,14 +212,33 @@ export class DepositsController {
         success = '0';
       }
     }
-    const target = buildFrontendPaymentCallbackUrl(this.config.get('LOAN_CALLBACK_URL'), {
+    const redirect = await this.resolveRedirect(
+      query.trackId,
+      this.config.get('LOAN_CALLBACK_URL'),
+    );
+    const target = buildFrontendPaymentCallbackUrl(redirect.url, {
       status,
       trackId: query.trackId,
       success,
+      depositId: redirect.depositId,
       sourceType: query.sourceType,
       sourceId: query.sourceId,
     });
     return res.redirect(302, target);
+  }
+
+  private async resolveRedirect(
+    trackId: string | undefined,
+    fallback: string,
+  ): Promise<{ url: string; depositId?: string }> {
+    if (!trackId) return { url: fallback };
+    const redirect =
+      await this.depositsService.findCallbackRedirectByTrackId(trackId);
+    if (!redirect) return { url: fallback };
+    return {
+      url: redirect.redirectUrl ?? fallback,
+      depositId: redirect.depositId,
+    };
   }
 
   @Post()
@@ -224,6 +261,7 @@ export class DepositsController {
       req.user.sub,
       dto.amount,
       dto.method ?? 'iBank',
+      dto.callbackUrl,
     );
   }
 

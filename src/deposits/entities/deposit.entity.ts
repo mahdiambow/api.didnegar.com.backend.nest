@@ -57,6 +57,10 @@ export class Deposit {
   @Column({ type: 'varchar', length: 500, nullable: true })
   callbackUrl: string | null;
 
+  /** Optional client URL to redirect the payer to after the gateway callback. */
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  redirectUrl: string | null;
+
   @Column({ type: 'datetime', nullable: true })
   paymentRequestCreatedAt: Date | null;
 

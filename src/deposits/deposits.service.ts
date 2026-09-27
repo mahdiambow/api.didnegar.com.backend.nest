@@ -58,6 +58,7 @@ export class DepositsService {
     userId: string,
     amount: number,
     gateway: GatewayMethod = 'iBank',
+    redirectUrl?: string,
   ) {
     const rounded = Math.round(Number(amount));
     if (!Number.isInteger(rounded) || rounded <= 0) {
@@ -92,6 +93,7 @@ export class DepositsService {
           creditApplied: 0,
           status: 'pending',
           callbackUrl,
+          redirectUrl: redirectUrl?.trim() || null,
         }),
       );
 
@@ -133,30 +135,45 @@ export class DepositsService {
     return this.depositRepository.findPaginated(offset, limit, filters);
   }
 
+  async findCallbackRedirectByTrackId(
+    trackId: string,
+  ): Promise<{ depositId: string; redirectUrl: string | null } | null> {
+    const deposit = await this.depositRepository.findByTrackId(trackId);
+    return deposit
+      ? { depositId: deposit.id, redirectUrl: deposit.redirectUrl }
+      : null;
+  }
+
   /** First callback stage from the reference flow. The query is not proof of payment. */
   async recordGatewayCallback(
     trackId: string,
     callbackStatus?: string,
   ): Promise<DepositCallbackAction> {
     const existing = await this.depositRepository.findByTrackId(trackId);
-    if (!existing || existing.status === 'success' || existing.status === 'failed') return 'none';
+    if (
+      !existing ||
+      existing.status === 'success' ||
+      existing.status === 'failed'
+    )
+      return 'none';
     if (callbackStatus === '1') {
-      await this.dataSource.getRepository(Deposit).update(
-        { id: existing.id },
-        { status: 'payment_accepted' },
-      );
+      await this.dataSource
+        .getRepository(Deposit)
+        .update({ id: existing.id }, { status: 'payment_accepted' });
       return 'inquiry';
     }
     if (callbackStatus === '2') {
-      await this.dataSource.getRepository(Deposit).update(
-        { id: existing.id },
-        { status: 'payment_not_accepted' },
-      );
+      await this.dataSource
+        .getRepository(Deposit)
+        .update({ id: existing.id }, { status: 'payment_not_accepted' });
       return 'verify';
     }
     // -1 is still pending. Any other explicit Zibal status is terminal.
     if (callbackStatus && callbackStatus !== '-1') {
-      await this.failGatewayDeposit(trackId, `ZIBAL_CALLBACK_STATUS_${callbackStatus}`);
+      await this.failGatewayDeposit(
+        trackId,
+        `ZIBAL_CALLBACK_STATUS_${callbackStatus}`,
+      );
     }
     return 'none';
   }
@@ -164,17 +181,30 @@ export class DepositsService {
   /** Second stage: server-to-server verify, then RabbitMQ schedules inquiry. */
   async verifyGatewayDeposit(trackId: string) {
     const existing = await this.depositRepository.findByTrackId(trackId);
-    if (!existing) throw new ApiException('DEPOSIT_NOT_FOUND', 'واریز یافت نشد', HttpStatus.NOT_FOUND);
-    if (existing.status === 'success' || existing.status === 'failed') return existing;
+    if (!existing)
+      throw new ApiException(
+        'DEPOSIT_NOT_FOUND',
+        'واریز یافت نشد',
+        HttpStatus.NOT_FOUND,
+      );
+    if (existing.status === 'success' || existing.status === 'failed')
+      return existing;
 
     const provider = this.providers[existing.gateway as GatewayMethod];
     if (!provider) {
-      throw new ApiException('UNSUPPORTED_GATEWAY', 'درگاه واریز پشتیبانی نمی‌شود', HttpStatus.BAD_REQUEST);
+      throw new ApiException(
+        'UNSUPPORTED_GATEWAY',
+        'درگاه واریز پشتیبانی نمی‌شود',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     let verified;
     try {
-      verified = await provider.verifyPayment(trackId, Math.round(Number(existing.amount)));
+      verified = await provider.verifyPayment(
+        trackId,
+        Math.round(Number(existing.amount)),
+      );
     } catch (error) {
       // A confirmed 4xx gateway rejection is terminal. Network/5xx errors keep
       // the deposit pending so a later callback or user retry can verify it.
@@ -191,11 +221,19 @@ export class DepositsService {
         lock: { mode: 'pessimistic_write' },
       });
       if (!deposit) {
-        throw new ApiException('DEPOSIT_NOT_FOUND', 'واریز یافت نشد', HttpStatus.NOT_FOUND);
+        throw new ApiException(
+          'DEPOSIT_NOT_FOUND',
+          'واریز یافت نشد',
+          HttpStatus.NOT_FOUND,
+        );
       }
       if (deposit.status === 'success') return deposit;
       if (deposit.status === 'failed') {
-        throw new ApiException('DEPOSIT_FAILED', 'این واریز ناموفق است', HttpStatus.CONFLICT);
+        throw new ApiException(
+          'DEPOSIT_FAILED',
+          'این واریز ناموفق است',
+          HttpStatus.CONFLICT,
+        );
       }
 
       deposit.status = 'payment_accepted';
@@ -208,7 +246,8 @@ export class DepositsService {
   /** Third stage: inquiry persists gateway timestamps then tells the worker whether to execute. */
   async inquireGatewayDeposit(trackId: string): Promise<boolean> {
     const deposit = await this.depositRepository.findByTrackId(trackId);
-    if (!deposit || deposit.status === 'success' || deposit.status === 'failed') return false;
+    if (!deposit || deposit.status === 'success' || deposit.status === 'failed')
+      return false;
     const provider = this.providers[deposit.gateway as GatewayMethod];
     if (!provider?.inquiryPayment) {
       // Loan has no inquiry API. Its successful verify is enough to continue.
@@ -216,7 +255,10 @@ export class DepositsService {
     }
     let inquiry;
     try {
-      inquiry = await provider.inquiryPayment(trackId, Math.round(Number(deposit.amount)));
+      inquiry = await provider.inquiryPayment(
+        trackId,
+        Math.round(Number(deposit.amount)),
+      );
     } catch (error) {
       if (error instanceof HttpException && error.getStatus() < 500) {
         await this.failGatewayDeposit(trackId);
@@ -243,17 +285,25 @@ export class DepositsService {
         where: { trackId },
         lock: { mode: 'pessimistic_write' },
       });
-      if (!deposit) throw new ApiException('DEPOSIT_NOT_FOUND', 'واریز یافت نشد', HttpStatus.NOT_FOUND);
-      if (deposit.status === 'success' || deposit.status === 'failed') return deposit;
+      if (!deposit)
+        throw new ApiException(
+          'DEPOSIT_NOT_FOUND',
+          'واریز یافت نشد',
+          HttpStatus.NOT_FOUND,
+        );
+      if (deposit.status === 'success' || deposit.status === 'failed')
+        return deposit;
       if (deposit.status !== 'payment_accepted') return deposit;
 
       deposit.status = 'success';
       await depositRepo.save(deposit);
 
-      await manager.getRepository(Transaction).update(
-        { sourceId: deposit.id, state: 'pending' },
-        { state: 'executed' },
-      );
+      await manager
+        .getRepository(Transaction)
+        .update(
+          { sourceId: deposit.id, state: 'pending' },
+          { state: 'executed' },
+        );
 
       if (deposit.orderId) {
         if (Number(deposit.creditApplied ?? 0) > 0) {
@@ -264,10 +314,12 @@ export class DepositsService {
             manager,
           );
         }
-        await manager.getRepository(Order).update(
-          { id: deposit.orderId, status: 'pending' },
-          { status: 'processing' },
-        );
+        await manager
+          .getRepository(Order)
+          .update(
+            { id: deposit.orderId, status: 'pending' },
+            { status: 'processing' },
+          );
       } else {
         await this.creditService.incrementTotalAmount(
           deposit.userId,
@@ -280,7 +332,10 @@ export class DepositsService {
     });
   }
 
-  private async failGatewayDeposit(trackId: string, rejectionReason?: string): Promise<void> {
+  private async failGatewayDeposit(
+    trackId: string,
+    rejectionReason?: string,
+  ): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const depositRepo = manager.getRepository(Deposit);
       const deposit = await depositRepo.findOne({
@@ -298,10 +353,12 @@ export class DepositsService {
       deposit.status = 'failed';
       deposit.rejectionReason = rejectionReason ?? deposit.rejectionReason;
       await depositRepo.save(deposit);
-      await manager.getRepository(Transaction).update(
-        { sourceId: deposit.id, state: 'pending' },
-        { state: 'rejected' },
-      );
+      await manager
+        .getRepository(Transaction)
+        .update(
+          { sourceId: deposit.id, state: 'pending' },
+          { state: 'rejected' },
+        );
       if (Number(deposit.creditApplied ?? 0) > 0) {
         await this.creditService.unlock(
           deposit.userId,
@@ -459,10 +516,7 @@ export class DepositsService {
       if (existing) {
         const existingCredit = Math.round(Number(existing.creditApplied ?? 0));
         const existingBank = Math.round(Number(existing.amount));
-        if (
-          existingCredit === creditApplied &&
-          existingBank === bankAmount
-        ) {
+        if (existingCredit === creditApplied && existingBank === bankAmount) {
           return { reuse: true as const, entity: existing };
         }
         throw new ApiException(
