@@ -23,9 +23,9 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 
 Creates or updates the parent-category/category/sub-category tree in
 categories.json. Missing parent categories are created. Categories and
-sub-categories are matched to the closest existing rows, with legacy-imported
-rows preferred when names otherwise match. All unselected categories and
-sub-categories are deactivated. Unmatched JSON rows are reported and skipped.`);
+sub-categories are matched only to the closest legacy-imported rows. All
+unselected categories and sub-categories are deactivated. Unmatched JSON rows
+are reported and skipped.`);
   process.exit(0);
 }
 
@@ -217,34 +217,56 @@ function findExistingByName(
   nameEn,
   source,
   relation = null,
-  onFuzzyMatch = null,
+  onMatch = null,
+  legacyOnly = false,
 ) {
   const availableRows = [...state.byName.values()]
     .flat()
-    .filter((row) => !state.claimedIds.has(String(row.id)));
+    .filter(
+      (row) =>
+        !state.claimedIds.has(String(row.id)) &&
+        (!legacyOnly || row.isLegacyImported),
+    );
   const exactRows = state.byNormalizedName.get(normalizeMatchText(name)) || [];
   const matches = exactRows.filter((row) => availableRows.includes(row));
   if (relation) {
     const related = matches.filter(
       (row) => String(row[relation.field]) === String(relation.id),
     );
-    if (related.length === 1) return related[0];
+    if (related.length === 1) {
+      onMatch?.(related[0], 1, 'exact');
+      return related[0];
+    }
   }
   const englishMatches = matches.filter(
     (row) => String(row.nameEn ?? '').trim() === nameEn,
   );
-  if (englishMatches.length === 1) return englishMatches[0];
-  if (matches.length === 1) return matches[0];
+  if (englishMatches.length === 1) {
+    onMatch?.(englishMatches[0], 1, 'exact');
+    return englishMatches[0];
+  }
+  if (matches.length === 1) {
+    onMatch?.(matches[0], 1, 'exact');
+    return matches[0];
+  }
 
   const sourceMatch = state.bySource.get(
     `${source.legacyTable}:${source.legacyId}`,
   );
-  if (sourceMatch) return sourceMatch;
+  if (sourceMatch && availableRows.includes(sourceMatch)) {
+    onMatch?.(sourceMatch, 1, 'exact');
+    return sourceMatch;
+  }
   // Names are the source identity. If legacy rows have duplicate Persian names
   // and no English name/relation to distinguish them, consume one stable row
   // per JSON occurrence so each target relation is restored exactly once.
-  if (matches.length > 1)
-    return matches.sort((a, b) => String(a.id).localeCompare(String(b.id)))[0];
+  if (matches.length > 1) {
+    const matchedRow = matches.sort((a, b) =>
+      String(a.id).localeCompare(String(b.id)),
+    )[0];
+    onMatch?.(matchedRow, 1, 'exact');
+    return matchedRow;
+  }
 
   const scored = availableRows
     .map((row) => ({ row, score: similarity(name, row.name) }))
@@ -260,7 +282,7 @@ function findExistingByName(
   const best = scored[0];
   const second = scored[1];
   if (second && best.score - second.score < 0.05) return null;
-  onFuzzyMatch?.(best.row, best.score);
+  onMatch?.(best.row, best.score, 'fuzzy');
   return best.row;
 }
 
@@ -269,17 +291,20 @@ function reportUnmatched(errors, message) {
   console.error(`Skipped: ${message}`);
 }
 
-function reportFuzzyMatch(matches, type, jsonName, matchedRow, score) {
+function reportMatch(matches, type, jsonName, matchedRow, score, method) {
   const match = {
     type,
     jsonName,
     matchedName: matchedRow.name,
     id: String(matchedRow.id),
+    method,
     score: Number(score.toFixed(3)),
     legacyImported: matchedRow.isLegacyImported,
   };
   matches.push(match);
-  console.log(`Matched ${type}: "${jsonName}" -> "${matchedRow.name}"`);
+  console.log(
+    `Matched ${type} (${method}): "${jsonName}" -> "${matchedRow.name}"`,
+  );
 }
 
 async function upsertParent(connection, row, source, sort, state) {
@@ -324,7 +349,7 @@ async function upsertCategory(
   sort,
   state,
   errors,
-  fuzzyMatches,
+  matches,
 ) {
   const existing = findExistingByName(
     state,
@@ -332,8 +357,9 @@ async function upsertCategory(
     row.nameEn,
     source,
     { field: 'parentCategoryId', id: parentCategoryId },
-    (matchedRow, score) =>
-      reportFuzzyMatch(fuzzyMatches, 'category', row.name, matchedRow, score),
+    (matchedRow, score, method) =>
+      reportMatch(matches, 'category', row.name, matchedRow, score, method),
+    true,
   );
   if (existing) {
     await connection.execute(
@@ -346,7 +372,7 @@ async function upsertCategory(
   }
   reportUnmatched(
     errors,
-    `Category "${row.name}" had no sufficiently close existing category match.`,
+    `Category "${row.name}" had no sufficiently close legacy-imported category match.`,
   );
   return null;
 }
@@ -359,7 +385,7 @@ async function upsertSubCategory(
   sort,
   state,
   errors,
-  fuzzyMatches,
+  matches,
 ) {
   const existing = findExistingByName(
     state,
@@ -367,14 +393,9 @@ async function upsertSubCategory(
     row.nameEn,
     source,
     { field: 'categoryId', id: categoryId },
-    (matchedRow, score) =>
-      reportFuzzyMatch(
-        fuzzyMatches,
-        'sub-category',
-        row.name,
-        matchedRow,
-        score,
-      ),
+    (matchedRow, score, method) =>
+      reportMatch(matches, 'sub-category', row.name, matchedRow, score, method),
+    true,
   );
   if (existing) {
     await connection.execute(
@@ -387,7 +408,7 @@ async function upsertSubCategory(
   }
   reportUnmatched(
     errors,
-    `Sub-category "${row.name}" had no sufficiently close existing sub-category match.`,
+    `Sub-category "${row.name}" had no sufficiently close legacy-imported sub-category match.`,
   );
   return null;
 }
@@ -418,7 +439,7 @@ async function main() {
       loadRows(target, 'sub_categories', 'sub_categories'),
     ]);
     const errors = [];
-    const fuzzyMatches = [];
+    const matches = [];
     await target.beginTransaction();
     try {
       let categoryIndex = 0;
@@ -442,7 +463,7 @@ async function main() {
             categorySort,
             categoryState,
             errors,
-            fuzzyMatches,
+            matches,
           );
           for (const [
             subCategorySort,
@@ -464,7 +485,7 @@ async function main() {
               subCategorySort,
               subCategoryState,
               errors,
-              fuzzyMatches,
+              matches,
             );
           }
         }
@@ -497,8 +518,10 @@ async function main() {
             deactivated,
             skipped: errors.length,
             errors,
-            fuzzyMatches: fuzzyMatches.length,
-            matches: fuzzyMatches,
+            matched: matches.length,
+            fuzzyMatches: matches.filter((match) => match.method === 'fuzzy')
+              .length,
+            matches,
           },
           null,
           2,
