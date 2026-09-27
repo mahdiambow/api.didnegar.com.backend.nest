@@ -45,7 +45,7 @@ services:
       SWAGGER_PERSIST_AUTH: ${SWAGGER_PERSIST_AUTH:-false}
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       RABBITMQ_ENABLED: ${RABBITMQ_ENABLED:-true}
-      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://didnegar:didnegar@rabbitmq:5672}
+      RABBITMQ_URL: ${DOCKER_RABBITMQ_URL:-amqp://didnegar:didnegar@rabbitmq:5672}
     ports:
       - "${PORT:-3000}:3000"
     depends_on:
