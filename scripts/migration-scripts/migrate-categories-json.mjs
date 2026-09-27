@@ -22,8 +22,10 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: npm run db:migrate:categories-json
 
 Creates or updates the parent-category/category/sub-category tree in
-categories.json. Existing rows match by exact Persian name. Rows absent from
-the JSON are deactivated so the active hierarchy exactly matches the file.`);
+categories.json. Missing parent categories are created. Categories and
+sub-categories must be rows imported by the legacy category migration and are
+matched by exact Persian name. All other categories and sub-categories, plus
+legacy rows absent from the JSON, are deactivated.`);
   process.exit(0);
 }
 
@@ -122,9 +124,10 @@ async function readSource() {
   });
 }
 
-async function loadRows(connection, table) {
+async function loadRows(connection, table, requiredLegacyTable = null) {
   const [rows] = await connection.execute(
-    `SELECT id, legacyId, legacyTable, name, nameEn, slug${table === 'categories' ? ', parentCategoryId' : ''}${table === 'sub_categories' ? ', categoryId' : ''} FROM ${table}`,
+    `SELECT id, legacyId, legacyTable, name, nameEn, slug${table === 'categories' ? ', parentCategoryId' : ''}${table === 'sub_categories' ? ', categoryId' : ''} FROM ${table}${requiredLegacyTable ? ' WHERE legacyId IS NOT NULL AND legacyTable = ?' : ''}`,
+    requiredLegacyTable ? [requiredLegacyTable] : [],
   );
   const bySource = new Map();
   const byName = new Map();
@@ -188,14 +191,11 @@ async function upsertParent(connection, row, source, sort, state) {
   );
   if (existing) {
     await connection.execute(
-      `UPDATE parent_categories SET name = ?, nameEn = ?, slug = ?, sort = ?, isActive = 1, updatedAt = NOW() WHERE id = ?`,
-      [row.name, row.nameEn, slug, sort, existing.id],
+      `UPDATE parent_categories SET name = ?, nameEn = ?, sort = ?, isActive = 1, updatedAt = NOW() WHERE id = ?`,
+      [row.name, row.nameEn, sort, existing.id],
     );
-    if (existing.slug !== slug) state.slugOwners.delete(existing.slug);
-    existing.slug = slug;
-    state.slugOwners.set(slug, String(existing.id));
     state.claimedIds.add(String(existing.id));
-    return { id: String(existing.id), slug };
+    return { id: String(existing.id), slug: existing.slug };
   }
   const id = newId();
   await connection.execute(
@@ -218,62 +218,23 @@ async function upsertCategory(
   parentCategoryId,
   sort,
   state,
-  parentSlug,
 ) {
-  const key = `${source.legacyTable}:${source.legacyId}`;
   const existing = findExistingByName(state, row.name, row.nameEn, source, {
     field: 'parentCategoryId',
     id: parentCategoryId,
   });
-  const slug = uniqueSlug(
-    baseSlug([
-      [parentSlug, `parent-${source.legacyId}`],
-      [row.nameEn, `category-${source.legacyId}`],
-      [source.legacyId, ''],
-    ]),
-    source.legacyId,
-    state.slugOwners,
-    existing?.id,
-  );
   if (existing) {
     await connection.execute(
-      `UPDATE categories SET parentCategoryId = ?, name = ?, nameEn = ?, slug = ?, sort = ?, isActive = 1, updatedAt = NOW() WHERE id = ?`,
-      [parentCategoryId, row.name, row.nameEn, slug, sort, existing.id],
+      `UPDATE categories SET parentCategoryId = ?, name = ?, nameEn = ?, sort = ?, isActive = 1, updatedAt = NOW() WHERE id = ?`,
+      [parentCategoryId, row.name, row.nameEn, sort, existing.id],
     );
-    if (existing.slug !== slug) state.slugOwners.delete(existing.slug);
     existing.parentCategoryId = parentCategoryId;
-    existing.slug = slug;
-    state.slugOwners.set(slug, String(existing.id));
     state.claimedIds.add(String(existing.id));
-    return { id: String(existing.id), slug };
+    return { id: String(existing.id) };
   }
-  const id = newId();
-  await connection.execute(
-    `INSERT INTO categories (id, parentCategoryId, legacyId, legacyTable, name, nameEn, slug, icon, image, sort, isActive, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, 1, NOW(), NOW())`,
-    [
-      id,
-      parentCategoryId,
-      source.legacyId,
-      source.legacyTable,
-      row.name,
-      row.nameEn,
-      slug,
-      sort,
-    ],
+  throw new Error(
+    `Cannot link category "${row.name}": no legacy-imported category matched this name.`,
   );
-  const inserted = {
-    id,
-    name: row.name,
-    nameEn: row.nameEn,
-    parentCategoryId,
-    slug,
-  };
-  state.bySource.set(key, inserted);
-  state.byName.set(row.name, [...(state.byName.get(row.name) || []), inserted]);
-  state.slugOwners.set(slug, id);
-  state.claimedIds.add(id);
-  return { id, slug };
 }
 
 async function upsertSubCategory(
@@ -283,59 +244,23 @@ async function upsertSubCategory(
   categoryId,
   sort,
   state,
-  categorySlug,
 ) {
-  const key = `${source.legacyTable}:${source.legacyId}`;
   const existing = findExistingByName(state, row.name, row.nameEn, source, {
     field: 'categoryId',
     id: categoryId,
   });
-  // Subcategory slugs are only unique within their category.
-  const base = baseSlug([
-    [categorySlug, `category-${source.legacyId}`],
-    [row.nameEn, `sub-category-${source.legacyId}`],
-    [source.legacyId, ''],
-  ]);
-  const ownerKey = (slug) => `${categoryId}:${slug}`;
-  const slug = uniqueSlug(
-    base,
-    source.legacyId,
-    state.slugOwners,
-    existing?.id,
-    ownerKey,
-  );
   if (existing) {
     await connection.execute(
-      `UPDATE sub_categories SET categoryId = ?, name = ?, nameEn = ?, slug = ?, sort = ?, isActive = 1, updatedAt = NOW() WHERE id = ?`,
-      [categoryId, row.name, row.nameEn, slug, sort, existing.id],
+      `UPDATE sub_categories SET categoryId = ?, name = ?, nameEn = ?, sort = ?, isActive = 1, updatedAt = NOW() WHERE id = ?`,
+      [categoryId, row.name, row.nameEn, sort, existing.id],
     );
-    state.slugOwners.delete(`${existing.categoryId}:${existing.slug}`);
     existing.categoryId = categoryId;
-    existing.slug = slug;
-    state.slugOwners.set(ownerKey(slug), String(existing.id));
     state.claimedIds.add(String(existing.id));
     return;
   }
-  const id = newId();
-  await connection.execute(
-    `INSERT INTO sub_categories (id, categoryId, legacyId, legacyTable, name, nameEn, slug, icon, image, sort, isActive, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, 1, NOW(), NOW())`,
-    [
-      id,
-      categoryId,
-      source.legacyId,
-      source.legacyTable,
-      row.name,
-      row.nameEn,
-      slug,
-      sort,
-    ],
+  throw new Error(
+    `Cannot link sub-category "${row.name}": no legacy-imported sub-category matched this name.`,
   );
-  const inserted = { id, name: row.name, nameEn: row.nameEn, categoryId, slug };
-  state.bySource.set(key, inserted);
-  state.byName.set(row.name, [...(state.byName.get(row.name) || []), inserted]);
-  state.slugOwners.set(ownerKey(slug), id);
-  state.claimedIds.add(id);
 }
 
 async function deactivateRowsAbsentFromJson(target, table, state) {
@@ -360,8 +285,8 @@ async function main() {
     );
     const [parentState, categoryState, subCategoryState] = await Promise.all([
       loadRows(target, 'parent_categories'),
-      loadRows(target, 'categories'),
-      loadRows(target, 'sub_categories'),
+      loadRows(target, 'categories', 'categories'),
+      loadRows(target, 'sub_categories', 'sub_categories'),
     ]);
     await target.beginTransaction();
     try {
@@ -385,7 +310,6 @@ async function main() {
             parentResult.id,
             categorySort,
             categoryState,
-            parentResult.slug,
           );
           for (const [
             subCategorySort,
@@ -398,7 +322,6 @@ async function main() {
               categoryRow.id,
               subCategorySort,
               subCategoryState,
-              categoryRow.slug,
             );
           }
         }
