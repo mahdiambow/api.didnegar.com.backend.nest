@@ -490,6 +490,10 @@ export class CategoriesService {
 
   async findSubCategory(id: string) {
     const subCategory = await this.subCategoryRepository.findById(id);
+    console.log("-------------")
+    console.log("id: ", id)
+    console.log("subcategory: ", subCategory)
+    console.log("-------------")
     if (!subCategory) {
       throw new ApiException(
         'SUB_CATEGORY_NOT_FOUND',
