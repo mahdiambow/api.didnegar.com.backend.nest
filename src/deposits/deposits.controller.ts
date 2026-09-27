@@ -31,6 +31,7 @@ import { PermissionsGuard } from '../utils/auth/guards/permissions.guard.js';
 import { RequirePermissions } from '../utils/auth/decorators/require-permissions.decorator.js';
 import { PERMISSIONS } from '../roles/permissions.js';
 import { DepositsService } from './deposits.service.js';
+import { DepositVerificationQueue } from './queues/deposit-verification.queue.js';
 import { DepositResponseDto } from './dto/deposit.dto.js';
 import { buildFrontendPaymentCallbackUrl } from './payment-callback.util.js';
 
@@ -109,6 +110,7 @@ const TopUpApiResponseDto = createSuccessResponseDto(DepositResponseDto, {
 export class DepositsController {
   constructor(
     private readonly depositsService: DepositsService,
+    private readonly depositVerificationQueue: DepositVerificationQueue,
     private readonly config: ConfigService,
   ) {}
 
@@ -122,12 +124,39 @@ export class DepositsController {
     @Query() query: GatewayCallbackQueryDto,
     @Res() res: Response,
   ) {
+    return this.handleGatewayCallback(query, res);
+  }
+
+  private async handleGatewayCallback(
+    query: GatewayCallbackQueryDto,
+    res: Response,
+  ) {
+    let status = query.status;
+    let success = query.success;
+    if (query.trackId) {
+      try {
+        const action = await this.depositsService.recordGatewayCallback(
+          query.trackId,
+          query.status,
+        );
+        if (action === 'verify') {
+          await this.depositVerificationQueue.enqueueVerify(query.trackId);
+        } else if (action === 'inquiry') {
+          await this.depositVerificationQueue.enqueueInquiry(query.trackId);
+        }
+      } catch {
+        // The callback always redirects. A failed publish leaves the deposit
+        // pending rather than trusting the browser callback as payment proof.
+        status = status ?? '2';
+        success = '0';
+      }
+    }
     const target = buildFrontendPaymentCallbackUrl(
       this.config.get('ZIBAL_CALLBACK_URL'),
       {
-        status: query.status,
+        status,
         trackId: query.trackId,
-        success: query.success,
+        success,
         sourceType: query.sourceType,
         sourceId: query.sourceId,
       },
@@ -141,20 +170,37 @@ export class DepositsController {
     description:
       'کال‌بک وام: status را استرینگ کرده و به LOAN_CALLBACK_URL ریدایرکت می‌کند',
   })
-  callbackLoan(
+  async callbackLoan(
     @Query() query: GatewayCallbackQueryDto,
     @Res() res: Response,
   ) {
-    const target = buildFrontendPaymentCallbackUrl(
-      this.config.get('LOAN_CALLBACK_URL'),
-      {
-        status: query.status,
-        trackId: query.trackId,
-        success: query.success,
-        sourceType: query.sourceType,
-        sourceId: query.sourceId,
-      },
-    );
+    // Loan keeps its own frontend callback URL but follows the same
+    // server-to-server settlement rule as Zibal.
+    let status = query.status;
+    let success = query.success;
+    if (query.trackId) {
+      try {
+        const action = await this.depositsService.recordGatewayCallback(
+          query.trackId,
+          query.status,
+        );
+        if (action === 'verify') {
+          await this.depositVerificationQueue.enqueueVerify(query.trackId);
+        } else if (action === 'inquiry') {
+          await this.depositVerificationQueue.enqueueInquiry(query.trackId);
+        }
+      } catch {
+        status = status ?? '2';
+        success = '0';
+      }
+    }
+    const target = buildFrontendPaymentCallbackUrl(this.config.get('LOAN_CALLBACK_URL'), {
+      status,
+      trackId: query.trackId,
+      success,
+      sourceType: query.sourceType,
+      sourceId: query.sourceId,
+    });
     return res.redirect(302, target);
   }
 

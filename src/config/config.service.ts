@@ -61,6 +61,10 @@ const DEFAULTS: Record<string, string> = {
   PUBLIC_API_URL: '',
   PAYMENT_SUCCESS_REDIRECT_URL: 'http://localhost:3001/success',
   PAYMENT_FAILED_REDIRECT_URL: 'http://localhost:3001/failed',
+  RABBITMQ_ENABLED: 'true',
+  RABBITMQ_URL: 'amqp://guest:guest@localhost:5672',
+  RABBITMQ_DEPOSIT_RETRY_DELAY_MS: '30000',
+  RABBITMQ_DEPOSIT_MAX_RETRIES: '5',
 };
 
 @Injectable()

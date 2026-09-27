@@ -11,7 +11,12 @@ import {
 import type { Order } from '../../orders/entities/order.entity.js';
 import type { User } from '../../users/entities/user.entity.js';
 
-export type DepositStatus = 'pending' | 'success' | 'failed';
+export type DepositStatus =
+  | 'pending'
+  | 'payment_accepted'
+  | 'payment_not_accepted'
+  | 'success'
+  | 'failed';
 export type DepositGateway = 'iBank' | 'loan' | 'credit';
 
 /** واریز به کیف پول — orderId اختیاری است */
@@ -51,6 +56,18 @@ export class Deposit {
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   callbackUrl: string | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  paymentRequestCreatedAt: Date | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  paymentRequestPaidAt: Date | null;
+
+  @Column({ type: 'datetime', nullable: true })
+  paymentRequestVerifiedAt: Date | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  rejectionReason: string | null;
 
   @CreateDateColumn()
   createdAt: Date;
