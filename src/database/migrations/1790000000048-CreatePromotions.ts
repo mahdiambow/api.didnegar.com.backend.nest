@@ -1,9 +1,39 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+type RefColumn = {
+  COLUMN_TYPE: string;
+  CHARACTER_SET_NAME: string | null;
+  COLLATION_NAME: string | null;
+};
+
 export class CreatePromotions1790000000048 implements MigrationInterface {
   name = 'CreatePromotions1790000000048';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const referenceType = (column: RefColumn) =>
+      `${column.COLUMN_TYPE}${
+        column.CHARACTER_SET_NAME
+          ? ` CHARACTER SET ${column.CHARACTER_SET_NAME} COLLATE ${column.COLLATION_NAME}`
+          : ''
+      }`;
+
+    const loadRef = async (table: string): Promise<RefColumn> => {
+      const [column] = await queryRunner.query(`
+        SELECT COLUMN_TYPE, CHARACTER_SET_NAME, COLLATION_NAME
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = '${table}'
+          AND COLUMN_NAME = 'id'
+      `);
+      if (!column) {
+        throw new Error(`Cannot resolve ${table}.id definition.`);
+      }
+      return column;
+    };
+
+    const userId = await loadRef('users');
+    const orderId = await loadRef('orders');
+
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS \`promotions\` (
         \`id\` CHAR(26) NOT NULL,
@@ -26,15 +56,26 @@ export class CreatePromotions1790000000048 implements MigrationInterface {
         \`updatedAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
         PRIMARY KEY (\`id\`),
         UNIQUE INDEX \`UQ_promotions_code\` (\`code\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    // Align leftover unicode_ci table from earlier failed runs with FK targets.
+    if (orderId.CHARACTER_SET_NAME && orderId.COLLATION_NAME) {
+      await queryRunner.query(`
+        ALTER TABLE \`promotions\`
+          CONVERT TO CHARACTER SET ${orderId.CHARACTER_SET_NAME}
+          COLLATE ${orderId.COLLATION_NAME}
+      `);
+    }
+
+    const promotionId = await loadRef('promotions');
 
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS \`promotion_usages\` (
         \`id\` CHAR(26) NOT NULL,
-        \`promotionId\` CHAR(26) NOT NULL,
-        \`userId\` CHAR(26) NOT NULL,
-        \`orderId\` CHAR(26) NULL,
+        \`promotionId\` ${referenceType(promotionId)} NOT NULL,
+        \`userId\` ${referenceType(userId)} NOT NULL,
+        \`orderId\` ${referenceType(orderId)} NULL,
         \`discountAmount\` DECIMAL(19,4) NOT NULL,
         \`createdAt\` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         PRIMARY KEY (\`id\`),
@@ -50,7 +91,7 @@ export class CreatePromotions1790000000048 implements MigrationInterface {
         CONSTRAINT \`FK_promotion_usages_orderId\`
           FOREIGN KEY (\`orderId\`) REFERENCES \`orders\`(\`id\`)
           ON DELETE SET NULL ON UPDATE RESTRICT
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
     if (await queryRunner.hasTable('orders')) {
@@ -64,7 +105,7 @@ export class CreatePromotions1790000000048 implements MigrationInterface {
       if (!table?.findColumnByName('promotionId')) {
         await queryRunner.query(`
           ALTER TABLE \`orders\`
-            ADD COLUMN \`promotionId\` CHAR(26) NULL AFTER \`discountAmount\`,
+            ADD COLUMN \`promotionId\` ${referenceType(promotionId)} NULL AFTER \`discountAmount\`,
             ADD INDEX \`IDX_orders_promotionId\` (\`promotionId\`),
             ADD CONSTRAINT \`FK_orders_promotionId\`
               FOREIGN KEY (\`promotionId\`) REFERENCES \`promotions\`(\`id\`)

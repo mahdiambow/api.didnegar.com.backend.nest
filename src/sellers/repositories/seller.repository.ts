@@ -25,6 +25,10 @@ export class SellerRepository {
     return this.repo.findOne({ where: { slug } });
   }
 
+  findByPhone(phone: string) {
+    return this.repo.findOne({ where: { phone } });
+  }
+
   findPaginatedForTenant(
     offset: number,
     limit: number,

@@ -1,17 +1,47 @@
 import type { MigrationInterface, QueryRunner } from 'typeorm';
 
+type RefColumn = {
+  COLUMN_TYPE: string;
+  CHARACTER_SET_NAME: string | null;
+  COLLATION_NAME: string | null;
+};
+
 /** Creates the Nest review table; legacy review data is imported separately. */
 export class CreateReviews1790000000040 implements MigrationInterface {
   name = 'CreateReviews1790000000040';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const referenceType = (column: RefColumn) =>
+      `${column.COLUMN_TYPE}${
+        column.CHARACTER_SET_NAME
+          ? ` CHARACTER SET ${column.CHARACTER_SET_NAME} COLLATE ${column.COLLATION_NAME}`
+          : ''
+      }`;
+
+    const loadRef = async (table: string): Promise<RefColumn> => {
+      const [column] = await queryRunner.query(`
+        SELECT COLUMN_TYPE, CHARACTER_SET_NAME, COLLATION_NAME
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = '${table}'
+          AND COLUMN_NAME = 'id'
+      `);
+      if (!column) {
+        throw new Error(`Cannot resolve ${table}.id definition.`);
+      }
+      return column;
+    };
+
+    const productId = await loadRef('products');
+    const userId = await loadRef('users');
+
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS \`reviews\` (
         \`id\` CHAR(26) NOT NULL,
         \`legacyId\` BIGINT NOT NULL,
         \`legacyTable\` VARCHAR(255) NOT NULL,
-        \`productId\` CHAR(26) NOT NULL,
-        \`userId\` CHAR(26) NULL,
+        \`productId\` ${referenceType(productId)} NOT NULL,
+        \`userId\` ${referenceType(userId)} NULL,
         \`authorName\` VARCHAR(255) NULL,
         \`authorEmail\` VARCHAR(320) NULL,
         \`authorUrl\` VARCHAR(2048) NULL,
@@ -31,7 +61,7 @@ export class CreateReviews1790000000040 implements MigrationInterface {
         CONSTRAINT \`FK_reviews_productId\` FOREIGN KEY (\`productId\`) REFERENCES \`products\`(\`id\`) ON DELETE CASCADE ON UPDATE RESTRICT,
         CONSTRAINT \`FK_reviews_userId\` FOREIGN KEY (\`userId\`) REFERENCES \`users\`(\`id\`) ON DELETE SET NULL ON UPDATE RESTRICT,
         CONSTRAINT \`FK_reviews_parentId\` FOREIGN KEY (\`parentId\`) REFERENCES \`reviews\`(\`id\`) ON DELETE SET NULL ON UPDATE RESTRICT
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
   }
 
