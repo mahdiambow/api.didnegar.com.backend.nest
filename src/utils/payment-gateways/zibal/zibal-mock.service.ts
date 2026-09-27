@@ -22,7 +22,11 @@ export class ZibalMockService implements IBank {
     this.startBaseUrl = config.get('ZIBAL_START_URL').replace(/\/$/, '');
   }
 
-  requestPayment(amount: number, description: string, orderId: string): PaymentRequestResult {
+  requestPayment(
+    amount: number,
+    description: string,
+    orderId: string,
+  ): PaymentRequestResult {
     const trackId = String(randomInt(100000000, 999999999));
     return {
       trackId,
@@ -32,8 +36,15 @@ export class ZibalMockService implements IBank {
   }
 
   verifyPayment(trackId: string, amount: number): PaymentVerifyResult {
-    const refId = String(200000 + (parseInt(trackId.slice(-6), 10) % 800000 || randomInt(1, 99999)));
-    return { refId, message: `[MOCK-ZIBAL] پرداخت با trackId ${trackId} به مبلغ ${amount} ریال تأیید شد`, amount };
+    const refId = String(
+      200000 +
+        (parseInt(trackId.slice(-6), 10) % 800000 || randomInt(1, 99999)),
+    );
+    return {
+      refId,
+      message: `[MOCK-ZIBAL] پرداخت با trackId ${trackId} به مبلغ ${amount} ریال تأیید شد`,
+      amount,
+    };
   }
 
   inquiryPayment(trackId: string, _amount: number): PaymentInquiryResult {
