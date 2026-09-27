@@ -76,7 +76,7 @@ export class DepositsService {
       rounded,
       'شارژ کیف پول',
       userId,
-      callbackUrl,
+      // callbackUrl,
     );
 
     const entity = await this.dataSource.transaction(async (manager) => {
@@ -428,7 +428,7 @@ export class DepositsService {
       bankAmount,
       productName,
       order.id,
-      callbackUrl,
+      // callbackUrl,
     );
 
     const deposit = await this.dataSource.transaction(async (manager) => {
@@ -585,7 +585,7 @@ export class DepositsService {
       amount,
       productName,
       order.id,
-      callbackUrl,
+      // callbackUrl,
     );
 
     const deposit = await this.dataSource.transaction(async (manager) => {
